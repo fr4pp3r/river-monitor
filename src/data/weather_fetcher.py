@@ -236,6 +236,7 @@ class WeatherFetcher:
         TMAX = latest_weather.get('temperature_max_c', 0)
         TMIN = latest_weather.get('temperature_min_c', 0)
         TideMax = latest_weather.get('tide_max_m', 0)
+        TideMin = latest_weather.get('tide_min_m', 0)
         
         if forecast_data:
             # R1: Today's precipitation
@@ -259,6 +260,11 @@ class WeatherFetcher:
             tide_maxes = [day.get('tide_max_m', 0) for day in tide_forecast_data[:7] if day.get('tide_max_m') is not None]
             if tide_maxes:
                 TideMax = max(tide_maxes)
+            
+            # TideMin: Minimum tide in next 7 days
+            tide_mins = [day.get('tide_min_m', 0) for day in tide_forecast_data[:7] if day.get('tide_min_m') is not None]
+            if tide_mins:
+                TideMin = min(tide_mins)
         
         return {
             'R1': R1,
@@ -268,6 +274,7 @@ class WeatherFetcher:
             'TMAX': TMAX,
             'TMIN': TMIN,
             'TideMax': TideMax,
+            'TideMin': TideMin,
             'precipitation_mm': latest_weather.get('precipitation_mm', 0),
             'temperature_max_c': latest_weather.get('temperature_max_c', 0),
             'temperature_min_c': latest_weather.get('temperature_min_c', 0),

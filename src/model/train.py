@@ -172,6 +172,44 @@ def train_model_new(
     print(classification_report(y_test, y_pred, 
                                target_names=target_names))
     
+    # Confusion Matrix
+    from sklearn.metrics import confusion_matrix
+    cm = confusion_matrix(y_test, y_pred)
+    print("\nConfusion Matrix:")
+    print("                 Predicted")
+    print("              Low  Medium  High")
+    for i, actual in enumerate(target_names):
+        row = cm[i]
+        print(f"Actual {actual:6s}  {row[0]:4d}  {row[1]:6d}  {row[2]:4d}")
+    
+    # Per-class metrics
+    print("\nPer-Class Metrics:")
+    for i, class_name in enumerate(target_names):
+        tp = cm[i, i]
+        fp = cm[:, i].sum() - tp
+        fn = cm[i, :].sum() - tp
+        tn = cm.sum() - tp - fp - fn
+        
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+        specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+        
+        print(f"  {class_name:6s}: Precision={precision:.4f}, Recall={recall:.4f}, "
+              f"F1={f1:.4f}, Specificity={specificity:.4f}")
+    
+    # Macro and weighted averages
+    macro_precision = sum(report[c]['precision'] for c in target_names) / len(target_names)
+    macro_recall = sum(report[c]['recall'] for c in target_names) / len(target_names)
+    macro_f1 = sum(report[c]['f1-score'] for c in target_names) / len(target_names)
+    
+    weighted_precision = sum(report[c]['precision'] * report[c]['support'] for c in target_names) / sum(report[c]['support'] for c in target_names)
+    weighted_recall = sum(report[c]['recall'] * report[c]['support'] for c in target_names) / sum(report[c]['support'] for c in target_names)
+    weighted_f1 = sum(report[c]['f1-score'] * report[c]['support'] for c in target_names) / sum(report[c]['support'] for c in target_names)
+    
+    print(f"\nMacro Average:    Precision={macro_precision:.4f}, Recall={macro_recall:.4f}, F1={macro_f1:.4f}")
+    print(f"Weighted Average: Precision={weighted_precision:.4f}, Recall={weighted_recall:.4f}, F1={weighted_f1:.4f}")
+    
     # Save model and scaler
     os.makedirs(os.path.dirname(model_path), exist_ok=True)
     joblib.dump(model, model_path)
@@ -211,11 +249,9 @@ def get_feature_importance(model: RandomForestClassifier) -> pd.DataFrame:
     if not hasattr(model, 'feature_importances_'):
         raise ValueError("Model has no feature_importances_ attribute")
     
-    # Get feature names from the model (if available)
-    # Note: The model doesn't store feature names, so we need to track them separately
-    # For now, return a generic DataFrame
-    n_features = len(model.feature_importances_)
-    feature_names = [f"feature_{i}" for i in range(n_features)]
+    # Use RF_FEATURES from config for proper feature names
+    from src.config import RF_FEATURES
+    feature_names = RF_FEATURES
     
     return pd.DataFrame({
         'feature': feature_names,

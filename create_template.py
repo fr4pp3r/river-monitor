@@ -33,6 +33,7 @@ df['rainy_days'] = (df['precipitation_mm'] > 0).rolling(7, min_periods=1).sum()
 df['TMAX'] = df['temperature_max_c']
 df['TMIN'] = df['temperature_min_c']
 df['TideMax'] = df['tide_max_m'].rolling(7, min_periods=1).max()
+df['TideMin'] = df['tide_min_m'].rolling(7, min_periods=1).min()
 
 # Save template
 df.to_csv('training_template.csv', index=False)
@@ -42,6 +43,6 @@ print(f"Columns: {list(df.columns)}")
 print("\nFirst 5 rows:")
 print(df.head())
 print("\nRequired columns for training:")
-print("  R1, R3, R7, rainy_days, TMAX, TMIN, TideMax, target")
+print("  R1, R3, R7, rainy_days, TMAX, TMIN, TideMax, TideMin, target")
 print("\nAfter adding target column, use:")
 print("  python src/model/train.py --mode new --csv training_data.csv --output data/models/rf_model.pkl")

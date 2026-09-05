@@ -1,0 +1,65 @@
+Starting model training (new 7-feature model)...
+Loading data from: training_data_target.csv
+Dataset shape: (1826, 8)
+Feature columns: ['R1', 'R3', 'R7', 'rainy_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
+Class distribution:
+target
+0    918
+1    593
+2    315
+Name: count, dtype: int64
+Class mapping: {0: 'Low', 1: 'Medium', 2: 'High'}
+
+Training set: 1460 samples
+Test set: 366 samples
+
+Training Random Forest classifier...
+
+Evaluating model...
+Test Accuracy: 0.9426
+
+Classification Report:
+              precision    recall  f1-score   support
+
+         Low       0.97      0.97      0.97       184
+      Medium       0.93      0.89      0.91       119
+        High       0.88      0.95      0.92        63
+
+    accuracy                           0.94       366
+   macro avg       0.93      0.94      0.93       366
+weighted avg       0.94      0.94      0.94       366
+
+
+Confusion Matrix:
+                 Predicted
+              Low  Medium  High
+Actual Low      179       5     0
+Actual Medium     5     106     8
+Actual High       0       3    60
+
+Per-Class Metrics:
+  Low   : Precision=0.9728, Recall=0.9728, F1=0.9728, Specificity=0.9725
+  Medium: Precision=0.9298, Recall=0.8908, F1=0.9099, Specificity=0.9676
+  High  : Precision=0.8824, Recall=0.9524, F1=0.9160, Specificity=0.9736
+
+Macro Average:    Precision=0.9283, Recall=0.9387, F1=0.9329
+Weighted Average: Precision=0.9433, Recall=0.9426, F1=0.9426
+Scaler saved to data/models\scaler.pkl
+
+Model saved to data/models/rf_model.pkl
+Scaler saved to data/models\scaler.pkl
+
+Model training complete!
+Model saved to: data/models/rf_model.pkl
+Test Accuracy: 0.9426
+
+Feature Importance:
+   feature  importance
+        R7    0.400675
+        R3    0.242313
+        R1    0.110405
+rainy_days    0.091770
+      TMAX    0.044008
+   TideMax    0.041186
+   TideMin    0.035747
+      TMIN    0.033896

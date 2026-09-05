@@ -200,6 +200,9 @@ def create_rf_features(df: pd.DataFrame) -> pd.DataFrame:
     # TideMax: daily max tide level
     df['TideMax'] = df['tide_max_m']
     
+    # TideMin: daily min tide level
+    df['TideMin'] = df['tide_min_m']
+    
     # Drop rows with NaN values in features
     df.dropna(subset=RF_FEATURES, inplace=True)
     

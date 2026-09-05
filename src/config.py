@@ -129,8 +129,8 @@ MODEL_TEST_SIZE = 0.2
 # Forecast parameters
 FORECAST_DAYS = 7  # Predict next 7 days
 
-# RF Model features (7 features for daily model)
-RF_FEATURES = ['R1', 'R3', 'R7', 'rainy_days', 'TMAX', 'TMIN', 'TideMax']
+# RF Model features (8 features for daily model)
+RF_FEATURES = ['R1', 'R3', 'R7', 'rainy_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
 
 # RF Model target classes
 RF_CLASSES = {0: 'Low', 1: 'Medium', 2: 'High'}
