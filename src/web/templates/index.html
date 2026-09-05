@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>River Monitor Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>River Water Level Monitor</h1>
+            <p class="subtitle">Real-time Flood Risk Prediction System</p>
+        </header>
+
+        <!-- Main Dashboard Grid -->
+        <main class="dashboard">
+            <!-- Current Status Card -->
+            <section class="card status-card">
+                <h2>Current Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Water Level</div>
+                        <div class="status-value" id="current-water-level">Loading...</div>
+                        <div class="status-unit">meters</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Risk Level</div>
+                        <div class="status-value risk-badge" id="current-risk-level">Loading...</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Last Updated</div>
+                        <div class="status-value" id="last-updated">Loading...</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Data Source</div>
+                        <div class="status-value" id="data-source">Loading...</div>
+                    </div>
+                </div>
+                <div class="status-actions">
+                    <button onclick="refreshPrediction()" class="btn btn-primary">Refresh Prediction</button>
+                    <button onclick="testAlert()" class="btn btn-warning">Test SMS Alert</button>
+                </div>
+            </section>
+
+            <!-- Water Level Chart -->
+            <section class="card chart-card">
+                <h2>Water Level (Last 24 Hours)</h2>
+                <div class="chart-container">
+                    <canvas id="waterLevelChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Forecast Chart -->
+            <section class="card chart-card">
+                <h2>48-Hour Water Level Forecast</h2>
+                <div class="chart-container">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Weather Data Card -->
+            <section class="card weather-card">
+                <h2>Current Weather & Rainfall</h2>
+                <div class="weather-grid">
+                    <div class="weather-item">
+                        <div class="weather-label">Precipitation</div>
+                        <div class="weather-value" id="current-precip">Loading...</div>
+                        <div class="weather-unit">mm</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-label">Pressure</div>
+                        <div class="weather-value" id="current-pressure">Loading...</div>
+                        <div class="weather-unit">hPa</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-label">Temperature</div>
+                        <div class="weather-value" id="current-temp">Loading...</div>
+                        <div class="weather-unit">°C</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-label">Humidity</div>
+                        <div class="weather-value" id="current-humidity">Loading...</div>
+                        <div class="weather-unit">%</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-label">Rainfall (24h)</div>
+                        <div class="weather-value" id="rainfall-24h">Loading...</div>
+                        <div class="weather-unit">mm</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-label">Rain Tips (24h)</div>
+                        <div class="weather-value" id="rain-tips-24h">Loading...</div>
+                        <div class="weather-unit">tips</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Status Card -->
+            <section class="card system-card">
+                <h2>System Status</h2>
+                <div class="system-grid" id="system-status">
+                    <div class="system-item">
+                        <div class="system-component">LoRa Module</div>
+                        <div class="system-status status-ok" id="lora-status">Loading...</div>
+                    </div>
+                    <div class="system-item">
+                        <div class="system-component">SMS Module</div>
+                        <div class="system-status status-ok" id="sms-status">Loading...</div>
+                    </div>
+                    <div class="system-item">
+                        <div class="system-component">Weather API</div>
+                        <div class="system-status status-ok" id="weather-status">Loading...</div>
+                    </div>
+                    <div class="system-item">
+                        <div class="system-component">Prediction Model</div>
+                        <div class="system-status status-ok" id="model-status">Loading...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fuzzy Logic Card -->
+            <section class="card fuzzy-card">
+                <h2>Fuzzy Logic Details</h2>
+                <div class="fuzzy-grid" id="fuzzy-details">
+                    <div class="fuzzy-item">
+                        <div class="fuzzy-label">RF Propensity</div>
+                        <div class="fuzzy-value" id="fuzzy-rf-propensity">Loading...</div>
+                    </div>
+                    <div class="fuzzy-item">
+                        <div class="fuzzy-label">Rule Triggered</div>
+                        <div class="fuzzy-value" id="fuzzy-rule-triggered">Loading...</div>
+                    </div>
+                    <div class="fuzzy-item">
+                        <div class="fuzzy-label">Water Level</div>
+                        <div class="fuzzy-value" id="fuzzy-water-level">Loading...</div>
+                        <div class="fuzzy-unit">mm</div>
+                    </div>
+                    <div class="fuzzy-item">
+                        <div class="fuzzy-label">Rate of Rise</div>
+                        <div class="fuzzy-value" id="fuzzy-rate-of-rise">Loading...</div>
+                        <div class="fuzzy-unit">mm/day</div>
+                    </div>
+                    <div class="fuzzy-item">
+                        <div class="fuzzy-label">Forecast Rain</div>
+                        <div class="fuzzy-value" id="fuzzy-forecast-rain">Loading...</div>
+                        <div class="fuzzy-unit">mm</div>
+                    </div>
+                    <div class="fuzzy-item">
+                        <div class="fuzzy-label">Tide Level</div>
+                        <div class="fuzzy-value" id="fuzzy-tide-level">Loading...</div>
+                        <div class="fuzzy-unit">m</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alerts Card -->
+            <section class="card alerts-card">
+                <h2>Recent Alerts</h2>
+                <div class="alerts-list" id="alerts-list">
+                    <p>Loading alerts...</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>River Monitor System | Raspberry Pi 5 | LoRa + SMS</p>
+            <p id="last-refresh">Last refresh: Never</p>
+        </footer>
+    </div>
+
+    <script>
+        // Global chart references
+        let waterLevelChart = null;
+        let forecastChart = null;
+
+        // Risk level colors
+        const riskColors = {
+            'normal': '#28a745',
+            'receding': '#17a2b8',
+            'alert': '#ffc107',
+            'alarm': '#fd7e14',
+            'critical': '#dc3545',
+            'Receding': '#17a2b8',
+            'Alert': '#ffc107',
+            'Alarm': '#fd7e14',
+            'Critical': '#dc3545'
+        };
+
+        // Status colors
+        const statusColors = {
+            'ok': '#28a745',
+            'warning': '#ffc107',
+            'error': '#dc3545'
+        };
+
+        // Format timestamp
+        function formatTimestamp(isoString) {
+            if (!isoString) return 'Never';
+            const date = new Date(isoString);
+            return date.toLocaleString();
+        }
+
+        // Format time ago
+        function timeAgo(isoString) {
+            if (!isoString) return 'Never';
+            const date = new Date(isoString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return `${seconds}s ago`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        // Update current status
+        async function updateCurrentStatus() {
+            try {
+                const response = await fetch('/api/prediction');
+                const prediction = await response.json();
+                
+                if (prediction.error) {
+                    console.error('Error getting prediction:', prediction.error);
+                    return;
+                }
+
+                // Update water level
+                const waterLevel = prediction.current_level_m;
+                document.getElementById('current-water-level').textContent = waterLevel.toFixed(2);
+
+                // Update risk level
+                const riskLevel = prediction.risk_level;
+                const riskBadge = document.getElementById('current-risk-level');
+                riskBadge.textContent = riskLevel.toUpperCase();
+                riskBadge.className = 'status-value risk-badge';
+                riskBadge.style.backgroundColor = riskColors[riskLevel] || '#6c757d';
+
+                // Update last updated
+                document.getElementById('last-updated').textContent = timeAgo(prediction.timestamp);
+
+                // Update data source
+                const waterResponse = await fetch('/api/water-levels?hours=1');
+                const waterData = await waterResponse.json();
+                if (waterData.length > 0) {
+                    document.getElementById('data-source').textContent = waterData[0].source.toUpperCase();
+                }
+
+            } catch (error) {
+                console.error('Error updating current status:', error);
+            }
+        }
+
+        // Update weather data
+        async function updateWeatherData() {
+            try {
+                const response = await fetch('/api/weather?hours=1');
+                const weatherData = await response.json();
+                
+                if (weatherData.length > 0) {
+                    const latest = weatherData[0];
+                    document.getElementById('current-precip').textContent = (latest.precipitation_mm || 0).toFixed(1);
+                    document.getElementById('current-pressure').textContent = (latest.pressure_hpa || 0).toFixed(1);
+                    document.getElementById('current-temp').textContent = (latest.temperature_c || 0).toFixed(1);
+                    document.getElementById('current-humidity').textContent = (latest.humidity_percent || 0).toFixed(0);
+                }
+                
+                // Fetch rainfall data
+                const rainResponse = await fetch('/api/rainfall?hours=24');
+                const rainData = await rainResponse.json();
+                if (rainData.length > 0) {
+                    const latestRain = rainData[rainData.length - 1];
+                    document.getElementById('rainfall-24h').textContent = (latestRain.total_rainfall_mm || 0).toFixed(1);
+                    document.getElementById('rain-tips-24h').textContent = latestRain.total_tips || 0;
+                }
+            } catch (error) {
+                console.error('Error updating weather data:', error);
+            }
+        }
+
+        // Update system status
+        async function updateSystemStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                // Update LoRa status
+                const loraStatus = document.getElementById('lora-status');
+                loraStatus.textContent = status.lora.message;
+                loraStatus.className = `system-status status-${status.lora.status}`;
+                loraStatus.style.color = statusColors[status.lora.status];
+
+                // Update SMS status
+                const smsStatus = document.getElementById('sms-status');
+                smsStatus.textContent = status.sms.message;
+                smsStatus.className = `system-status status-${status.sms.status}`;
+                smsStatus.style.color = statusColors[status.sms.status];
+
+                // Update weather status
+                const weatherStatus = document.getElementById('weather-status');
+                weatherStatus.textContent = status.weather.message;
+                weatherStatus.className = `system-status status-${status.weather.status}`;
+                weatherStatus.style.color = statusColors[status.weather.status];
+
+                // Update model status
+                const modelStatus = document.getElementById('model-status');
+                modelStatus.textContent = status.model.message;
+                modelStatus.className = `system-status status-${status.model.status}`;
+                modelStatus.style.color = statusColors[status.model.status];
+
+            } catch (error) {
+                console.error('Error updating system status:', error);
+            }
+        }
+
+        // Update alerts
+        async function updateAlerts() {
+            try {
+                const response = await fetch('/api/alerts?limit=10');
+                const alerts = await response.json();
+                
+                const alertsList = document.getElementById('alerts-list');
+                
+                if (alerts.length === 0) {
+                    alertsList.innerHTML = '<p>No recent alerts</p>';
+                    return;
+                }
+
+                alertsList.innerHTML = alerts.map(alert => {
+                    const riskColor = riskColors[alert.risk_level] || '#6c757d';
+                    return `
+                        <div class="alert-item" style="border-left: 4px solid ${riskColor}">
+                            <div class="alert-header">
+                                <span class="alert-risk" style="color: ${riskColor}">${alert.risk_level.toUpperCase()}</span>
+                                <span class="alert-time">${timeAgo(alert.timestamp)}</span>
+                            </div>
+                            <div class="alert-message">${alert.message}</div>
+                            <div class="alert-meta">
+                                Water: ${alert.water_level_m.toFixed(2)}m | 
+                                Status: ${alert.status}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error updating alerts:', error);
+            }
+        }
+
+        // Update fuzzy logic details
+        async function updateFuzzyDetails() {
+            try {
+                const response = await fetch('/api/fuzzy-details');
+                const details = await response.json();
+                
+                if (details.error) {
+                    console.error('Error getting fuzzy details:', details.error);
+                    return;
+                }
+
+                // Update RF Propensity
+                const rfPropensity = details.rf_propensity || 'Unknown';
+                document.getElementById('fuzzy-rf-propensity').textContent = rfPropensity;
+                document.getElementById('fuzzy-rf-propensity').className = 'fuzzy-value';
+                if (rfPropensity === 'High') {
+                    document.getElementById('fuzzy-rf-propensity').style.color = '#dc3545';
+                } else if (rfPropensity === 'Medium') {
+                    document.getElementById('fuzzy-rf-propensity').style.color = '#fd7e14';
+                } else if (rfPropensity === 'Low') {
+                    document.getElementById('fuzzy-rf-propensity').style.color = '#28a745';
+                }
+
+                // Update Rule Triggered
+                const ruleTriggered = details.rule_triggered || 'N/A';
+                document.getElementById('fuzzy-rule-triggered').textContent = ruleTriggered;
+
+                // Update Water Level
+                const waterLevel = details.current_water_level_mm || 0;
+                document.getElementById('fuzzy-water-level').textContent = waterLevel.toFixed(0);
+
+                // Update Rate of Rise
+                const ror = details.fuzzy_inputs?.rate_of_rise_mm_day || 0;
+                document.getElementById('fuzzy-rate-of-rise').textContent = ror.toFixed(1);
+
+                // Update Forecast Rain
+                const forecastRain = details.fuzzy_inputs?.forecast_rain_mm || 0;
+                document.getElementById('fuzzy-forecast-rain').textContent = forecastRain.toFixed(1);
+
+                // Update Tide Level
+                const tideLevel = details.fuzzy_inputs?.tide_level_m || 0;
+                document.getElementById('fuzzy-tide-level').textContent = tideLevel.toFixed(2);
+
+            } catch (error) {
+                console.error('Error updating fuzzy details:', error);
+            }
+        }
+
+        // Create or update water level chart
+        async function updateWaterLevelChart() {
+            try {
+                const response = await fetch('/api/water-levels?hours=24');
+                const waterLevels = await response.json();
+                
+                if (waterLevels.length === 0) {
+                    return;
+                }
+
+                // Sort by timestamp
+                waterLevels.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                const timestamps = waterLevels.map(wl => wl.timestamp);
+                const levels = waterLevels.map(wl => wl.water_level_m);
+                const sources = waterLevels.map(wl => wl.source);
+
+                const ctx = document.getElementById('waterLevelChart').getContext('2d');
+                
+                // Destroy existing chart if it exists
+                if (waterLevelChart) {
+                    waterLevelChart.destroy();
+                }
+
+                waterLevelChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timestamps,
+                        datasets: [{
+                            label: 'Water Level (m)',
+                            data: levels,
+                            borderColor: '#17a2b8',
+                            backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1,
+                            pointRadius: 3,
+                            pointBackgroundColor: sources.map(s => s === 'lora' ? '#28a745' : '#ffc107')
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour',
+                                    displayFormats: {
+                                        hour: 'HH:mm'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Water Level (m)'
+                                },
+                                min: 0,
+                                max: 8
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Water Level: ${context.parsed.y.toFixed(2)} m (${sources[context.dataIndex].toUpperCase()})`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error updating water level chart:', error);
+            }
+        }
+
+        // Create or update forecast chart
+        async function updateForecastChart() {
+            try {
+                const response = await fetch('/api/forecast?days=7');
+                const forecast = await response.json();
+                
+                if (forecast.length === 0) {
+                    return;
+                }
+
+                // Get current water level for reference
+                const currentResponse = await fetch('/api/prediction');
+                const current = await currentResponse.json();
+                const currentLevel = current.current_level_m || 0;
+
+                // Get risk thresholds
+                const criticalLevel = 7.5;
+
+                const timestamps = forecast.map(f => f.timestamp);
+                const levels = forecast.map(f => f.water_level_m);
+
+                const ctx = document.getElementById('forecastChart').getContext('2d');
+                
+                // Destroy existing chart if it exists
+                if (forecastChart) {
+                    forecastChart.destroy();
+                }
+
+                forecastChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timestamps,
+                        datasets: [
+                            {
+                                label: 'Forecasted Water Level',
+                                data: levels,
+                                borderColor: '#17a2b8',
+                                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1,
+                                pointRadius: 4
+                            },
+                            {
+                                label: 'Current Level',
+                                data: Array(forecast.length).fill(currentLevel),
+                                borderColor: '#6c757d',
+                                backgroundColor: 'transparent',
+                                borderWidth: 1,
+                                borderDash: [5, 5],
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'Alert Threshold (40%)',
+                                data: Array(forecast.length).fill(criticalLevel * 0.40),
+                                borderColor: '#ffc107',
+                                backgroundColor: 'transparent',
+                                borderWidth: 1,
+                                borderDash: [3, 3],
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'Alarm Threshold (60%)',
+                                data: Array(forecast.length).fill(criticalLevel * 0.60),
+                                borderColor: '#fd7e14',
+                                backgroundColor: 'transparent',
+                                borderWidth: 1,
+                                borderDash: [3, 3],
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'Critical Threshold (100%)',
+                                data: Array(forecast.length).fill(criticalLevel),
+                                borderColor: '#dc3545',
+                                backgroundColor: 'transparent',
+                                borderWidth: 1,
+                                borderDash: [3, 3],
+                                fill: false,
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM dd'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Water Level (m)'
+                                },
+                                min: 0,
+                                max: 8
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if (context.dataset.label.includes('Threshold')) {
+                                            return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} m`;
+                                        }
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} m`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error updating forecast chart:', error);
+            }
+        }
+
+        // Refresh prediction
+        async function refreshPrediction() {
+            try {
+                const response = await fetch('/api/refresh-prediction', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert('Prediction refreshed successfully!');
+                    // Refresh all data
+                    refreshAll();
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to refresh prediction'));
+                }
+            } catch (error) {
+                console.error('Error refreshing prediction:', error);
+                alert('Error refreshing prediction');
+            }
+        }
+
+        // Test SMS alert
+        async function testAlert() {
+            try {
+                const response = await fetch('/api/test-alert', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert('Test alert sent successfully!');
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to send test alert'));
+                }
+            } catch (error) {
+                console.error('Error testing alert:', error);
+                alert('Error sending test alert');
+            }
+        }
+
+        // Refresh all data
+        async function refreshAll() {
+            await Promise.all([
+                updateCurrentStatus(),
+                updateWeatherData(),
+                updateSystemStatus(),
+                updateAlerts(),
+                updateFuzzyDetails(),
+                updateWaterLevelChart(),
+                updateForecastChart()
+            ]);
+            
+            // Update last refresh time
+            document.getElementById('last-refresh').textContent = 
+                `Last refresh: ${new Date().toLocaleString()}`;
+        }
+
+        // Auto-refresh every N seconds
+        const autoRefreshSeconds = {{ auto_refresh_seconds }};
+        setInterval(refreshAll, autoRefreshSeconds * 1000);
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', refreshAll);
+    </script>
+</body>
+</html>
