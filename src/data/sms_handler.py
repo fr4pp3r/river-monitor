@@ -10,12 +10,13 @@ from typing import List, Optional
 
 from src.config import (
     SMS_UART_PORT, SMS_BAUD_RATE, SMS_TIMEOUT,
-    ALERT_PHONE_NUMBERS, SMS_ALERT_TEMPLATE, SMS_ALERT_RISK_LEVELS,
+    SMS_ALERT_TEMPLATE, SMS_ALERT_RISK_LEVELS,
     WATER_LEVEL_INTERVAL
 )
 from src.data.database import (
     insert_water_level, get_latest_water_level,
-    insert_alert, update_alert_status, get_recent_alerts
+    insert_alert, update_alert_status, get_recent_alerts,
+    get_active_alert_phone_numbers
 )
 
 
@@ -205,19 +206,26 @@ class SMSHandler:
             forecast_change=forecast_change
         )
         
+        # Get phone numbers from database based on risk level
+        phone_numbers = get_active_alert_phone_numbers(risk_level)
+        
+        if not phone_numbers:
+            print(f"No active contacts configured for {risk_level} alerts")
+            return False
+        
         # Record alert in database
         alert_id = insert_alert(
             datetime.now(),
             risk_level,
             water_level_m,
             message,
-            ",".join(ALERT_PHONE_NUMBERS),
+            ",".join(phone_numbers),
             "pending"
         )
         
         # Send to all phone numbers
         success = True
-        for phone_number in ALERT_PHONE_NUMBERS:
+        for phone_number in phone_numbers:
             if self.send_sms(phone_number, message):
                 print(f"Alert sent to {phone_number}")
             else:
@@ -256,6 +264,33 @@ def send_alert_sms(risk_level: str, water_level_m: float, forecast_change: float
             print(f"Alert SMS sent for {risk_level} risk level")
         else:
             print(f"Failed to send alert SMS for {risk_level}")
+    finally:
+        handler.cleanup()
+
+
+def test_alert_sms():
+    """Test SMS alert system with a test message"""
+    handler = SMSHandler()
+    try:
+        # Get all active contacts for testing
+        from src.data.database import get_all_alert_contacts
+        contacts = get_all_alert_contacts(active_only=True)
+        phone_numbers = [c['phone_number'] for c in contacts]
+        
+        if not phone_numbers:
+            print("No active contacts configured for test")
+            return False
+        
+        message = "[TEST] River Monitor System - Test Alert"
+        success = True
+        for phone_number in phone_numbers:
+            if handler.send_sms(phone_number, message):
+                print(f"Test alert sent to {phone_number}")
+            else:
+                success = False
+                print(f"Failed to send test alert to {phone_number}")
+        
+        return success
     finally:
         handler.cleanup()
 

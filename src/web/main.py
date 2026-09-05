@@ -23,10 +23,11 @@ from src.data.database import (
     get_latest_weather, get_weather_since,
     get_latest_prediction, get_predictions_since,
     get_recent_alerts, get_system_status, get_database_stats,
-    get_rainfall_since, get_rainfall_stats
+    get_rainfall_since, get_rainfall_stats,
+    get_all_alert_contacts, insert_alert_contact, update_alert_contact, delete_alert_contact,
+    get_active_alert_phone_numbers
 )
-from src.model.predict import FloodPredictor
-from src.model.fuzzy_logic import get_fuzzy_system
+from src.data.sms_handler import test_alert_sms
 
 
 # Initialize FastAPI app
@@ -286,15 +287,103 @@ async def refresh_prediction() -> JSONResponse:
 async def test_alert() -> JSONResponse:
     """Test SMS alert system"""
     try:
-        from src.data.sms_handler import send_alert_sms
+        from src.data.sms_handler import test_alert_sms
         
         # Send a test alert
-        send_alert_sms("test", 1.0, 0.0)
+        success = test_alert_sms()
         
-        return JSONResponse(content={"status": "success", "message": "Test alert sent"})
+        if success:
+            return JSONResponse(content={"status": "success", "message": "Test alert sent"})
+        else:
+            return JSONResponse(content={"status": "error", "message": "Failed to send test alert"}, status_code=500)
         
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
+
+
+# ============================================================================
+# ALERT CONTACTS API ENDPOINTS
+# ============================================================================
+
+@app.get("/api/contacts")
+async def get_contacts(active_only: bool = True) -> JSONResponse:
+    """Get all alert contacts"""
+    try:
+        contacts = get_all_alert_contacts(active_only=active_only)
+        return JSONResponse(content=contacts)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.post("/api/contacts")
+async def create_contact(request: Request) -> JSONResponse:
+    """Create a new alert contact"""
+    try:
+        data = await request.json()
+        name = data.get('name')
+        phone_number = data.get('phone_number')
+        receive_alert = data.get('receive_alert', 1)
+        receive_warning = data.get('receive_warning', 1)
+        receive_critical = data.get('receive_critical', 1)
+        
+        if not name or not phone_number:
+            return JSONResponse(content={"error": "Name and phone number are required"}, status_code=400)
+        
+        contact_id = insert_alert_contact(
+            name=name,
+            phone_number=phone_number,
+            receive_alert=receive_alert,
+            receive_warning=receive_warning,
+            receive_critical=receive_critical
+        )
+        
+        return JSONResponse(content={"status": "success", "contact_id": contact_id})
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.put("/api/contacts/{contact_id}")
+async def update_contact(contact_id: int, request: Request) -> JSONResponse:
+    """Update an alert contact"""
+    try:
+        data = await request.json()
+        updates = {k: v for k, v in data.items() if k in ['name', 'phone_number', 'is_active', 'receive_alert', 'receive_warning', 'receive_critical']}
+        
+        if not updates:
+            return JSONResponse(content={"error": "No valid fields to update"}, status_code=400)
+        
+        success = update_alert_contact(contact_id, **updates)
+        
+        if success:
+            return JSONResponse(content={"status": "success"})
+        else:
+            return JSONResponse(content={"error": "Contact not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.delete("/api/contacts/{contact_id}")
+async def delete_contact(contact_id: int) -> JSONResponse:
+    """Delete an alert contact"""
+    try:
+        success = delete_alert_contact(contact_id)
+        
+        if success:
+            return JSONResponse(content={"status": "success"})
+        else:
+            return JSONResponse(content={"error": "Contact not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/contacts/phone-numbers")
+async def get_phone_numbers(risk_level: str = None) -> JSONResponse:
+    """Get phone numbers for a specific risk level"""
+    try:
+        numbers = get_active_alert_phone_numbers(risk_level)
+        return JSONResponse(content={"phone_numbers": numbers})
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
 # ============================================================================

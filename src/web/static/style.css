@@ -532,9 +532,176 @@ html, body {
     opacity: 1;
 }
 
+/* Contacts Card */
+.contacts-card {
+    grid-column: span 2;
+}
+
+.contacts-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.contact-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--light-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.contact-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.contact-name {
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 2px;
+}
+
+.contact-phone {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    word-break: break-all;
+}
+
+.contact-risk-levels {
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+    margin-top: 2px;
+}
+
+.contact-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.contact-status {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.contact-status-active {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.contact-status-inactive {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+/* Contact Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    width: 90%;
+    max-width: 500px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.modal-close {
+    color: var(--text-light);
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+    color: var(--text-color);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(23, 162, 184, 0.25);
+}
+
+.checkbox-group {
+    margin-bottom: 15px;
+}
+
+.checkbox-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input {
+    margin-right: 8px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
 /* Print Styles */
 @media print {
-    .header, .footer, .btn, .status-actions {
+    .header, .footer, .btn, .status-actions, .modal {
         display: none !important;
     }
     

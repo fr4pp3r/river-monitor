@@ -57,12 +57,12 @@ WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 MARINE_API_URL = "https://marine-api.open-meteo.com/v1/marine"
 
 # Location coordinates (default: Manila)
-WEATHER_LATITUDE = 14.5995
-WEATHER_LONGITUDE = 120.9842
+WEATHER_LATITUDE = 9.299495315028961
+WEATHER_LONGITUDE = 118.43788786664786
 
 # Weather parameters
 WEATHER_DAILY_PARAMS = "temperature_2m_max,temperature_2m_min,precipitation_sum"
-MARINE_DAILY_PARAMS = "tide_level_max,tide_level_min"
+MARINE_HOURLY_PARAMS = "sea_level_height_msl"
 WEATHER_TIMEZONE = "auto"
 WEATHER_FORECAST_DAYS = 7
 
@@ -74,7 +74,7 @@ WEATHER_CACHE_EXPIRY = 21600  # 6 hours in seconds
 # ============================================================================
 
 # Phone numbers to receive SMS alerts (format: ["+639123456789", "+639876543210"])
-ALERT_PHONE_NUMBERS = ["+639123456789"]  # REPLACE WITH ACTUAL NUMBERS
+ALERT_PHONE_NUMBERS = ["+639940176150"]  # REPLACE WITH ACTUAL NUMBERS
 
 # Risk levels that trigger SMS alerts
 SMS_ALERT_RISK_LEVELS = ["alarm", "critical"]

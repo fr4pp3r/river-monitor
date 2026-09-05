@@ -104,6 +104,21 @@ def init_database():
             )
         """)
         
+        # Alert contacts table (phone numbers for SMS alerts)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS alert_contacts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                phone_number TEXT NOT NULL UNIQUE,
+                is_active INTEGER DEFAULT 1,
+                receive_alert INTEGER DEFAULT 1,
+                receive_warning INTEGER DEFAULT 1,
+                receive_critical INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
         # System status table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS system_status (
@@ -363,6 +378,97 @@ def get_recent_alerts(limit: int = 50) -> List[Dict]:
             LIMIT ?
         """, (limit,))
         return [dict(row) for row in cursor.fetchall()]
+
+
+# ============================================================================
+# ALERT CONTACTS OPERATIONS
+# ============================================================================
+
+def insert_alert_contact(name: str, phone_number: str, 
+                         receive_alert: int = 1, receive_warning: int = 1, 
+                         receive_critical: int = 1) -> int:
+    """Insert a new alert contact"""
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO alert_contacts (name, phone_number, receive_alert, receive_warning, receive_critical)
+            VALUES (?, ?, ?, ?, ?)
+        """, (name, phone_number, receive_alert, receive_warning, receive_critical))
+        return cursor.lastrowid
+
+
+def get_all_alert_contacts(active_only: bool = True) -> List[Dict]:
+    """Get all alert contacts"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if active_only:
+            cursor.execute("""
+                SELECT * FROM alert_contacts 
+                WHERE is_active = 1
+                ORDER BY name
+            """)
+        else:
+            cursor.execute("""
+                SELECT * FROM alert_contacts 
+                ORDER BY name
+            """)
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_active_alert_phone_numbers(risk_level: str = None) -> List[str]:
+    """Get phone numbers of active contacts for a specific risk level"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        if risk_level == 'critical':
+            cursor.execute("""
+                SELECT phone_number FROM alert_contacts 
+                WHERE is_active = 1 AND receive_critical = 1
+            """)
+        elif risk_level == 'alarm':
+            cursor.execute("""
+                SELECT phone_number FROM alert_contacts 
+                WHERE is_active = 1 AND (receive_critical = 1 OR receive_warning = 1)
+            """)
+        elif risk_level == 'alert':
+            cursor.execute("""
+                SELECT phone_number FROM alert_contacts 
+                WHERE is_active = 1 AND (receive_critical = 1 OR receive_warning = 1 OR receive_alert = 1)
+            """)
+        else:
+            cursor.execute("""
+                SELECT phone_number FROM alert_contacts 
+                WHERE is_active = 1 AND receive_alert = 1
+            """)
+        return [row[0] for row in cursor.fetchall()]
+
+
+def update_alert_contact(contact_id: int, **kwargs) -> bool:
+    """Update an alert contact"""
+    allowed_fields = ['name', 'phone_number', 'is_active', 'receive_alert', 'receive_warning', 'receive_critical']
+    updates = {k: v for k, v in kwargs.items() if k in allowed_fields}
+    
+    if not updates:
+        return False
+    
+    updates['updated_at'] = datetime.now().isoformat()
+    
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        set_clause = ', '.join([f"{k} = ?" for k in updates.keys()])
+        values = list(updates.values()) + [contact_id]
+        cursor.execute(f"""
+            UPDATE alert_contacts SET {set_clause} WHERE id = ?
+        """, values)
+        return cursor.rowcount > 0
+
+
+def delete_alert_contact(contact_id: int) -> bool:
+    """Delete an alert contact"""
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM alert_contacts WHERE id = ?", (contact_id,))
+        return cursor.rowcount > 0
 
 
 # ============================================================================

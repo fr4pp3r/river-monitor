@@ -12,7 +12,7 @@ from typing import Dict, Optional, List
 from src.config import (
     WEATHER_API_URL, MARINE_API_URL,
     WEATHER_LATITUDE, WEATHER_LONGITUDE,
-    WEATHER_DAILY_PARAMS, MARINE_DAILY_PARAMS,
+    WEATHER_DAILY_PARAMS, MARINE_HOURLY_PARAMS,
     WEATHER_TIMEZONE, WEATHER_FORECAST_DAYS,
     WEATHER_CACHE_EXPIRY
 )
@@ -49,11 +49,11 @@ class WeatherFetcher:
             return None
     
     def fetch_tide_data(self) -> Optional[Dict]:
-        """Fetch tide forecast from Open-Meteo Marine API"""
+        """Fetch tide forecast from Open-Meteo Marine API (hourly sea level, derive daily max/min)"""
         params = {
             'latitude': WEATHER_LATITUDE,
             'longitude': WEATHER_LONGITUDE,
-            'daily': MARINE_DAILY_PARAMS,
+            'hourly': MARINE_HOURLY_PARAMS,
             'timezone': WEATHER_TIMEZONE,
             'forecast_days': WEATHER_FORECAST_DAYS
         }
@@ -125,24 +125,47 @@ class WeatherFetcher:
         return processed
     
     def process_tide_data(self, api_data: Dict) -> Dict:
-        """Process raw tide API data into structured format"""
+        """Process raw tide API data (hourly) into daily max/min format"""
         processed = {
             'timestamp': datetime.now(),
             'daily': []
         }
         
-        if 'daily' in api_data:
-            daily = api_data['daily']
-            dates = daily.get('time', [])
-            tide_max = daily.get('tide_level_max', [])
-            tide_min = daily.get('tide_level_min', [])
+        if 'hourly' in api_data:
+            hourly = api_data['hourly']
+            times = hourly.get('time', [])
+            sea_levels = hourly.get('sea_level_height_msl', [])
             
-            for i, date_str in enumerate(dates):
+            # Group hourly data by date and compute daily max/min
+            daily_data = {}
+            for i, time_str in enumerate(times):
+                if i >= len(sea_levels):
+                    break
+                sea_level = sea_levels[i]
+                if sea_level is None:
+                    continue
+                    
+                # Parse date from ISO timestamp (e.g., "2026-09-05T00:00")
+                try:
+                    dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                    date_key = dt.date().isoformat()
+                except ValueError:
+                    continue
+                
+                if date_key not in daily_data:
+                    daily_data[date_key] = {'max': sea_level, 'min': sea_level}
+                else:
+                    daily_data[date_key]['max'] = max(daily_data[date_key]['max'], sea_level)
+                    daily_data[date_key]['min'] = min(daily_data[date_key]['min'], sea_level)
+            
+            # Convert to daily list sorted by date
+            for date_key in sorted(daily_data.keys()):
+                day_data = daily_data[date_key]
                 processed['daily'].append({
-                    'date': date_str,
-                    'timestamp': datetime.fromisoformat(date_str),
-                    'tide_max_m': tide_max[i] if i < len(tide_max) else None,
-                    'tide_min_m': tide_min[i] if i < len(tide_min) else None
+                    'date': date_key,
+                    'timestamp': datetime.fromisoformat(date_key),
+                    'tide_max_m': day_data['max'],
+                    'tide_min_m': day_data['min']
                 })
             
             # Current values (first day)
@@ -158,9 +181,23 @@ class WeatherFetcher:
     def cache_weather_data(self, data: Dict):
         """Cache weather and tide data to file"""
         cache_file = os.path.join(self.cache_dir, "weather_cache.json")
+        
+        def convert_datetime(obj):
+            """Recursively convert datetime objects to ISO format strings"""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, dict):
+                return {k: convert_datetime(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_datetime(item) for item in obj]
+            else:
+                return obj
+        
+        serializable_data = convert_datetime(data)
+        
         cache_data = {
             'timestamp': datetime.now().isoformat(),
-            'data': data
+            'data': serializable_data
         }
         with open(cache_file, 'w') as f:
             json.dump(cache_data, f)
@@ -194,14 +231,31 @@ class WeatherFetcher:
             current = data.get('current', {})
             tide_current = data.get('tide', {}).get('current', {})
             
+            # Convert daily data to JSON-serializable format
+            daily_data = data.get('daily', [])
+            serializable_daily = []
+            for day in daily_data:
+                day_copy = day.copy()
+                if 'timestamp' in day_copy and hasattr(day_copy['timestamp'], 'isoformat'):
+                    day_copy['timestamp'] = day_copy['timestamp'].isoformat()
+                serializable_daily.append(day_copy)
+            
+            tide_daily = data.get('tide', {}).get('daily', [])
+            serializable_tide_daily = []
+            for day in tide_daily:
+                day_copy = day.copy()
+                if 'timestamp' in day_copy and hasattr(day_copy['timestamp'], 'isoformat'):
+                    day_copy['timestamp'] = day_copy['timestamp'].isoformat()
+                serializable_tide_daily.append(day_copy)
+            
             current_data = {
                 'precipitation_mm': current.get('precipitation_mm', 0),
                 'temperature_max_c': current.get('temperature_max_c'),
                 'temperature_min_c': current.get('temperature_min_c'),
                 'tide_max_m': tide_current.get('tide_max_m'),
                 'tide_min_m': tide_current.get('tide_min_m'),
-                'forecast_data': json.dumps(data.get('daily', [])),
-                'tide_forecast_data': json.dumps(data.get('tide', {}).get('daily', []))
+                'forecast_data': json.dumps(serializable_daily),
+                'tide_forecast_data': json.dumps(serializable_tide_daily)
             }
             
             insert_weather_data(datetime.now(), current_data)
