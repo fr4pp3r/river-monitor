@@ -157,7 +157,7 @@ river-monitor/
 
 - **Operating System**: Raspberry Pi OS Lite (64-bit) recommended
 - **Python**: 3.11 or higher
-- **Dependencies**: See `requirements.txt` (includes `scikit-fuzzy==0.4.2`)
+- **Dependencies**: See `requirements.txt` (includes `scikit-fuzzy>=0.5.0`)
 
 ## Setup Instructions
 
