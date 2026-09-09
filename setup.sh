@@ -35,13 +35,36 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Run an apt command but do NOT let a failure abort the script (set -e safe).
+# System package failures (e.g. camera/multimedia stack) should not block
+# the parts of the setup that actually matter for this project.
+apt_nonfatal() {
+    if sudo apt-get "$@"; then
+        echo -e "${GREEN}apt-get $1 completed successfully${NC}"
+    else
+        echo -e "${RED}Warning: apt-get $1 reported errors (exit code $?).${NC}"
+        echo -e "${YELLOW}Continuing setup anyway — many system packages are unrelated to the river monitor and can be skipped.${NC}"
+    fi
+}
+
 # Update system
 print_section "Updating System Packages"
+
+# Repair any broken package state left over from a previous/interrupted upgrade.
+# This is the common cause of "E: Sub-process /usr/bin/dpkg returned an error code (1)".
+echo -e "${YELLOW}Repairing broken package state (dpkg --configure -a)...${NC}"
+apt_nonfatal --fix-broken install
+apt_nonfatal -f install
+
 echo -e "${YELLOW}Updating apt package lists...${NC}"
-sudo apt-get update -y
+apt_nonfatal update
 
 echo -e "${YELLOW}Upgrading installed packages...${NC}"
-sudo apt-get upgrade -y
+# NOTE: Use a non-fatal upgrade. On Raspberry Pi OS the camera/multimedia
+# packages (ffmpeg, rpicam-apps, gstreamer, etc.) sometimes fail to configure.
+# These are NOT needed by the river monitor, so we warn and continue instead
+# of stopping the whole setup.
+apt_nonfatal upgrade
 
 # Install required system packages
 print_section "Installing System Dependencies"
@@ -58,7 +81,7 @@ PACKAGES=(
 )
 
 echo -e "${YELLOW}Installing packages: ${PACKAGES[*]}${NC}"
-sudo apt-get install -y "${PACKAGES[@]}"
+apt_nonfatal install -y "${PACKAGES[@]}"
 
 # Enable SPI and UART
 print_section "Enabling Hardware Interfaces"
