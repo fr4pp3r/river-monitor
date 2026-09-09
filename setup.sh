@@ -47,24 +47,45 @@ apt_nonfatal() {
     fi
 }
 
-# Update system
-print_section "Updating System Packages"
+# ---------------------------------------------------------------------------
+# SYSTEM UPDATE / UPGRADE  (OPTIONAL — SKIPPED BY DEFAULT)
+# ---------------------------------------------------------------------------
+# By default we do NOT run `apt update` / `apt upgrade`. Doing a full system
+# upgrade on a Raspberry Pi can be risky: if it is interrupted or a
+# camera/multimedia package (ffmpeg, rpicam-apps, gstreamer, ...) fails to
+# configure mid-way, a reboot can leave the OS unbootable.
+#
+# The river monitor does NOT need these packages, and a fresh Raspberry Pi OS
+# already ships everything required (python3, pip, etc.). So we skip the
+# upgrade entirely unless you explicitly opt in.
+#
+# To enable it, run setup with:   ./setup.sh --update
+# ---------------------------------------------------------------------------
 
-# Repair any broken package state left over from a previous/interrupted upgrade.
-# This is the common cause of "E: Sub-process /usr/bin/dpkg returned an error code (1)".
-echo -e "${YELLOW}Repairing broken package state (dpkg --configure -a)...${NC}"
-apt_nonfatal --fix-broken install
-apt_nonfatal -f install
+SKIP_SYSTEM_UPDATE=1
+if [ "$1" = "--update" ]; then
+    SKIP_SYSTEM_UPDATE=0
+fi
 
-echo -e "${YELLOW}Updating apt package lists...${NC}"
-apt_nonfatal update
+if [ "$SKIP_SYSTEM_UPDATE" -eq 1 ]; then
+    echo -e "${YELLOW}Skipping system update/upgrade.${NC}"
+    echo -e "${YELLOW}To run it, re-run this script with: ./setup.sh --update${NC}"
+    echo -e "${YELLOW}(Only do this when you can afford to reboot after it completes.)${NC}"
+else
+    print_section "Updating System Packages"
 
-echo -e "${YELLOW}Upgrading installed packages...${NC}"
-# NOTE: Use a non-fatal upgrade. On Raspberry Pi OS the camera/multimedia
-# packages (ffmpeg, rpicam-apps, gstreamer, etc.) sometimes fail to configure.
-# These are NOT needed by the river monitor, so we warn and continue instead
-# of stopping the whole setup.
-apt_nonfatal upgrade
+    # Repair any broken package state left over from a previous/interrupted upgrade.
+    # This is the common cause of "E: Sub-process /usr/bin/dpkg returned an error code (1)".
+    echo -e "${YELLOW}Repairing broken package state (dpkg --configure -a)...${NC}"
+    apt_nonfatal --fix-broken install
+    apt_nonfatal -f install
+
+    echo -e "${YELLOW}Updating apt package lists...${NC}"
+    apt_nonfatal update
+
+    echo -e "${YELLOW}Upgrading installed packages...${NC}"
+    apt_nonfatal upgrade
+fi
 
 # Install required system packages
 print_section "Installing System Dependencies"
