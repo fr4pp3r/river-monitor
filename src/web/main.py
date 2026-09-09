@@ -4,6 +4,8 @@ Provides a LAN-accessible dashboard for visualizing water levels, weather, and p
 """
 
 import json
+import os
+import sys
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
@@ -12,6 +14,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 import uvicorn
+
+# Ensure the project root is on the module search path so that
+# "from src.config import ..." styles of absolute imports work
+# regardless of the directory this script is invoked from.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 from src.config import (
     DASHBOARD_HOST, DASHBOARD_PORT,
