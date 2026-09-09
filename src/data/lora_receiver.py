@@ -11,9 +11,10 @@ from datetime import datetime
 from typing import Optional, Callable
 
 from src.config import (
-    LORA_SPI_PORT, LORA_CE_PIN, LORA_CS_PIN, LORA_RESET_PIN,
+    LORA_ENABLED, LORA_SPI_PORT, LORA_CE_PIN, LORA_CS_PIN, LORA_RESET_PIN,
     LORA_FREQUENCY, LORA_BANDWIDTH, LORA_SPREADING_FACTOR, LORA_CODING_RATE,
-    SENSOR_MAX_DISTANCE, SENSOR_MAX_DISTANCE_MM, RAIN_BUCKET_TIP_MM, WATER_LEVEL_INTERVAL
+    SENSOR_MAX_DISTANCE, SENSOR_MAX_DISTANCE_MM, RAIN_BUCKET_TIP_MM, WATER_LEVEL_INTERVAL,
+    SMS_ENABLED
 )
 from src.data.database import insert_water_level, get_latest_water_level
 from src.data.sms_handler import trigger_sms_fallback
@@ -26,6 +27,13 @@ class LoRaReceiver:
         self.spi = None
         self.gpio_setup_done = False
         self.last_receive_time = None
+        
+        if not LORA_ENABLED:
+            print("LoRa module is DISABLED in config (LORA_ENABLED=False)")
+            self.enabled = False
+            return
+        
+        self.enabled = True
         self.setup_hardware()
         
     def setup_hardware(self):
@@ -251,6 +259,10 @@ class LoRaReceiver:
     
     def run(self, callback: Optional[Callable] = None):
         """Main receive loop"""
+        if not self.enabled:
+            print("LoRa receiver is disabled, skipping run loop")
+            return
+        
         print("Starting LoRa receiver...")
         
         try:
@@ -263,8 +275,11 @@ class LoRaReceiver:
                 
                 # Check if fallback needed
                 if self.check_fallback_needed():
-                    print("No LoRa data received, triggering SMS fallback...")
-                    trigger_sms_fallback()
+                    if SMS_ENABLED:
+                        print("No LoRa data received, triggering SMS fallback...")
+                        trigger_sms_fallback()
+                    else:
+                        print("No LoRa data received, SMS fallback is DISABLED")
                     self.last_receive_time = datetime.now()  # Reset timer
                 
         except KeyboardInterrupt:
@@ -282,6 +297,9 @@ class LoRaReceiver:
 
 def start_lora_receiver():
     """Start the LoRa receiver as a standalone process"""
+    if not LORA_ENABLED:
+        print("LoRa module is DISABLED in config. Skipping.")
+        return
     receiver = LoRaReceiver()
     receiver.run()
 

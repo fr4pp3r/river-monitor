@@ -284,6 +284,11 @@ html, body {
     color: var(--danger-color);
 }
 
+.status-disabled {
+    color: #6c757d;
+    font-style: italic;
+}
+
 /* Alerts Card */
 .alerts-card {
     grid-column: span 2;

@@ -16,7 +16,8 @@ import uvicorn
 from src.config import (
     DASHBOARD_HOST, DASHBOARD_PORT,
     AUTO_REFRESH_SECONDS, CRITICAL_LEVEL_M,
-    RISK_THRESHOLDS, RISK_LEVELS
+    RISK_THRESHOLDS, RISK_LEVELS,
+    LORA_ENABLED, SMS_ENABLED
 )
 from src.data.database import (
     get_latest_water_level, get_water_levels_since,
@@ -68,14 +69,16 @@ async def get_status() -> JSONResponse:
         # Build status response
         status = {
             "lora": {
-                "status": "ok" if latest_water and latest_water['source'] == 'lora' else "warning",
+                "enabled": LORA_ENABLED,
+                "status": "disabled" if not LORA_ENABLED else ("ok" if latest_water and latest_water['source'] == 'lora' else "warning"),
                 "last_update": latest_water['timestamp'] if latest_water else None,
-                "message": "Receiving data" if latest_water and latest_water['source'] == 'lora' else "No recent LoRa data"
+                "message": "Module disabled" if not LORA_ENABLED else ("Receiving data" if latest_water and latest_water['source'] == 'lora' else "No recent LoRa data")
             },
             "sms": {
-                "status": "ok" if latest_water and latest_water['source'] == 'sms' else "ok",
+                "enabled": SMS_ENABLED,
+                "status": "disabled" if not SMS_ENABLED else "ok",
                 "last_update": latest_water['timestamp'] if latest_water and latest_water['source'] == 'sms' else None,
-                "message": "Fallback available"
+                "message": "Module disabled" if not SMS_ENABLED else "Fallback available"
             },
             "weather": {
                 "status": "ok" if latest_weather else "warning",
@@ -286,6 +289,9 @@ async def refresh_prediction() -> JSONResponse:
 @app.post("/api/test-alert")
 async def test_alert() -> JSONResponse:
     """Test SMS alert system"""
+    if not SMS_ENABLED:
+        return JSONResponse(content={"status": "error", "message": "SMS module is disabled in config"}, status_code=400)
+    
     try:
         from src.data.sms_handler import test_alert_sms
         

@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from src.config import (
-    SMS_UART_PORT, SMS_BAUD_RATE, SMS_TIMEOUT,
+    SMS_ENABLED, SMS_UART_PORT, SMS_BAUD_RATE, SMS_TIMEOUT,
     SMS_ALERT_TEMPLATE, SMS_ALERT_RISK_LEVELS,
     WATER_LEVEL_INTERVAL
 )
@@ -26,10 +26,20 @@ class SMSHandler:
     def __init__(self):
         self.serial_port = None
         self.last_sms_time = None
+        
+        if not SMS_ENABLED:
+            print("SMS module is DISABLED in config (SMS_ENABLED=False)")
+            self.enabled = False
+            return
+        
+        self.enabled = True
         self.connect()
     
     def connect(self, max_retries: int = 3) -> bool:
         """Connect to the SMS module"""
+        if not self.enabled:
+            return False
+        
         for attempt in range(max_retries):
             try:
                 self.serial_port = serial.Serial(
@@ -143,7 +153,7 @@ class SMSHandler:
             return None
         
         # List messages
-        if not self.send_at_command("AT+CMGL="ALL"", expected_response="+CMGL:"):
+        if not self.send_at_command('AT+CMGL="ALL"', expected_response="+CMGL:"):
             return None
         
         # Read response (this is simplified - actual parsing would be more complex)
@@ -246,6 +256,10 @@ class SMSHandler:
 
 def trigger_sms_fallback():
     """Trigger SMS fallback to get sensor data"""
+    if not SMS_ENABLED:
+        print("SMS fallback skipped: SMS module is DISABLED in config")
+        return
+    
     handler = SMSHandler()
     try:
         if handler.request_sensor_data():
@@ -258,6 +272,10 @@ def trigger_sms_fallback():
 
 def send_alert_sms(risk_level: str, water_level_m: float, forecast_change: float):
     """Send SMS alert for high risk levels"""
+    if not SMS_ENABLED:
+        print("Alert SMS skipped: SMS module is DISABLED in config")
+        return
+    
     handler = SMSHandler()
     try:
         if handler.send_alert(risk_level, water_level_m, forecast_change):
@@ -270,6 +288,10 @@ def send_alert_sms(risk_level: str, water_level_m: float, forecast_change: float
 
 def test_alert_sms():
     """Test SMS alert system with a test message"""
+    if not SMS_ENABLED:
+        print("Test alert skipped: SMS module is DISABLED in config")
+        return False
+    
     handler = SMSHandler()
     try:
         # Get all active contacts for testing
@@ -297,18 +319,21 @@ def test_alert_sms():
 
 if __name__ == "__main__":
     # Test SMS functionality
-    handler = SMSHandler()
-    try:
-        if handler.connect():
-            print("Testing SMS module...")
-            # Try to read any existing messages
-            message = handler.read_sms()
-            if message:
-                print(f"Found message: {message}")
-            else:
-                print("No messages found")
-            
-            # Test sending (uncomment to test)
-            # handler.send_sms("+639123456789", "Test message from River Monitor")
-    finally:
-        handler.cleanup()
+    if not SMS_ENABLED:
+        print("SMS module is DISABLED in config. Skipping.")
+    else:
+        handler = SMSHandler()
+        try:
+            if handler.connect():
+                print("Testing SMS module...")
+                # Try to read any existing messages
+                message = handler.read_sms()
+                if message:
+                    print(f"Found message: {message}")
+                else:
+                    print("No messages found")
+                
+                # Test sending (uncomment to test)
+                # handler.send_sms("+639123456789", "Test message from River Monitor")
+        finally:
+            handler.cleanup()

@@ -207,7 +207,8 @@
         const statusColors = {
             'ok': '#28a745',
             'warning': '#ffc107',
-            'error': '#dc3545'
+            'error': '#dc3545',
+            'disabled': '#6c757d'
         };
 
         // Format timestamp
@@ -314,6 +315,14 @@
                 smsStatus.textContent = status.sms.message;
                 smsStatus.className = `system-status status-${status.sms.status}`;
                 smsStatus.style.color = statusColors[status.sms.status];
+
+                // Hide Test SMS button when SMS module is disabled
+                const testAlertBtn = document.querySelector('.btn-warning');
+                if (status.sms.enabled === false) {
+                    testAlertBtn.style.display = 'none';
+                } else {
+                    testAlertBtn.style.display = '';
+                }
 
                 // Update weather status
                 const weatherStatus = document.getElementById('weather-status');

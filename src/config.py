@@ -4,6 +4,14 @@ Adjust these values according to your hardware setup and requirements
 """
 
 # ============================================================================
+# MODULE ENABLE/DISABLE FLAGS
+# ============================================================================
+
+# Set to False to disable hardware modules (useful for development/testing)
+LORA_ENABLED = False   # Enable/disable LoRa receiver module
+SMS_ENABLED = False    # Enable/disable SMS handler module
+
+# ============================================================================
 # HARDWARE CONFIGURATION
 # ============================================================================
 
