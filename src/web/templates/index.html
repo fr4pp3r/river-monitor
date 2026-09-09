@@ -242,6 +242,12 @@
                 
                 if (prediction.error) {
                     console.error('Error getting prediction:', prediction.error);
+                    // No data available yet — show a clear "No data" state instead of
+                    // leaving the card stuck on "Loading..."
+                    document.getElementById('current-water-level').textContent = 'No data';
+                    document.getElementById('current-risk-level').textContent = '—';
+                    document.getElementById('last-updated').textContent = 'Waiting for sensor data';
+                    document.getElementById('data-source').textContent = '—';
                     return;
                 }
 
@@ -274,7 +280,7 @@
         // Update weather data
         async function updateWeatherData() {
             try {
-                const response = await fetch('/api/weather?hours=1');
+                const response = await fetch('/api/weather?hours=6');
                 const weatherData = await response.json();
                 
                 if (weatherData.length > 0) {
@@ -283,6 +289,12 @@
                     document.getElementById('current-pressure').textContent = (latest.pressure_hpa || 0).toFixed(1);
                     document.getElementById('current-temp').textContent = (latest.temperature_c || 0).toFixed(1);
                     document.getElementById('current-humidity').textContent = (latest.humidity_percent || 0).toFixed(0);
+                } else {
+                    // No weather data available yet
+                    document.getElementById('current-precip').textContent = '—';
+                    document.getElementById('current-pressure').textContent = '—';
+                    document.getElementById('current-temp').textContent = '—';
+                    document.getElementById('current-humidity').textContent = '—';
                 }
                 
                 // Fetch rainfall data

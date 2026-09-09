@@ -20,7 +20,7 @@ if _PROJECT_ROOT not in sys.path:
 from src.config import (
     WEATHER_API_URL, MARINE_API_URL,
     WEATHER_LATITUDE, WEATHER_LONGITUDE,
-    WEATHER_DAILY_PARAMS, MARINE_HOURLY_PARAMS,
+    WEATHER_DAILY_PARAMS, WEATHER_HOURLY_PARAMS, MARINE_HOURLY_PARAMS,
     WEATHER_TIMEZONE, WEATHER_FORECAST_DAYS,
     WEATHER_CACHE_EXPIRY
 )
@@ -40,6 +40,7 @@ class WeatherFetcher:
             'latitude': WEATHER_LATITUDE,
             'longitude': WEATHER_LONGITUDE,
             'daily': WEATHER_DAILY_PARAMS,
+            'hourly': WEATHER_HOURLY_PARAMS,
             'timezone': WEATHER_TIMEZONE,
             'forecast_days': WEATHER_FORECAST_DAYS
         }
@@ -129,6 +130,39 @@ class WeatherFetcher:
                     'temperature_min_c': first['temperature_min_c'],
                     'precipitation_mm': first['precipitation_mm']
                 }
+        
+        # Extract nearest current hourly values (temp / humidity / pressure)
+        # so the dashboard's current-weather card has real data.
+        if 'hourly' in api_data:
+            hourly = api_data['hourly']
+            times = hourly.get('time', [])
+            temps = hourly.get('temperature_2m', [])
+            humidities = hourly.get('relative_humidity_2m', [])
+            pressures = hourly.get('surface_pressure', [])
+            hourly_precip = hourly.get('precipitation', [])
+            
+            if times:
+                # Find the hourly slot closest to now
+                now = datetime.now().replace(minute=0, second=0, microsecond=0)
+                closest_idx = None
+                closest_diff = None
+                for i, time_str in enumerate(times):
+                    try:
+                        slot = datetime.fromisoformat(time_str)
+                    except ValueError:
+                        continue
+                    diff = abs((slot - now).total_seconds())
+                    if closest_diff is None or diff < closest_diff:
+                        closest_diff = diff
+                        closest_idx = i
+                
+                if closest_idx is not None:
+                    processed['current'].update({
+                        'temperature_c': temps[closest_idx] if closest_idx < len(temps) else None,
+                        'humidity_percent': humidities[closest_idx] if closest_idx < len(humidities) else None,
+                        'pressure_hpa': pressures[closest_idx] if closest_idx < len(pressures) else None,
+                        'hourly_precipitation_mm': hourly_precip[closest_idx] if closest_idx < len(hourly_precip) else None
+                    })
         
         return processed
     
@@ -262,6 +296,9 @@ class WeatherFetcher:
                 'temperature_min_c': current.get('temperature_min_c'),
                 'tide_max_m': tide_current.get('tide_max_m'),
                 'tide_min_m': tide_current.get('tide_min_m'),
+                'pressure_hpa': current.get('pressure_hpa'),
+                'temperature_c': current.get('temperature_c'),
+                'humidity_percent': current.get('humidity_percent'),
                 'forecast_data': json.dumps(serializable_daily),
                 'tide_forecast_data': json.dumps(serializable_tide_daily)
             }

@@ -70,6 +70,8 @@ WEATHER_LONGITUDE = 118.43788786664786
 
 # Weather parameters
 WEATHER_DAILY_PARAMS = "temperature_2m_max,temperature_2m_min,precipitation_sum"
+# Hourly params used to populate the dashboard's current temp / pressure / humidity
+WEATHER_HOURLY_PARAMS = "temperature_2m,relative_humidity_2m,surface_pressure,precipitation"
 MARINE_HOURLY_PARAMS = "sea_level_height_msl"
 WEATHER_TIMEZONE = "auto"
 WEATHER_FORECAST_DAYS = 7

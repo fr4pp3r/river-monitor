@@ -38,6 +38,8 @@ from src.data.database import (
     get_active_alert_phone_numbers
 )
 from src.data.sms_handler import test_alert_sms
+from src.model.predict import FloodPredictor
+from src.data.weather_fetcher import WeatherFetcher
 
 
 # Initialize FastAPI app
@@ -124,6 +126,14 @@ async def get_weather(hours: int = 48) -> JSONResponse:
     """Get weather data for the last N hours"""
     try:
         weather_data = get_weather_since(hours=hours)
+        
+        # If the requested window is empty (e.g. stale/just-started DB), fall back
+        # to the most recent weather reading so the dashboard can still display it.
+        if not weather_data:
+            latest = get_latest_weather()
+            if latest:
+                weather_data = [latest]
+        
         return JSONResponse(content=[dict(w) for w in weather_data])
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
@@ -137,9 +147,13 @@ async def get_prediction() -> JSONResponse:
         prediction = get_latest_prediction()
         
         if not prediction:
-            # Make a new prediction
-            predictor = FloodPredictor()
-            prediction = predictor.make_prediction()
+            # Try to make a new prediction from live data
+            try:
+                predictor = FloodPredictor()
+                prediction = predictor.make_prediction()
+            except Exception as pred_err:
+                return JSONResponse(content={"error": str(pred_err)}, status_code=500)
+
             if prediction:
                 # Convert to dict format
                 prediction_dict = {
@@ -152,7 +166,10 @@ async def get_prediction() -> JSONResponse:
                     'fuzzy_result': prediction.get('fuzzy_result', {})
                 }
                 return JSONResponse(content=prediction_dict)
-        
+
+            # No data available yet (e.g. no water level readings)
+            return JSONResponse(content={"error": "No data available yet"}, status_code=409)
+
         # Format existing prediction
         if isinstance(prediction['forecast_data'], str):
             prediction['forecast_data'] = json.loads(prediction['forecast_data'])
@@ -409,6 +426,17 @@ def run_dashboard():
     """Run the FastAPI dashboard server"""
     print(f"Starting River Monitor Dashboard on {DASHBOARD_HOST}:{DASHBOARD_PORT}")
     print(f"Access the dashboard at: http://{DASHBOARD_HOST}:{DASHBOARD_PORT}")
+    
+    # Try to fetch and store fresh weather/tide data so the dashboard has
+    # up-to-date readings even before the first sensor packet arrives.
+    try:
+        fetcher = WeatherFetcher()
+        if fetcher.store_weather_in_db():
+            print("Weather and tide data refreshed at startup")
+        else:
+            print("Warning: Could not refresh weather data at startup (using cached/last known)")
+    except Exception as e:
+        print(f"Warning: Weather refresh at startup failed: {e}")
     
     uvicorn.run(
         app,
