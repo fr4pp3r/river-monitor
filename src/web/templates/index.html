@@ -3,228 +3,529 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>River Monitor Dashboard</title>
+    <title>River Water Level Monitor</title>
+    <meta name="description" content="Real-time river water level monitoring and flood risk prediction dashboard">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
+
+    <!-- Inline SVG icon sprite -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+        <symbol id="i-water" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.7S6.5 9.5 6.5 14a5.5 5.5 0 0 0 11 0c0-4.5-5.5-11.3-5.5-11.3z"/>
+            <path d="M9.2 13.5a2.8 2.8 0 0 0 2.3 2.8"/>
+        </symbol>
+        <symbol id="i-radar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19.07 4.93A10 10 0 1 0 22 12"/>
+            <path d="M16.24 7.76A6 6 0 0 1 18 12"/>
+            <circle cx="12" cy="12" r="2"/>
+            <path d="M20.5 12H22"/>
+        </symbol>
+        <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.8.34 1.58.65 2.32a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.76-1.76a2 2 0 0 1 2.11-.45c.74.31 1.52.53 2.32.65A2 2 0 0 1 22 16.92z"/>
+        </symbol>
+        <symbol id="i-cloud-rain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/>
+            <line x1="8" y1="20" x2="8" y2="20.01"/>
+            <line x1="12" y1="20" x2="12" y2="20.01"/>
+            <line x1="16" y1="20" x2="16" y2="20.01"/>
+        </symbol>
+        <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 15l3.5-3.5"/>
+            <path d="M20.3 18a10 10 0 1 0-16.6 0"/>
+        </symbol>
+        <symbol id="i-thermometer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+        </symbol>
+        <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+        </symbol>
+        <symbol id="i-wind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 8h10a3 3 0 1 0-3-3"/>
+            <path d="M3 12h16a3 3 0 1 1-3 3"/>
+            <path d="M3 16h7"/>
+        </symbol>
+        <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2"/>
+            <rect x="9" y="9" width="6" height="6"/>
+            <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>
+        </symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </symbol>
+        <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+        </symbol>
+        <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+        </symbol>
+        <symbol id="i-alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </symbol>
+        <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>
+        </symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </symbol>
+        <symbol id="i-lightning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+        </symbol>
+    </svg>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+        <!-- ==================== HEADER ==================== -->
         <header class="header">
             <h1>River Water Level Monitor</h1>
             <p class="subtitle">Real-time Flood Risk Prediction System</p>
+            <div class="flex items-center gap-2 mt-2" style="position:relative; z-index:1;">
+                <button id="theme-toggle" class="btn btn--ghost" style="color:inherit;" aria-label="Toggle dark mode" title="Toggle dark mode">
+                    <svg class="icon" style="width:18px;height:18px;"><use href="#i-moon"/></svg>
+                </button>
+            </div>
         </header>
 
-        <!-- Main Dashboard Grid -->
+        <!-- ==================== DASHBOARD ==================== -->
         <main class="dashboard">
-            <!-- Current Status Card -->
-            <section class="card status-card">
-                <h2>Current Status</h2>
-                <div class="status-grid">
-                    <div class="status-item">
-                        <div class="status-label">Water Level</div>
-                        <div class="status-value" id="current-water-level">Loading...</div>
-                        <div class="status-unit">meters</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-label">Risk Level</div>
-                        <div class="status-value risk-badge" id="current-risk-level">Loading...</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-label">Last Updated</div>
-                        <div class="status-value" id="last-updated">Loading...</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-label">Data Source</div>
-                        <div class="status-value" id="data-source">Loading...</div>
-                    </div>
-                </div>
-                <div class="status-actions">
-                    <button onclick="refreshPrediction()" class="btn btn-primary">Refresh Prediction</button>
-                    <button onclick="testAlert()" class="btn btn-warning">Test SMS Alert</button>
-                </div>
-            </section>
 
-            <!-- Water Level Chart -->
-            <section class="card chart-card">
-                <h2>Water Level (Last 24 Hours)</h2>
-                <div class="chart-container">
-                    <canvas id="waterLevelChart"></canvas>
-                </div>
-            </section>
+            <!-- ========== Current Status (Hero) ========== -->
+            <section class="card status-card card--span-6" aria-labelledby="status-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="status-title">Current Status</h2>
+                        <p class="card__subtitle" id="live-indicator">
+                            <span class="live-dot" aria-hidden="true"></span>
+                            <span id="live-text">Waiting for data…</span>
+                        </p>
+                    </div>
+                    <span class="risk-badge risk-badge--normal" id="current-risk-level" role="status" aria-live="polite"></span>
+                </header>
+                <div class="card__content">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">Water Level</span>
+                            <span class="status-value skeleton-text" id="current-water-level"></span>
+                            <span class="status-unit">meters above sensor</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Trend</span>
+                            <span class="status-value" style="font-size:var(--text-xl);" id="current-trend">—</span>
+                            <span class="status-unit" id="trend-detail">Last 24 hours</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Last Updated</span>
+                            <span class="status-value" style="font-size:var(--text-lg);" id="last-updated"></span>
+                            <span class="status-unit" id="last-updated-exact">—</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Data Source</span>
+                            <span class="status-value" style="font-size:var(--text-lg);" id="data-source">—</span>
+                            <span class="status-unit" id="data-source-detail">LoRa or SMS fallback</span>
+                        </div>
+                    </div>
 
-            <!-- Forecast Chart -->
-            <section class="card chart-card">
-                <h2>48-Hour Water Level Forecast</h2>
-                <div class="chart-container">
-                    <canvas id="forecastChart"></canvas>
-                </div>
-            </section>
+                    <!-- Flood Risk Gauge -->
+                    <div class="risk-gauge mt-4" role="img" aria-label="Flood risk gauge showing current water level against alert, alarm and critical thresholds">
+                        <div class="risk-gauge__labels">
+                            <span class="risk-gauge__label">Normal</span>
+                            <span class="risk-gauge__label">Alert</span>
+                            <span class="risk-gauge__label">Alarm</span>
+                            <span class="risk-gauge__label">Critical</span>
+                        </div>
+                        <div class="risk-gauge__track" id="risk-gauge-track">
+                            <span class="risk-gauge__seg risk-gauge__seg--normal"></span>
+                            <span class="risk-gauge__seg risk-gauge__seg--alert"></span>
+                            <span class="risk-gauge__seg risk-gauge__seg--alarm"></span>
+                            <span class="risk-gauge__seg risk-gauge__seg--critical"></span>
+                            <!-- threshold markers -->
+                            <span class="risk-gauge__marker" style="left:40%" data-threshold="Alert 3.0m"></span>
+                            <span class="risk-gauge__marker" style="left:60%" data-threshold="Alarm 4.5m"></span>
+                            <span class="risk-gauge__marker" style="left:100%" data-threshold="Critical 7.5m"></span>
+                            <!-- needle -->
+                            <span class="risk-gauge__needle" id="risk-gauge-needle" style="left:0%"></span>
+                        </div>
+                        <div class="risk-gauge__legend">
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alert-soft);border:1px solid var(--color-alert)"></span> Alert ≥ 3.0 m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alarm-soft);border:1px solid var(--color-alarm)"></span> Alarm ≥ 4.5 m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-critical-soft);border:1px solid var(--color-critical)"></span> Critical ≥ 7.5 m</span>
+                        </div>
+                    </div>
 
-            <!-- Weather Data Card -->
-            <section class="card weather-card">
-                <h2>Current Weather & Rainfall</h2>
-                <div class="weather-grid">
-                    <div class="weather-item">
-                        <div class="weather-label">Precipitation</div>
-                        <div class="weather-value" id="current-precip">Loading...</div>
-                        <div class="weather-unit">mm</div>
-                    </div>
-                    <div class="weather-item">
-                        <div class="weather-label">Pressure</div>
-                        <div class="weather-value" id="current-pressure">Loading...</div>
-                        <div class="weather-unit">hPa</div>
-                    </div>
-                    <div class="weather-item">
-                        <div class="weather-label">Temperature</div>
-                        <div class="weather-value" id="current-temp">Loading...</div>
-                        <div class="weather-unit">°C</div>
-                    </div>
-                    <div class="weather-item">
-                        <div class="weather-label">Humidity</div>
-                        <div class="weather-value" id="current-humidity">Loading...</div>
-                        <div class="weather-unit">%</div>
-                    </div>
-                    <div class="weather-item">
-                        <div class="weather-label">Rainfall (24h)</div>
-                        <div class="weather-value" id="rainfall-24h">Loading...</div>
-                        <div class="weather-unit">mm</div>
-                    </div>
-                    <div class="weather-item">
-                        <div class="weather-label">Rain Tips (24h)</div>
-                        <div class="weather-value" id="rain-tips-24h">Loading...</div>
-                        <div class="weather-unit">tips</div>
+                    <div class="status-actions">
+                        <button onclick="refreshPrediction()" class="btn btn--primary" id="refresh-btn">
+                            <svg class="icon" style="width:16px;height:16px;"><use href="#i-refresh"/></svg>
+                            Refresh Prediction
+                        </button>
+                        <button onclick="testAlert()" class="btn btn--secondary" id="test-alert-btn">
+                            <svg class="icon" style="width:16px;height:16px;"><use href="#i-phone"/></svg>
+                            Test SMS Alert
+                        </button>
                     </div>
                 </div>
             </section>
 
-            <!-- System Status Card -->
-            <section class="card system-card">
-                <h2>System Status</h2>
-                <div class="system-grid" id="system-status">
-                    <div class="system-item">
-                        <div class="system-component">LoRa Module</div>
-                        <div class="system-status status-ok" id="lora-status">Loading...</div>
+            <!-- ========== System Status ========== -->
+            <section class="card system-card card--span-6" aria-labelledby="system-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="system-title">System Status</h2>
+                        <p class="card__subtitle">Module health &amp; data flow</p>
                     </div>
-                    <div class="system-item">
-                        <div class="system-component">SMS Module</div>
-                        <div class="system-status status-ok" id="sms-status">Loading...</div>
-                    </div>
-                    <div class="system-item">
-                        <div class="system-component">Weather API</div>
-                        <div class="system-status status-ok" id="weather-status">Loading...</div>
-                    </div>
-                    <div class="system-item">
-                        <div class="system-component">Prediction Model</div>
-                        <div class="system-status status-ok" id="model-status">Loading...</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Fuzzy Logic Card -->
-            <section class="card fuzzy-card">
-                <h2>Fuzzy Logic Details</h2>
-                <div class="fuzzy-grid" id="fuzzy-details">
-                    <div class="fuzzy-item">
-                        <div class="fuzzy-label">RF Propensity</div>
-                        <div class="fuzzy-value" id="fuzzy-rf-propensity">Loading...</div>
-                    </div>
-                    <div class="fuzzy-item">
-                        <div class="fuzzy-label">Rule Triggered</div>
-                        <div class="fuzzy-value" id="fuzzy-rule-triggered">Loading...</div>
-                    </div>
-                    <div class="fuzzy-item">
-                        <div class="fuzzy-label">Water Level</div>
-                        <div class="fuzzy-value" id="fuzzy-water-level">Loading...</div>
-                        <div class="fuzzy-unit">mm</div>
-                    </div>
-                    <div class="fuzzy-item">
-                        <div class="fuzzy-label">Rate of Rise</div>
-                        <div class="fuzzy-value" id="fuzzy-rate-of-rise">Loading...</div>
-                        <div class="fuzzy-unit">mm/day</div>
-                    </div>
-                    <div class="fuzzy-item">
-                        <div class="fuzzy-label">Forecast Rain</div>
-                        <div class="fuzzy-value" id="fuzzy-forecast-rain">Loading...</div>
-                        <div class="fuzzy-unit">mm</div>
-                    </div>
-                    <div class="fuzzy-item">
-                        <div class="fuzzy-label">Tide Level</div>
-                        <div class="fuzzy-value" id="fuzzy-tide-level">Loading...</div>
-                        <div class="fuzzy-unit">m</div>
+                </header>
+                <div class="card__content">
+                    <div class="system-grid" id="system-status">
+                        <div class="system-item">
+                            <span class="flex items-center gap-2">
+                                <svg class="icon" style="width:16px;height:16px;color:var(--color-text-muted);"><use href="#i-radar"/></svg>
+                                <span class="system-component">LoRa Module</span>
+                            </span>
+                            <span class="system-status system-status--disabled" id="lora-status">Loading…</span>
+                        </div>
+                        <div class="system-item">
+                            <span class="flex items-center gap-2">
+                                <svg class="icon" style="width:16px;height:16px;color:var(--color-text-muted);"><use href="#i-phone"/></svg>
+                                <span class="system-component">SMS Module</span>
+                            </span>
+                            <span class="system-status system-status--disabled" id="sms-status">Loading…</span>
+                        </div>
+                        <div class="system-item">
+                            <span class="flex items-center gap-2">
+                                <svg class="icon" style="width:16px;height:16px;color:var(--color-text-muted);"><use href="#i-cloud-rain"/></svg>
+                                <span class="system-component">Weather API</span>
+                            </span>
+                            <span class="system-status system-status--disabled" id="weather-status">Loading…</span>
+                        </div>
+                        <div class="system-item">
+                            <span class="flex items-center gap-2">
+                                <svg class="icon" style="width:16px;height:16px;color:var(--color-text-muted);"><use href="#i-cpu"/></svg>
+                                <span class="system-component">Prediction Model</span>
+                            </span>
+                            <span class="system-status system-status--disabled" id="model-status">Loading…</span>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Alert Contacts Card -->
-            <section class="card contacts-card">
-                <div class="card-header">
-                    <h2>Alert Contacts</h2>
-                    <button onclick="showAddContactModal()" class="btn btn-primary btn-sm">Add Contact</button>
-                </div>
-                <div class="contacts-list" id="contacts-list">
-                    <p>Loading contacts...</p>
+            <!-- ========== Water Level Chart ========== -->
+            <section class="card chart-card card--span-full" aria-labelledby="water-chart-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="water-chart-title">Water Level — Last 24 Hours</h2>
+                        <p class="card__subtitle">Readings from LoRa sensor with SMS fallback</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="chart-container">
+                        <canvas id="waterLevelChart" role="img" aria-label="Line chart of water level over the last 24 hours"></canvas>
+                        <div class="chart-empty" id="water-chart-empty" hidden>
+                            <svg class="icon" style="width:32px;height:32px;color:var(--color-text-muted);"><use href="#i-water"/></svg>
+                            <p>No water level data yet.</p>
+                            <p class="text-muted" style="font-size:var(--text-sm)">Waiting for the first sensor reading…</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            <!-- Alerts Card -->
-            <section class="card alerts-card">
-                <h2>Recent Alerts</h2>
-                <div class="alerts-list" id="alerts-list">
-                    <p>Loading alerts...</p>
+            <!-- ========== Forecast Chart ========== -->
+            <section class="card chart-card card--span-full" aria-labelledby="forecast-chart-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="forecast-chart-title">48-Hour Water Level Forecast</h2>
+                        <p class="card__subtitle">AI prediction from Random Forest + Fuzzy Logic</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="chart-container">
+                        <canvas id="forecastChart" role="img" aria-label="Line chart of forecasted water level with alert, alarm and critical thresholds"></canvas>
+                        <div class="chart-empty" id="forecast-chart-empty" hidden>
+                            <svg class="icon" style="width:32px;height:32px;color:var(--color-text-muted);"><use href="#i-gauge"/></svg>
+                            <p>No forecast available yet.</p>
+                            <p class="text-muted" style="font-size:var(--text-sm)">Forecasts appear once the model has water level data.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== Current Weather ========== -->
+            <section class="card weather-card card--span-6" aria-labelledby="weather-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="weather-title">Current Weather &amp; Rainfall</h2>
+                        <p class="card__subtitle">Open-Meteo + rain gauge</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="weather-grid">
+                        <div class="weather-item">
+                            <svg class="icon" style="width:20px;height:20px;color:var(--color-brand);margin-bottom:var(--space-1);"><use href="#i-drop"/></svg>
+                            <span class="weather-label">Precipitation</span>
+                            <span class="weather-value skeleton-text" id="current-precip"></span>
+                            <span class="weather-unit">mm</span>
+                        </div>
+                        <div class="weather-item">
+                            <svg class="icon" style="width:20px;height:20px;color:var(--color-brand);margin-bottom:var(--space-1);"><use href="#i-gauge"/></svg>
+                            <span class="weather-label">Pressure</span>
+                            <span class="weather-value skeleton-text" id="current-pressure"></span>
+                            <span class="weather-unit">hPa</span>
+                        </div>
+                        <div class="weather-item">
+                            <svg class="icon" style="width:20px;height:20px;color:var(--color-brand);margin-bottom:var(--space-1);"><use href="#i-thermometer"/></svg>
+                            <span class="weather-label">Temperature</span>
+                            <span class="weather-value skeleton-text" id="current-temp"></span>
+                            <span class="weather-unit">°C</span>
+                        </div>
+                        <div class="weather-item">
+                            <svg class="icon" style="width:20px;height:20px;color:var(--color-brand);margin-bottom:var(--space-1);"><use href="#i-drop"/></svg>
+                            <span class="weather-label">Humidity</span>
+                            <span class="weather-value skeleton-text" id="current-humidity"></span>
+                            <span class="weather-unit">%</span>
+                        </div>
+                        <div class="weather-item">
+                            <svg class="icon" style="width:20px;height:20px;color:var(--color-brand);margin-bottom:var(--space-1);"><use href="#i-cloud-rain"/></svg>
+                            <span class="weather-label">Rainfall (24h)</span>
+                            <span class="weather-value skeleton-text" id="rainfall-24h"></span>
+                            <span class="weather-unit">mm</span>
+                        </div>
+                        <div class="weather-item">
+                            <svg class="icon" style="width:20px;height:20px;color:var(--color-brand);margin-bottom:var(--space-1);"><use href="#i-lightning"/></svg>
+                            <span class="weather-label">Rain Tips (24h)</span>
+                            <span class="weather-value skeleton-text" id="rain-tips-24h"></span>
+                            <span class="weather-unit">tips</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== Fuzzy Logic ========== -->
+            <section class="card fuzzy-card card--span-6" aria-labelledby="fuzzy-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="fuzzy-title">Fuzzy Logic Details</h2>
+                        <p class="card__subtitle">15-rule decision engine inputs &amp; result</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="fuzzy-grid" id="fuzzy-details">
+                        <div class="fuzzy-item">
+                            <span class="fuzzy-label">RF Propensity</span>
+                            <span class="fuzzy-value skeleton-text" id="fuzzy-rf-propensity"></span>
+                            <span class="fuzzy-unit">Random Forest</span>
+                        </div>
+                        <div class="fuzzy-item">
+                            <span class="fuzzy-label">Rule Triggered</span>
+                            <span class="fuzzy-value skeleton-text" id="fuzzy-rule-triggered"></span>
+                            <span class="fuzzy-unit">Fuzzy rule #</span>
+                        </div>
+                        <div class="fuzzy-item">
+                            <span class="fuzzy-label">Water Level</span>
+                            <span class="fuzzy-value skeleton-text" id="fuzzy-water-level"></span>
+                            <span class="fuzzy-unit">mm</span>
+                        </div>
+                        <div class="fuzzy-item">
+                            <span class="fuzzy-label">Rate of Rise</span>
+                            <span class="fuzzy-value skeleton-text" id="fuzzy-rate-of-rise"></span>
+                            <span class="fuzzy-unit">mm/day</span>
+                        </div>
+                        <div class="fuzzy-item">
+                            <span class="fuzzy-label">Forecast Rain</span>
+                            <span class="fuzzy-value skeleton-text" id="fuzzy-forecast-rain"></span>
+                            <span class="fuzzy-unit">mm</span>
+                        </div>
+                        <div class="fuzzy-item">
+                            <span class="fuzzy-label">Tide Level</span>
+                            <span class="fuzzy-value skeleton-text" id="fuzzy-tide-level"></span>
+                            <span class="fuzzy-unit">m</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== Alert Contacts ========== -->
+            <section class="card contacts-card card--span-6" aria-labelledby="contacts-title">
+                <header class="card__header contacts-header">
+                    <div>
+                        <h2 class="card__title" id="contacts-title">Alert Contacts</h2>
+                        <p class="card__subtitle">Who receives SMS flood alerts</p>
+                    </div>
+                    <button onclick="showAddContactModal()" class="btn btn--primary btn--sm">
+                        <svg class="icon" style="width:14px;height:14px;"><use href="#i-users"/></svg>
+                        Add Contact
+                    </button>
+                </header>
+                <div class="card__content">
+                    <div class="contacts-list" id="contacts-list" aria-live="polite">
+                        <p class="text-muted">Loading contacts…</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== Recent Alerts ========== -->
+            <section class="card alerts-card card--span-6" aria-labelledby="alerts-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="alerts-title">Recent Alerts</h2>
+                        <p class="card__subtitle">Latest flood risk notifications</p>
+                    </div>
+                    <svg class="icon" style="width:18px;height:18px;color:var(--color-text-muted);"><use href="#i-bell"/></svg>
+                </header>
+                <div class="card__content">
+                    <div class="alerts-list" id="alerts-list" aria-live="polite">
+                        <p class="text-muted">Loading alerts…</p>
+                    </div>
                 </div>
             </section>
         </main>
 
-        <!-- Footer -->
+        <!-- ==================== FOOTER ==================== -->
         <footer class="footer">
             <p>River Monitor System | Raspberry Pi 5 | LoRa + SMS</p>
-            <p id="last-refresh">Last refresh: Never</p>
+            <p class="footer__refresh" id="last-refresh">Last refresh: Never</p>
         </footer>
     </div>
 
+    <!-- ==================== TOASTS ==================== -->
+    <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- ==================== CONTACT MODAL ==================== -->
+    <div class="modal" id="contact-modal" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
+        <div class="modal__content">
+            <div class="modal__header">
+                <h3 class="modal__title" id="contact-modal-title">Add Contact</h3>
+                <button type="button" class="modal__close" onclick="closeContactModal()" aria-label="Close dialog">
+                    <svg class="icon" style="width:18px;height:18px;"><use href="#i-x"/></svg>
+                </button>
+            </div>
+            <form id="contact-form" onsubmit="event.preventDefault(); saveContact();">
+                <div class="modal__body">
+                    <input type="hidden" id="contact-id" name="id">
+                    <div class="form-group">
+                        <label class="form-label" for="contact-name">Name</label>
+                        <input type="text" class="form-input" id="contact-name" name="name" placeholder="e.g. Barangay Captain" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="contact-phone">Phone Number</label>
+                        <input type="tel" class="form-input" id="contact-phone" name="phone_number" placeholder="+639XXXXXXXXX" required>
+                    </div>
+                    <div class="form-group">
+                        <span class="form-label">Receive Alerts For:</span>
+                        <div class="checkbox-grid">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="contact-receive-alert" name="receive_alert" value="1"> Alert
+                            </label>
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="contact-receive-warning" name="receive_warning" value="1"> Alarm
+                            </label>
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="contact-receive-critical" name="receive_critical" value="1"> Critical
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="contact-is-active" name="is_active" value="1" checked> Active
+                        </label>
+                    </div>
+                </div>
+                <div class="modal__footer">
+                    <button type="button" class="btn btn--secondary" onclick="closeContactModal()">Cancel</button>
+                    <button type="submit" class="btn btn--primary">Save Contact</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // Global chart references
+        // =====================================================================
+        // GLOBALS
+        // =====================================================================
         let waterLevelChart = null;
         let forecastChart = null;
 
-        // Risk level colors
-        const riskColors = {
-            'normal': '#28a745',
-            'receding': '#17a2b8',
-            'alert': '#ffc107',
-            'alarm': '#fd7e14',
-            'critical': '#dc3545',
-            'Receding': '#17a2b8',
-            'Alert': '#ffc107',
-            'Alarm': '#fd7e14',
-            'Critical': '#dc3545'
+        // Risk metadata: colors + CSS classes, keyed by lowercase name
+        const RISK_META = {
+            'normal':   { color: '#16a34a', badge: 'risk-badge--normal' },
+            'receding': { color: '#0284c7', badge: 'risk-badge--receding' },
+            'alert':    { color: '#f59e0b', badge: 'risk-badge--alert' },
+            'alarm':    { color: '#ea580c', badge: 'risk-badge--alarm' },
+            'critical': { color: '#dc2626', badge: 'risk-badge--critical' }
         };
 
         // Status colors
         const statusColors = {
-            'ok': '#28a745',
-            'warning': '#ffc107',
-            'error': '#dc3545',
-            'disabled': '#6c757d'
+            'ok': '#1a7f37',
+            'warning': '#9a6700',
+            'error': '#cf222e',
+            'disabled': '#8b949e'
         };
 
-        // Format timestamp
-        function formatTimestamp(isoString) {
-            if (!isoString) return 'Never';
-            const date = new Date(isoString);
-            return date.toLocaleString();
+        // Thresholds (mirrors config: CRITICAL_LEVEL_M = 7.5, alert 40%, alarm 60%)
+        const CRITICAL_LEVEL_M = 7.5;
+        const ALERT_THRESHOLD_M = CRITICAL_LEVEL_M * 0.40; // 3.0
+        const ALARM_THRESHOLD_M = CRITICAL_LEVEL_M * 0.60;  // 4.5
+
+        // =====================================================================
+        // UTILITIES
+        // =====================================================================
+        function $(id) { return document.getElementById(id); }
+
+        // Set a metric value, clearing skeleton shimmer and replacing em-dash defaults
+        function setValue(id, text) {
+            const el = $(id);
+            if (!el) return;
+            el.textContent = text;
+            el.classList.remove('skeleton-text', 'skeleton-value', 'skeleton-badge');
         }
 
-        // Format time ago
+        function formatTimestamp(isoString) {
+            if (!isoString) return 'Never';
+            return new Date(isoString).toLocaleString();
+        }
+
         function timeAgo(isoString) {
             if (!isoString) return 'Never';
-            const date = new Date(isoString);
-            const now = new Date();
-            const seconds = Math.floor((now - date) / 1000);
-            
+            const seconds = Math.floor((Date.now() - new Date(isoString)) / 1000);
+            if (seconds < 10) return 'just now';
             if (seconds < 60) return `${seconds}s ago`;
             const minutes = Math.floor(seconds / 60);
             if (minutes < 60) return `${minutes}m ago`;
@@ -234,232 +535,365 @@
             return `${days}d ago`;
         }
 
-        // Update current status
+        function riskMeta(level) {
+            const key = String(level || '').toLowerCase();
+            return RISK_META[key] || { color: '#8b949e', badge: '' };
+        }
+
+        // =====================================================================
+        // TOAST NOTIFICATIONS (replaces alert())
+        // =====================================================================
+        const TOAST_ICONS = {
+            success: '#i-check', warning: '#i-alert-triangle', danger: '#i-alert-triangle', info: '#i-info'
+        };
+
+        function showToast(title, message = '', type = 'info', timeout = 4500) {
+            const container = $('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast--${type}`, toast.setAttribute('role', 'status');
+            toast.innerHTML = `
+                <svg class="toast__icon" aria-hidden="true"><use href="${TOAST_ICONS[type] || TOAST_ICONS.info}"/></svg>
+                <div class="toast__content">
+                    <div class="toast__title">${escapeHtml(title)}</div>
+                    ${message ? `<div class="toast__message">${escapeHtml(message)}</div>` : ''}
+                </div>
+                <button class="toast__close" aria-label="Dismiss notification">
+                    <svg class="icon" style="width:14px;height:14px;"><use href="#i-x"/></svg>
+                </button>`;
+            container.appendChild(toast);
+
+            const dismiss = () => {
+                toast.style.transition = 'opacity 200ms ease, transform 200ms ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 200);
+            };
+            toast.querySelector('.toast__close').addEventListener('click', dismiss);
+            if (timeout > 0) setTimeout(dismiss, timeout);
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : String(str);
+            return div.innerHTML;
+        }
+
+        // =====================================================================
+        // THEME TOGGLE (dark mode, persisted)
+        // =====================================================================
+        function initTheme() {
+            const stored = localStorage.getItem('flaire-theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+            updateThemeIcon(theme);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('flaire-theme', next);
+            updateThemeIcon(next);
+        }
+
+        function updateThemeIcon(theme) {
+            const btn = $('theme-toggle');
+            if (!btn) return;
+            btn.innerHTML = `<svg style="width:18px;height:18px;"><use href="${theme === 'dark' ? '#i-sun' : '#i-moon'}"/></svg>`;
+        }
+
+        // =====================================================================
+        // RISK GAUGE
+        // =====================================================================
+        function updateRiskGauge(levelM) {
+            const needle = $('risk-gauge-needle');
+            if (!needle) return;
+            // Position the bar marker. Values beyond critical clamp to 100%.
+            const pct = levelM == null ? 0 : Math.max(0, Math.min(1, levelM / CRITICAL_LEVEL_M)) * 100;
+            needle.style.left = pct + '%';
+        }
+
+        // =====================================================================
+        // CURRENT STATUS & HERO
+        // =====================================================================
         async function updateCurrentStatus() {
             try {
                 const response = await fetch('/api/prediction');
                 const prediction = await response.json();
-                
+
+                const liveText = $('live-text');
+                const liveDot = document.querySelector('.live-dot');
+
                 if (prediction.error) {
-                    console.error('Error getting prediction:', prediction.error);
-                    // No data available yet — show a clear "No data" state instead of
-                    // leaving the card stuck on "Loading..."
-                    document.getElementById('current-water-level').textContent = 'No data';
-                    document.getElementById('current-risk-level').textContent = '—';
-                    document.getElementById('last-updated').textContent = 'Waiting for sensor data';
-                    document.getElementById('data-source').textContent = '—';
+                    setValue('current-water-level', 'No data');
+                    setValue('current-risk-level', 'No data');
+                    const riskBadge = $('current-risk-level');
+                    riskBadge.className = 'risk-badge risk-badge--normal';
+                    setValue('last-updated', 'Waiting for sensor data');
+                    setValue('data-source', '—');
+                    setValue('current-trend', '—');
+                    setValue('trend-detail', 'No readings yet');
+                    updateRiskGauge(0);
+                    if (liveText) liveText.textContent = 'Waiting for sensor data';
+                    if (liveDot) liveDot.classList.remove('live-dot--active');
                     return;
                 }
 
-                // Update water level
+                // Water level
                 const waterLevel = prediction.current_level_m;
-                document.getElementById('current-water-level').textContent = waterLevel.toFixed(2);
+                setValue('current-water-level', waterLevel != null ? waterLevel.toFixed(2) : '—');
+                updateRiskGauge(waterLevel);
 
-                // Update risk level
-                const riskLevel = prediction.risk_level;
-                const riskBadge = document.getElementById('current-risk-level');
-                riskBadge.textContent = riskLevel.toUpperCase();
-                riskBadge.className = 'status-value risk-badge';
-                riskBadge.style.backgroundColor = riskColors[riskLevel] || '#6c757d';
+                // Risk badge
+                const riskLevel = prediction.risk_level || 'normal';
+                const meta = riskMeta(riskLevel);
+                const riskBadge = $('current-risk-level');
+                riskBadge.textContent = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1);
+                riskBadge.className = 'risk-badge ' + meta.badge;
+                riskBadge.style.color = (meta.badge === 'risk-badge--alert') ? '#1f2328' : '';
 
-                // Update last updated
-                document.getElementById('last-updated').textContent = timeAgo(prediction.timestamp);
+                // Last updated
+                setValue('last-updated', timeAgo(prediction.timestamp));
+                setValue('last-updated-exact', formatTimestamp(prediction.timestamp));
 
-                // Update data source
+                // Live indicator
+                if (liveText) liveText.textContent = 'Live';
+                if (liveDot) liveDot.classList.add('live-dot--active');
+
+                // Data source (from most recent water reading)
                 const waterResponse = await fetch('/api/water-levels?hours=1');
                 const waterData = await waterResponse.json();
                 if (waterData.length > 0) {
-                    document.getElementById('data-source').textContent = waterData[0].source.toUpperCase();
+                    setValue('data-source', (waterData[0].source || '—').toUpperCase());
+                    setValue('data-source-detail', waterData[0].source === 'lora' ? 'LoRa radio link' : 'SMS fallback');
                 }
 
+                // Trend: compare first vs last reading in the last 3 hours
+                const trendResponse = await fetch('/api/water-levels?hours=3');
+                const trendData = await trendResponse.json();
+                if (trendData.length >= 2) {
+                    const first = trendData[0].water_level_m;
+                    const last = trendData[trendData.length - 1].water_level_m;
+                    const diff = last - first;
+                    const trend = diff > 0.01 ? 'Rising' : (diff < -0.01 ? 'Falling' : 'Steady');
+                    setValue('current-trend', trend);
+                    const el = $('current-trend');
+                    el.style.color = diff > 0.01 ? '#cf222e' : (diff < -0.01 ? '#0969da' : '#57606a');
+                    setValue('trend-detail', `Δ ${(diff >= 0 ? '+' : '') + diff.toFixed(2)} m over 3h`);
+                }
             } catch (error) {
                 console.error('Error updating current status:', error);
             }
         }
 
-        // Update weather data
+        // =====================================================================
+        // WEATHER & RAINFALL
+        // =====================================================================
         async function updateWeatherData() {
             try {
                 const response = await fetch('/api/weather?hours=6');
                 const weatherData = await response.json();
-                
+
                 if (weatherData.length > 0) {
                     const latest = weatherData[0];
-                    document.getElementById('current-precip').textContent = (latest.precipitation_mm || 0).toFixed(1);
-                    document.getElementById('current-pressure').textContent = (latest.pressure_hpa || 0).toFixed(1);
-                    document.getElementById('current-temp').textContent = (latest.temperature_c || 0).toFixed(1);
-                    document.getElementById('current-humidity').textContent = (latest.humidity_percent || 0).toFixed(0);
+                    setValue('current-precip', (latest.precipitation_mm || 0).toFixed(1));
+                    setValue('current-pressure', (latest.pressure_hpa || 0).toFixed(1));
+                    setValue('current-temp', (latest.temperature_c || 0).toFixed(1));
+                    setValue('current-humidity', (latest.humidity_percent || 0).toFixed(0));
                 } else {
-                    // No weather data available yet
-                    document.getElementById('current-precip').textContent = '—';
-                    document.getElementById('current-pressure').textContent = '—';
-                    document.getElementById('current-temp').textContent = '—';
-                    document.getElementById('current-humidity').textContent = '—';
+                    setValue('current-precip', '—');
+                    setValue('current-pressure', '—');
+                    setValue('current-temp', '—');
+                    setValue('current-humidity', '—');
                 }
-                
-                // Fetch rainfall data
+
                 const rainResponse = await fetch('/api/rainfall?hours=24');
                 const rainData = await rainResponse.json();
                 if (rainData.length > 0) {
                     const latestRain = rainData[rainData.length - 1];
-                    document.getElementById('rainfall-24h').textContent = (latestRain.total_rainfall_mm || 0).toFixed(1);
-                    document.getElementById('rain-tips-24h').textContent = latestRain.total_tips || 0;
+                    setValue('rainfall-24h', (latestRain.total_rainfall_mm || 0).toFixed(1));
+                    setValue('rain-tips-24h', latestRain.total_tips || 0);
+                } else {
+                    setValue('rainfall-24h', '—');
+                    setValue('rain-tips-24h', '—');
                 }
             } catch (error) {
                 console.error('Error updating weather data:', error);
             }
         }
 
-        // Update system status
+        // =====================================================================
+        // SYSTEM STATUS
+        // =====================================================================
         async function updateSystemStatus() {
             try {
                 const response = await fetch('/api/status');
                 const status = await response.json();
-                
-                // Update LoRa status
-                const loraStatus = document.getElementById('lora-status');
-                loraStatus.textContent = status.lora.message;
-                loraStatus.className = `system-status status-${status.lora.status}`;
-                loraStatus.style.color = statusColors[status.lora.status];
 
-                // Update SMS status
-                const smsStatus = document.getElementById('sms-status');
-                smsStatus.textContent = status.sms.message;
-                smsStatus.className = `system-status status-${status.sms.status}`;
-                smsStatus.style.color = statusColors[status.sms.status];
+                const setStatus = (id, item, statusKey) => {
+                    const el = $(id);
+                    if (!el) return;
+                    el.textContent = item.message;
+                    el.className = `system-status system-status--${statusKey}`;
+                };
 
-                // Hide Test SMS button when SMS module is disabled
-                const testAlertBtn = document.querySelector('.btn-warning');
-                if (status.sms.enabled === false) {
-                    testAlertBtn.style.display = 'none';
+                setStatus('lora-status', status.lora, status.lora.status);
+                setStatus('sms-status', status.sms, status.sms.status);
+                setStatus('weather-status', status.weather, status.weather.status);
+                setStatus('model-status', status.model, status.model.status);
+
+                // Hide Test SMS button when module is disabled
+                const testBtn = $('test-alert-btn');
+                if (status.sms && status.sms.enabled === false) {
+                    testBtn.style.display = 'none';
                 } else {
-                    testAlertBtn.style.display = '';
+                    testBtn.style.display = '';
                 }
-
-                // Update weather status
-                const weatherStatus = document.getElementById('weather-status');
-                weatherStatus.textContent = status.weather.message;
-                weatherStatus.className = `system-status status-${status.weather.status}`;
-                weatherStatus.style.color = statusColors[status.weather.status];
-
-                // Update model status
-                const modelStatus = document.getElementById('model-status');
-                modelStatus.textContent = status.model.message;
-                modelStatus.className = `system-status status-${status.model.status}`;
-                modelStatus.style.color = statusColors[status.model.status];
-
             } catch (error) {
                 console.error('Error updating system status:', error);
             }
         }
 
-        // Update alerts
+        // =====================================================================
+        // ALERTS
+        // =====================================================================
         async function updateAlerts() {
             try {
                 const response = await fetch('/api/alerts?limit=10');
                 const alerts = await response.json();
-                
-                const alertsList = document.getElementById('alerts-list');
-                
-                if (alerts.length === 0) {
-                    alertsList.innerHTML = '<p>No recent alerts</p>';
+                const list = $('alerts-list');
+
+                if (!alerts.length) {
+                    list.innerHTML = '<div class="alert-empty">No recent alerts</div>';
                     return;
                 }
 
-                alertsList.innerHTML = alerts.map(alert => {
-                    const riskColor = riskColors[alert.risk_level] || '#6c757d';
+                list.innerHTML = alerts.map(alert => {
+                    const meta = riskMeta(alert.risk_level);
+                    const cls = `alert-risk alert-risk--${String(alert.risk_level || '').toLowerCase()}`;
                     return `
-                        <div class="alert-item" style="border-left: 4px solid ${riskColor}">
+                        <div class="alert-item" style="border-left-color: ${meta.color}">
                             <div class="alert-header">
-                                <span class="alert-risk" style="color: ${riskColor}">${alert.risk_level.toUpperCase()}</span>
+                                <span class="${cls}" style="${meta.badge === 'risk-badge--alert' ? 'color:#1f2328' : ''}">${escapeHtml(alert.risk_level)}</span>
                                 <span class="alert-time">${timeAgo(alert.timestamp)}</span>
                             </div>
-                            <div class="alert-message">${alert.message}</div>
+                            <div class="alert-message">${escapeHtml(alert.message)}</div>
                             <div class="alert-meta">
-                                Water: ${alert.water_level_m.toFixed(2)}m | 
-                                Status: ${alert.status}
+                                <span>Water: ${Number(alert.water_level_m).toFixed(2)} m</span>
+                                <span>Status: ${escapeHtml(alert.status)}</span>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 }).join('');
-
             } catch (error) {
                 console.error('Error updating alerts:', error);
             }
         }
 
-        // Update fuzzy logic details
+        // =====================================================================
+        // FUZZY LOGIC DETAILS
+        // =====================================================================
         async function updateFuzzyDetails() {
             try {
                 const response = await fetch('/api/fuzzy-details');
                 const details = await response.json();
-                
+
                 if (details.error) {
-                    console.error('Error getting fuzzy details:', details.error);
+                    console.error('Fuzzy details error:', details.error);
                     return;
                 }
 
-                // Update RF Propensity
-                const rfPropensity = details.rf_propensity || 'Unknown';
-                document.getElementById('fuzzy-rf-propensity').textContent = rfPropensity;
-                document.getElementById('fuzzy-rf-propensity').className = 'fuzzy-value';
-                if (rfPropensity === 'High') {
-                    document.getElementById('fuzzy-rf-propensity').style.color = '#dc3545';
-                } else if (rfPropensity === 'Medium') {
-                    document.getElementById('fuzzy-rf-propensity').style.color = '#fd7e14';
-                } else if (rfPropensity === 'Low') {
-                    document.getElementById('fuzzy-rf-propensity').style.color = '#28a745';
-                }
+                // RF Propensity
+                const rf = details.rf_propensity || 'Unknown';
+                const rfEl = $('fuzzy-rf-propensity');
+                setValue('fuzzy-rf-propensity', rf);
+                rfEl.className = 'fuzzy-value ' +
+                    (rf.toLowerCase() === 'high' ? 'fuzzy-value--high' :
+                     rf.toLowerCase() === 'medium' ? 'fuzzy-value--medium' :
+                     rf.toLowerCase() === 'low' ? 'fuzzy-value--low' : '');
 
-                // Update Rule Triggered
-                const ruleTriggered = details.rule_triggered || 'N/A';
-                document.getElementById('fuzzy-rule-triggered').textContent = ruleTriggered;
-
-                // Update Water Level
-                const waterLevel = details.current_water_level_mm || 0;
-                document.getElementById('fuzzy-water-level').textContent = waterLevel.toFixed(0);
-
-                // Update Rate of Rise
-                const ror = details.fuzzy_inputs?.rate_of_rise_mm_day || 0;
-                document.getElementById('fuzzy-rate-of-rise').textContent = ror.toFixed(1);
-
-                // Update Forecast Rain
-                const forecastRain = details.fuzzy_inputs?.forecast_rain_mm || 0;
-                document.getElementById('fuzzy-forecast-rain').textContent = forecastRain.toFixed(1);
-
-                // Update Tide Level
-                const tideLevel = details.fuzzy_inputs?.tide_level_m || 0;
-                document.getElementById('fuzzy-tide-level').textContent = tideLevel.toFixed(2);
-
+                setValue('fuzzy-rule-triggered', details.rule_triggered || 'N/A');
+                setValue('fuzzy-water-level', (details.current_water_level_mm || 0).toFixed(0));
+                setValue('fuzzy-rate-of-rise', (details.fuzzy_inputs?.rate_of_rise_mm_day || 0).toFixed(1));
+                setValue('fuzzy-forecast-rain', (details.fuzzy_inputs?.forecast_rain_mm || 0).toFixed(1));
+                setValue('fuzzy-tide-level', (details.fuzzy_inputs?.tide_level_m || 0).toFixed(2));
             } catch (error) {
                 console.error('Error updating fuzzy details:', error);
             }
         }
 
-        // Create or update water level chart
+        // =====================================================================
+        // CHART PLUGIN — Flood Risk Zones (horizontal bands + threshold lines)
+        // =====================================================================
+        const riskZonePlugin = {
+            id: 'riskZones',
+            afterDraw(chart) {
+                const { ctx, chartArea, scales } = chart;
+                if (!chartArea || !scales.y) return;
+                const y = scales.y;
+                const zones = [
+                    { from: ALERT_THRESHOLD_M, to: ALARM_THRESHOLD_M, color: 'rgba(245, 158, 11, 0.07)' },
+                    { from: ALARM_THRESHOLD_M, to: CRITICAL_LEVEL_M, color: 'rgba(234, 88, 12, 0.08)' },
+                    { from: CRITICAL_LEVEL_M, to: y.max, color: 'rgba(220, 38, 38, 0.10)' }
+                ];
+                ctx.save();
+                zones.forEach(zone => {
+                    const y0 = y.getPixelForValue(Math.min(zone.to, y.max));
+                    const y1 = y.getPixelForValue(Math.max(zone.from, y.min));
+                    if (y1 < y0) return;
+                    ctx.fillStyle = zone.color;
+                    ctx.fillRect(chartArea.left, y0, chartArea.right - chartArea.left, y1 - y0);
+                });
+                // Threshold lines
+                const thresholds = [
+                    { level: ALERT_THRESHOLD_M, color: 'rgba(245, 158, 11, 0.6)', dash: [4, 4] },
+                    { level: ALARM_THRESHOLD_M, color: 'rgba(234, 88, 12, 0.6)', dash: [4, 4] },
+                    { level: CRITICAL_LEVEL_M, color: 'rgba(220, 38, 38, 0.7)', dash: [4, 4] }
+                ];
+                thresholds.forEach(t => {
+                    if (t.level < y.min || t.level > y.max) return;
+                    const yp = y.getPixelForValue(t.level);
+                    ctx.strokeStyle = t.color;
+                    ctx.setLineDash(t.dash);
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(chartArea.left, yp);
+                    ctx.lineTo(chartArea.right, yp);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                });
+                ctx.restore();
+            }
+        };
+
+        // =====================================================================
+        // WATER LEVEL CHART
+        // =====================================================================
         async function updateWaterLevelChart() {
             try {
                 const response = await fetch('/api/water-levels?hours=24');
                 const waterLevels = await response.json();
-                
-                if (waterLevels.length === 0) {
+                const emptyEl = $('water-chart-empty');
+
+                if (!waterLevels.length) {
+                    if (emptyEl) emptyEl.hidden = false;
                     return;
                 }
+                if (emptyEl) emptyEl.hidden = true;
 
-                // Sort by timestamp
                 waterLevels.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
                 const timestamps = waterLevels.map(wl => wl.timestamp);
                 const levels = waterLevels.map(wl => wl.water_level_m);
                 const sources = waterLevels.map(wl => wl.source);
 
-                const ctx = document.getElementById('waterLevelChart').getContext('2d');
-                
-                // Destroy existing chart if it exists
-                if (waterLevelChart) {
-                    waterLevelChart.destroy();
-                }
+                const ctx = $('waterLevelChart').getContext('2d');
+                if (waterLevelChart) waterLevelChart.destroy();
 
+                const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, 'rgba(0, 119, 182, 0.25)');
+                gradient.addColorStop(1, 'rgba(0, 119, 182, 0.02)');
+
+                Chart.register(riskZonePlugin);
                 waterLevelChart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -467,89 +901,97 @@
                         datasets: [{
                             label: 'Water Level (m)',
                             data: levels,
-                            borderColor: '#17a2b8',
-                            backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                            borderColor: '#0077b6',
+                            backgroundColor: gradient,
                             borderWidth: 2,
                             fill: true,
-                            tension: 0.1,
-                            pointRadius: 3,
-                            pointBackgroundColor: sources.map(s => s === 'lora' ? '#28a745' : '#ffc107')
+                            tension: 0.3,
+                            pointRadius: 2.5,
+                            pointHoverRadius: 5,
+                            pointBackgroundColor: sources.map(s =>
+                                s === 'lora' ? '#16a34a' : '#f59e0b'),
+                            pointBorderColor: sources.map(s =>
+                                s === 'lora' ? '#16a34a' : '#f59e0b')
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: { mode: 'nearest', intersect: false },
                         scales: {
                             x: {
                                 type: 'time',
-                                time: {
-                                    unit: 'hour',
-                                    displayFormats: {
-                                        hour: 'HH:mm'
-                                    }
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Time'
-                                }
+                                time: { unit: 'hour', displayFormats: { hour: 'HH:mm' } },
+                                grid: { color: (context) => context.tick ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0)' },
+                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a' }
                             },
                             y: {
-                                title: {
-                                    display: true,
-                                    text: 'Water Level (m)'
-                                },
                                 min: 0,
-                                max: 8
+                                max: 8,
+                                grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid') || 'rgba(0,0,0,0.06)' },
+                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a' },
+                                title: { display: true, text: 'Water Level (m)' }
                             }
                         },
                         plugins: {
                             legend: {
                                 display: true,
-                                position: 'top'
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    boxWidth: 8,
+                                    padding: 16,
+                                    color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a'
+                                }
                             },
                             tooltip: {
+                                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-bg') || 'rgba(31,35,40,0.92)',
+                                titleColor: '#fff',
+                                bodyColor: '#e6edf3',
+                                borderColor: 'rgba(0,0,0,0.1)',
+                                borderWidth: 1,
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: false,
                                 callbacks: {
                                     label: function(context) {
-                                        return `Water Level: ${context.parsed.y.toFixed(2)} m (${sources[context.dataIndex].toUpperCase()})`;
+                                        const src = (sources[context.dataIndex] || '').toUpperCase();
+                                        return `Water Level: ${context.parsed.y.toFixed(2)} m  (${src})`;
                                     }
                                 }
                             }
                         }
                     }
                 });
-
             } catch (error) {
                 console.error('Error updating water level chart:', error);
             }
         }
 
-        // Create or update forecast chart
+        // =====================================================================
+        // FORECAST CHART
+        // =====================================================================
         async function updateForecastChart() {
             try {
                 const response = await fetch('/api/forecast?days=7');
                 const forecast = await response.json();
-                
-                if (forecast.length === 0) {
+                const emptyEl = $('forecast-chart-empty');
+
+                if (!forecast.length) {
+                    if (emptyEl) emptyEl.hidden = false;
                     return;
                 }
+                if (emptyEl) emptyEl.hidden = true;
 
-                // Get current water level for reference
                 const currentResponse = await fetch('/api/prediction');
                 const current = await currentResponse.json();
                 const currentLevel = current.current_level_m || 0;
 
-                // Get risk thresholds
-                const criticalLevel = 7.5;
-
                 const timestamps = forecast.map(f => f.timestamp);
                 const levels = forecast.map(f => f.water_level_m);
 
-                const ctx = document.getElementById('forecastChart').getContext('2d');
-                
-                // Destroy existing chart if it exists
-                if (forecastChart) {
-                    forecastChart.destroy();
-                }
+                const ctx = $('forecastChart').getContext('2d');
+                if (forecastChart) forecastChart.destroy();
 
                 forecastChart = new Chart(ctx, {
                     type: 'line',
@@ -559,50 +1001,20 @@
                             {
                                 label: 'Forecasted Water Level',
                                 data: levels,
-                                borderColor: '#17a2b8',
-                                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                                borderColor: '#0077b6',
+                                backgroundColor: 'rgba(0, 119, 182, 0.12)',
                                 borderWidth: 2,
-                                fill: false,
-                                tension: 0.1,
-                                pointRadius: 4
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
                             },
                             {
                                 label: 'Current Level',
                                 data: Array(forecast.length).fill(currentLevel),
-                                borderColor: '#6c757d',
-                                backgroundColor: 'transparent',
-                                borderWidth: 1,
+                                borderColor: '#8b949e',
+                                borderWidth: 1.5,
                                 borderDash: [5, 5],
-                                fill: false,
-                                pointRadius: 0
-                            },
-                            {
-                                label: 'Alert Threshold (40%)',
-                                data: Array(forecast.length).fill(criticalLevel * 0.40),
-                                borderColor: '#ffc107',
-                                backgroundColor: 'transparent',
-                                borderWidth: 1,
-                                borderDash: [3, 3],
-                                fill: false,
-                                pointRadius: 0
-                            },
-                            {
-                                label: 'Alarm Threshold (60%)',
-                                data: Array(forecast.length).fill(criticalLevel * 0.60),
-                                borderColor: '#fd7e14',
-                                backgroundColor: 'transparent',
-                                borderWidth: 1,
-                                borderDash: [3, 3],
-                                fill: false,
-                                pointRadius: 0
-                            },
-                            {
-                                label: 'Critical Threshold (100%)',
-                                data: Array(forecast.length).fill(criticalLevel),
-                                borderColor: '#dc3545',
-                                backgroundColor: 'transparent',
-                                borderWidth: 1,
-                                borderDash: [3, 3],
                                 fill: false,
                                 pointRadius: 0
                             }
@@ -614,139 +1026,193 @@
                         scales: {
                             x: {
                                 type: 'time',
-                                time: {
-                                    unit: 'day',
-                                    displayFormats: {
-                                        day: 'MMM dd'
-                                    }
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Date'
-                                }
+                                time: { unit: 'day', displayFormats: { day: 'MMM dd' } },
+                                grid: { display: false },
+                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a' }
                             },
                             y: {
-                                title: {
-                                    display: true,
-                                    text: 'Water Level (m)'
-                                },
                                 min: 0,
-                                max: 8
+                                max: 8,
+                                grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid') || 'rgba(0,0,0,0.06)' },
+                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a' },
+                                title: { display: true, text: 'Water Level (m)' }
                             }
                         },
                         plugins: {
                             legend: {
                                 display: true,
-                                position: 'top'
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    boxWidth: 8,
+                                    padding: 16,
+                                    color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a'
+                                }
                             },
                             tooltip: {
+                                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-bg') || 'rgba(31,35,40,0.92)',
+                                titleColor: '#fff',
+                                bodyColor: '#e6edf3',
+                                borderColor: 'rgba(0,0,0,0.1)',
+                                borderWidth: 1,
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: true,
                                 callbacks: {
                                     label: function(context) {
-                                        if (context.dataset.label.includes('Threshold')) {
-                                            return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} m`;
+                                        if (context.dataset.label === 'Current Level') {
+                                            return `Current: ${context.parsed.y.toFixed(2)} m`;
                                         }
-                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} m`;
+                                        return `Forecast: ${context.parsed.y.toFixed(2)} m`;
                                     }
                                 }
                             }
                         }
                     }
                 });
-
             } catch (error) {
                 console.error('Error updating forecast chart:', error);
             }
         }
 
-        // Refresh prediction
+        // =====================================================================
+        // ACTIONS — Refresh Prediction & Test SMS
+        // =====================================================================
         async function refreshPrediction() {
+            const btn = $('refresh-btn');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
             try {
-                const response = await fetch('/api/refresh-prediction', {
-                    method: 'POST'
-                });
+                const response = await fetch('/api/refresh-prediction', { method: 'POST' });
                 const result = await response.json();
-                
                 if (result.status === 'success') {
-                    alert('Prediction refreshed successfully!');
-                    // Refresh all data
+                    showToast('Prediction Refreshed', 'Flood risk prediction recomputed from latest data.', 'success');
                     refreshAll();
                 } else {
-                    alert('Error: ' + (result.message || 'Failed to refresh prediction'));
+                    showToast('Refresh Failed', result.message || 'Could not refresh prediction.', 'danger');
                 }
             } catch (error) {
                 console.error('Error refreshing prediction:', error);
-                alert('Error refreshing prediction');
+                showToast('Refresh Failed', 'Network error while refreshing prediction.', 'danger');
+            } finally {
+                if (btn) { btn.disabled = false; btn.style.opacity = ''; }
             }
         }
 
-        // Test SMS alert
         async function testAlert() {
             try {
-                const response = await fetch('/api/test-alert', {
-                    method: 'POST'
-                });
+                const response = await fetch('/api/test-alert', { method: 'POST' });
                 const result = await response.json();
-                
                 if (result.status === 'success') {
-                    alert('Test alert sent successfully!');
+                    showToast('Test Alert Sent', 'SMS test alert dispatched to active contacts.', 'success');
                 } else {
-                    alert('Error: ' + (result.message || 'Failed to send test alert'));
+                    showToast('Test Alert Failed', result.message || 'Could not send test alert.', 'danger');
                 }
             } catch (error) {
                 console.error('Error testing alert:', error);
-                alert('Error sending test alert');
+                showToast('Test Alert Failed', 'Network error while sending test alert.', 'danger');
             }
         }
 
-        // Contact management functions
+        // =====================================================================
+        // CONTACTS
+        // =====================================================================
+        function riskPillsFor(contact) {
+            const pills = [];
+            if (contact.receive_alert) pills.push('<span class="risk-pill risk-pill--alert">Alert</span>');
+            if (contact.receive_warning) pills.push('<span class="risk-pill risk-pill--alarm">Alarm</span>');
+            if (contact.receive_critical) pills.push('<span class="risk-pill risk-pill--critical">Critical</span>');
+            return pills.join(' ') || '<span class="text-muted" style="font-size:var(--text-xs)">None</span>';
+        }
+
+        async function updateContacts() {
+            try {
+                const response = await fetch('/api/contacts?active_only=false');
+                const contacts = await response.json();
+                const list = $('contacts-list');
+
+                if (!contacts.length) {
+                    list.innerHTML = '<div class="alert-empty">No contacts configured. Click &quot;Add Contact&quot; to add one.</div>';
+                    return;
+                }
+
+                list.innerHTML = contacts.map(contact => `
+                    <div class="contact-item" data-id="${contact.id}">
+                        <div class="contact-info">
+                            <div class="contact-name">${escapeHtml(contact.name)}</div>
+                            <div class="contact-phone">${escapeHtml(contact.phone_number)}</div>
+                            <div class="contact-risk-levels">${riskPillsFor(contact)}</div>
+                        </div>
+                        <div class="contact-actions">
+                            <span class="contact-status ${contact.is_active ? 'contact-status--active' : 'contact-status--inactive'}">
+                                ${contact.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                            <button onclick="editContact(${contact.id})" class="btn btn--ghost btn--sm" aria-label="Edit ${escapeHtml(contact.name)}">
+                                <svg class="icon" style="width:14px;height:14px;"><use href="#i-edit"/></svg> Edit
+                            </button>
+                            <button onclick="deleteContact(${contact.id})" class="btn btn--ghost btn--sm" style="color:var(--color-danger)" aria-label="Delete ${escapeHtml(contact.name)}">
+                                <svg class="icon" style="width:14px;height:14px;"><use href="#i-trash"/></svg> Delete
+                            </button>
+                        </div>
+                    </div>`).join('');
+            } catch (error) {
+                console.error('Error updating contacts:', error);
+            }
+        }
+
         function showAddContactModal() {
-            document.getElementById('contact-modal-title').textContent = 'Add Contact';
-            document.getElementById('contact-form').reset();
-            document.getElementById('contact-id').value = '';
-            document.getElementById('contact-modal').style.display = 'flex';
+            $('contact-modal-title').textContent = 'Add Contact';
+            $('contact-form').reset();
+            $('contact-id').value = '';
+            openModal('contact-modal');
         }
 
         function editContact(contactId) {
             fetch(`/api/contacts/${contactId}`)
                 .then(response => response.json())
                 .then(contact => {
-                    document.getElementById('contact-modal-title').textContent = 'Edit Contact';
-                    document.getElementById('contact-id').value = contact.id;
-                    document.getElementById('contact-name').value = contact.name;
-                    document.getElementById('contact-phone').value = contact.phone_number;
-                    document.getElementById('contact-receive-alert').checked = contact.receive_alert;
-                    document.getElementById('contact-receive-warning').checked = contact.receive_warning;
-                    document.getElementById('contact-receive-critical').checked = contact.receive_critical;
-                    document.getElementById('contact-is-active').checked = contact.is_active;
-                    document.getElementById('contact-modal').style.display = 'flex';
+                    $('contact-modal-title').textContent = 'Edit Contact';
+                    $('contact-id').value = contact.id;
+                    $('contact-name').value = contact.name;
+                    $('contact-phone').value = contact.phone_number;
+                    $('contact-receive-alert').checked = !!contact.receive_alert;
+                    $('contact-receive-warning').checked = !!contact.receive_warning;
+                    $('contact-receive-critical').checked = !!contact.receive_critical;
+                    $('contact-is-active').checked = !!contact.is_active;
+                    openModal('contact-modal');
                 })
-                .catch(error => console.error('Error fetching contact:', error));
+                .catch(error => {
+                    console.error('Error fetching contact:', error);
+                    showToast('Load Failed', 'Could not load contact details.', 'danger');
+                });
         }
 
         function deleteContact(contactId) {
             if (!confirm('Are you sure you want to delete this contact?')) return;
-            
             fetch(`/api/contacts/${contactId}`, { method: 'DELETE' })
                 .then(response => response.json())
                 .then(result => {
                     if (result.status === 'success') {
+                        showToast('Contact Deleted', 'The contact was removed.', 'success');
                         updateContacts();
                     } else {
-                        alert('Error: ' + (result.error || 'Failed to delete contact'));
+                        showToast('Delete Failed', result.error || 'Could not delete contact.', 'danger');
                     }
                 })
-                .catch(error => console.error('Error deleting contact:', error));
+                .catch(error => {
+                    console.error('Error deleting contact:', error);
+                    showToast('Delete Failed', 'Network error while deleting contact.', 'danger');
+                });
         }
 
         async function saveContact() {
-            const contactId = document.getElementById('contact-id').value;
+            const contactId = $('contact-id').value;
             const data = {
-                name: document.getElementById('contact-name').value,
-                phone_number: document.getElementById('contact-phone').value,
-                receive_alert: document.getElementById('contact-receive-alert').checked ? 1 : 0,
-                receive_warning: document.getElementById('contact-receive-warning').checked ? 1 : 0,
-                receive_critical: document.getElementById('contact-receive-critical').checked ? 1 : 0,
-                is_active: document.getElementById('contact-is-active').checked ? 1 : 0
+                name: $('contact-name').value,
+                phone_number: $('contact-phone').value,
+                receive_alert: $('contact-receive-alert').checked ? 1 : 0,
+                receive_warning: $('contact-receive-warning').checked ? 1 : 0,
+                receive_critical: $('contact-receive-critical').checked ? 1 : 0,
+                is_active: $('contact-is-active').checked ? 1 : 0
             };
 
             const url = contactId ? `/api/contacts/${contactId}` : '/api/contacts';
@@ -761,22 +1227,57 @@
                 const result = await response.json();
 
                 if (result.status === 'success' || result.contact_id) {
-                    document.getElementById('contact-modal').style.display = 'none';
+                    closeContactModal();
+                    showToast(contactId ? 'Contact Updated' : 'Contact Added',
+                        contactId ? 'Changes saved.' : 'New contact created.', 'success');
                     updateContacts();
                 } else {
-                    alert('Error: ' + (result.error || 'Failed to save contact'));
+                    showToast('Save Failed', result.error || 'Could not save contact.', 'danger');
                 }
             } catch (error) {
                 console.error('Error saving contact:', error);
-                alert('Error saving contact');
+                showToast('Save Failed', 'Network error while saving contact.', 'danger');
             }
         }
 
-        function closeContactModal() {
-            document.getElementById('contact-modal').style.display = 'none';
+        // =====================================================================
+        // MODAL — accessible open/close (focus trap + Esc)
+        // =====================================================================
+        function openModal(id) {
+            const modal = $(id);
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+            // Focus first input
+            setTimeout(() => {
+                const first = modal.querySelector('input:not([type="hidden"])');
+                if (first) first.focus();
+            }, 50);
         }
 
-        // Refresh all data
+        function closeContactModal() {
+            const modal = $('contact-modal');
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        // Esc closes modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const open = document.querySelector('.modal.is-open');
+                if (open) open.classList.remove('is-open');
+            }
+        });
+
+        // Click on backdrop closes modal
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.remove('is-open');
+            });
+        });
+
+        // =====================================================================
+        // REFRESH LOOP
+        // =====================================================================
         async function refreshAll() {
             await Promise.all([
                 updateCurrentStatus(),
@@ -788,104 +1289,20 @@
                 updateWaterLevelChart(),
                 updateForecastChart()
             ]);
-            
-            // Update last refresh time
-            document.getElementById('last-refresh').textContent = 
-                `Last refresh: ${new Date().toLocaleString()}`;
+            $('last-refresh').textContent = `Last refresh: ${new Date().toLocaleString()}`;
         }
 
-        // Update contacts list
-        async function updateContacts() {
-            try {
-                const response = await fetch('/api/contacts?active_only=false');
-                const contacts = await response.json();
-                
-                const contactsList = document.getElementById('contacts-list');
-                
-                if (contacts.length === 0) {
-                    contactsList.innerHTML = '<p>No contacts configured. Click "Add Contact" to add one.</p>';
-                    return;
-                }
-
-                contactsList.innerHTML = contacts.map(contact => {
-                    const riskLevels = [];
-                    if (contact.receive_alert) riskLevels.push('Alert');
-                    if (contact.receive_warning) riskLevels.push('Alarm');
-                    if (contact.receive_critical) riskLevels.push('Critical');
-                    
-                    return `
-                        <div class="contact-item" data-id="${contact.id}">
-                            <div class="contact-info">
-                                <div class="contact-name">${contact.name}</div>
-                                <div class="contact-phone">${contact.phone_number}</div>
-                                <div class="contact-risk-levels">${riskLevels.join(', ') || 'None'}</div>
-                            </div>
-                            <div class="contact-actions">
-                                <span class="contact-status ${contact.is_active ? 'status-active' : 'status-inactive'}">
-                                    ${contact.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                                <button onclick="editContact(${contact.id})" class="btn btn-sm btn-secondary">Edit</button>
-                                <button onclick="deleteContact(${contact.id})" class="btn btn-sm btn-danger">Delete</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (error) {
-                console.error('Error updating contacts:', error);
-            }
-        }
-
-        // Auto-refresh every N seconds
         const autoRefreshSeconds = {{ auto_refresh_seconds }};
         setInterval(refreshAll, autoRefreshSeconds * 1000);
 
-        // Initial load
-        document.addEventListener('DOMContentLoaded', refreshAll);
-    <!-- Contact Modal -->
-    <div class="modal" id="contact-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="contact-modal-title">Add Contact</h3>
-                <button class="modal-close" onclick="closeContactModal()">&times;</button>
-            </div>
-            <form id="contact-form">
-                <input type="hidden" id="contact-id" name="id">
-                <div class="form-group">
-                    <label for="contact-name">Name</label>
-                    <input type="text" id="contact-name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="contact-phone">Phone Number</label>
-                    <input type="tel" id="contact-phone" name="phone_number" required placeholder="+639XXXXXXXXX">
-                </div>
-                <div class="form-group checkbox-group">
-                    <label>Receive Alerts For:</label>
-                    <div class="checkbox-row">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="contact-receive-alert" name="receive_alert" value="1"> Alert
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="contact-receive-warning" name="receive_warning" value="1"> Alarm
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="contact-receive-critical" name="receive_critical" value="1"> Critical
-                        </label>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="contact-is-active" name="is_active" value="1" checked> Active
-                    </label>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeContactModal()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveContact()">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+        // =====================================================================
+        // INIT
+        // =====================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            $('theme-toggle').addEventListener('click', toggleTheme);
+            refreshAll();
+        });
     </script>
 </body>
 </html>
