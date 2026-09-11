@@ -423,6 +423,15 @@ def get_all_alert_contacts(active_only: bool = True) -> List[Dict]:
         return [dict(row) for row in cursor.fetchall()]
 
 
+def get_alert_contact(contact_id: int) -> Optional[Dict]:
+    """Get a single alert contact by ID, or None if not found"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM alert_contacts WHERE id = ?", (contact_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
 def get_active_alert_phone_numbers(risk_level: str = None) -> List[str]:
     """Get phone numbers of active contacts for a specific risk level"""
     with get_db_connection() as conn:

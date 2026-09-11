@@ -34,7 +34,8 @@ from src.data.database import (
     get_latest_prediction, get_predictions_since,
     get_recent_alerts, get_system_status, get_database_stats,
     get_rainfall_since, get_rainfall_stats,
-    get_all_alert_contacts, insert_alert_contact, update_alert_contact, delete_alert_contact,
+    get_all_alert_contacts, get_alert_contact,
+    insert_alert_contact, update_alert_contact, delete_alert_contact,
     get_active_alert_phone_numbers
 )
 from src.data.sms_handler import test_alert_sms
@@ -414,6 +415,19 @@ async def get_phone_numbers(risk_level: str = None) -> JSONResponse:
     try:
         numbers = get_active_alert_phone_numbers(risk_level)
         return JSONResponse(content={"phone_numbers": numbers})
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/contacts/{contact_id}")
+async def get_contact(contact_id: int) -> JSONResponse:
+    """Get a single alert contact by ID"""
+    try:
+        contact = get_alert_contact(contact_id)
+        if contact:
+            return JSONResponse(content=contact)
+        else:
+            return JSONResponse(content={"error": "Contact not found"}, status_code=404)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
