@@ -7,7 +7,7 @@ import time
 import struct
 import threading
 import spidev
-import RPi.GPIO as GPIO
+from gpiozero import OutputDevice, InputDevice
 from datetime import datetime
 from typing import Optional, Callable
 
@@ -26,7 +26,9 @@ class LoRaReceiver:
     
     def __init__(self):
         self.spi = None
-        self.gpio_setup_done = False
+        self.ce_pin = None
+        self.cs_pin = None
+        self.rst_pin = None
         self.last_receive_time = None
         
         if not LORA_ENABLED:
@@ -36,24 +38,15 @@ class LoRaReceiver:
         
         self.enabled = True
         self.setup_hardware()
-        
+
     def setup_hardware(self):
         """Initialize SPI and GPIO"""
         try:
-            # Setup GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setwarnings(False)
-            
-            # LoRa control pins
-            GPIO.setup(LORA_CE_PIN, GPIO.OUT)
-            GPIO.setup(LORA_CS_PIN, GPIO.OUT)
-            GPIO.setup(LORA_RESET_PIN, GPIO.OUT)
-            
-            # Initialize pins
-            GPIO.output(LORA_CE_PIN, GPIO.LOW)
-            GPIO.output(LORA_CS_PIN, GPIO.HIGH)
-            GPIO.output(LORA_RESET_PIN, GPIO.LOW)
-            
+            # LoRa control pins (gpiozero uses BCM numbering by default)
+            self.cs_pin = OutputDevice(LORA_CS_PIN, active_high=True, initial_value=True)
+            self.rst_pin = OutputDevice(LORA_RESET_PIN, active_high=True, initial_value=False)
+            self.ce_pin = InputDevice(LORA_CE_PIN)
+
             # Setup SPI
             self.spi = spidev.SpiDev()
             self.spi.open(0, LORA_CS_PIN)
@@ -77,9 +70,9 @@ class LoRaReceiver:
     
     def reset(self):
         """Reset the LoRa module"""
-        GPIO.output(LORA_RESET_PIN, GPIO.LOW)
+        self.rst_pin.off()
         time.sleep(0.1)
-        GPIO.output(LORA_RESET_PIN, GPIO.HIGH)
+        self.rst_pin.on()
         time.sleep(0.1)
     
     def configure_lora(self):
@@ -121,17 +114,17 @@ class LoRaReceiver:
     
     def _read_register(self, address: int) -> int:
         """Read a register value"""
-        GPIO.output(LORA_CS_PIN, GPIO.LOW)
+        self.cs_pin.off()
         self.spi.xfer2([address & 0x7F, 0x00])
         value = self.spi.xfer2([0x00])[0]
-        GPIO.output(LORA_CS_PIN, GPIO.HIGH)
+        self.cs_pin.on()
         return value
-    
+
     def _write_register(self, address: int, value: int):
         """Write to a register"""
-        GPIO.output(LORA_CS_PIN, GPIO.LOW)
+        self.cs_pin.off()
         self.spi.xfer2([address | 0x80, value])
-        GPIO.output(LORA_CS_PIN, GPIO.HIGH)
+        self.cs_pin.on()
     
     def _calculate_frequency(self, freq_mhz: float) -> int:
         """Calculate frequency register value"""
@@ -143,12 +136,12 @@ class LoRaReceiver:
         
         while time.time() - start_time < timeout:
             # Check if packet received (DIO0 goes high)
-            if GPIO.input(LORA_CE_PIN):  # Using CE as DIO0
+            if self.ce_pin.is_active:  # Using CE as DIO0
                 # Read packet
                 packet = self._read_packet()
                 if packet:
                     return packet
-            
+
             time.sleep(0.01)
         
         return None
@@ -294,8 +287,14 @@ class LoRaReceiver:
         """Clean up GPIO and SPI"""
         if self.spi:
             self.spi.close()
-        if self.gpio_setup_done:
-            GPIO.cleanup()
+        # gpiozero devices clean up automatically on __del__,
+        # but we explicitly close them for deterministic release
+        if self.cs_pin:
+            self.cs_pin.close()
+        if self.rst_pin:
+            self.rst_pin.close()
+        if self.ce_pin:
+            self.ce_pin.close()
 
 
 def start_lora_receiver():

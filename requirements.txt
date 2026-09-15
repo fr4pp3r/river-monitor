@@ -9,7 +9,9 @@ jinja2==3.1.3
 
 # Hardware Communication
 spidev==3.6
-RPi.GPIO==0.7.1
+# gpiozero replaces RPi.GPIO (RPi.GPIO cannot determine the SOC peripheral
+# base address on Raspberry Pi 5, where GPIO moved behind the RP1 controller)
+gpiozero>=2.0
 pyserial==3.5
 
 # HTTP Requests
