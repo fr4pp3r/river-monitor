@@ -5,6 +5,7 @@ Handles RFM95W module communication for receiving water level sensor data
 
 import time
 import struct
+import threading
 import spidev
 import RPi.GPIO as GPIO
 from datetime import datetime
@@ -86,14 +87,16 @@ class LoRaReceiver:
         # Set frequency (915 MHz)
         self._write_register(0x06, self._calculate_frequency(LORA_FREQUENCY))
         
-        # Set spreading factor
-        self._write_register(0x1E, (LORA_SPREADING_FACTOR << 4))
-        
-        # Set bandwidth
+        # Set spreading factor + enable CRC (bit 2 = RxPayloadCrcOn, mandatory:
+        # the sensor node's RadioHead RH_RF95 transmits with CRC enabled by
+        # default, and a CRC-disabled receiver discards those packets)
+        self._write_register(0x1E, (LORA_SPREADING_FACTOR << 4) | 0x04)
+
+        # Set bandwidth (RegModemConfig1, upper nibble)
         bw = {125: 0x00, 250: 0x01, 500: 0x02}[LORA_BANDWIDTH]
         self._write_register(0x1D, bw << 4)
-        
-        # Set coding rate
+
+        # Set coding rate (RegModemConfig1, lower nibble)
         self._write_register(0x1D, self._read_register(0x1D) | (LORA_CODING_RATE << 1))
         
         # Set preamble length
@@ -302,6 +305,30 @@ def start_lora_receiver():
         return
     receiver = LoRaReceiver()
     receiver.run()
+
+
+def start_lora_receiver_async():
+    """Start the LoRa receiver loop in a background daemon thread.
+
+    Returns the created thread so callers can inspect/join it if needed.
+    The thread is a daemon, so it dies automatically when the process exits.
+    """
+    if not LORA_ENABLED:
+        print("LoRa module is DISABLED in config. Skipping.")
+        return None
+
+    def _run():
+        try:
+            receiver = LoRaReceiver()
+            receiver.run()
+        except Exception as e:
+            # GPIO/SPI permission errors, missing hardware, etc. must not
+            # crash the web dashboard - log and keep serving.
+            print(f"LoRa receiver thread failed: {e}")
+
+    thread = threading.Thread(target=_run, name="lora-receiver", daemon=True)
+    thread.start()
+    return thread
 
 
 if __name__ == "__main__":

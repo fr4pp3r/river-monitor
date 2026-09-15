@@ -39,6 +39,7 @@ from src.data.database import (
     get_active_alert_phone_numbers
 )
 from src.data.sms_handler import test_alert_sms
+from src.data.lora_receiver import start_lora_receiver_async
 from src.model.predict import FloodPredictor
 from src.data.weather_fetcher import WeatherFetcher
 
@@ -441,7 +442,7 @@ def run_dashboard():
     print(f"Starting River Monitor Dashboard on {DASHBOARD_HOST}:{DASHBOARD_PORT}")
     print(f"Access the dashboard at: http://{DASHBOARD_HOST}:{DASHBOARD_PORT}")
     
-    # Try to fetch and store fresh weather/tide data so the dashboard has
+# Try to fetch and store fresh weather/tide data so the dashboard has
     # up-to-date readings even before the first sensor packet arrives.
     try:
         fetcher = WeatherFetcher()
@@ -451,7 +452,11 @@ def run_dashboard():
             print("Warning: Could not refresh weather data at startup (using cached/last known)")
     except Exception as e:
         print(f"Warning: Weather refresh at startup failed: {e}")
-    
+
+    # Start the LoRa receiver loop in a background thread so sensor packets
+    # are ingested and stored while the web dashboard keeps running.
+    start_lora_receiver_async()
+
     uvicorn.run(
         app,
         host=DASHBOARD_HOST,

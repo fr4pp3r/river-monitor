@@ -8,7 +8,7 @@ Adjust these values according to your hardware setup and requirements
 # ============================================================================
 
 # Set to False to disable hardware modules (useful for development/testing)
-LORA_ENABLED = False   # Enable/disable LoRa receiver module
+LORA_ENABLED = True    # Enable/disable LoRa receiver module
 SMS_ENABLED = False    # Enable/disable SMS handler module
 
 # ============================================================================
@@ -22,7 +22,9 @@ LORA_CS_PIN = 8       # Chip Select GPIO pin
 LORA_RESET_PIN = 27   # Reset GPIO pin
 LORA_FREQUENCY = 915.0 # MHz - 915MHz band
 LORA_BANDWIDTH = 125  # kHz
-LORA_SPREADING_FACTOR = 12
+# Spreading factor must match the sensor node (Feather RadioHead RH_RF95 default = 7).
+# SF12 and SF7 are incompatible - an SF7 node cannot be heard by an SF12 receiver.
+LORA_SPREADING_FACTOR = 7
 LORA_CODING_RATE = 5
 
 # SMS Module (A7608e-H) - UART Configuration
