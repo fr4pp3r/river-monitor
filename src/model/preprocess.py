@@ -6,7 +6,7 @@ Handles data cleaning, feature engineering, and preparation for training
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Tuple, Optional
+from typing import Dict, Tuple, Optional
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import joblib
