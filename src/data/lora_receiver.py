@@ -161,7 +161,7 @@ class LoRaReceiver:
         self._write_reg(REG_PA_CONFIG, 0x8F)
 
         # Sync word (0x39) - MUST match RadioHead's default 0x12 (LoRa public)
-        self._write_reg(REG_SYNC_WORD, 0x12)
+        self._write_reg(REG_SYNC_WORD, 0x39)
 
         # DIO mapping: DIO0 -> RxDone
         self._write_reg(REG_DIO_MAPPING_1, 0x00)
