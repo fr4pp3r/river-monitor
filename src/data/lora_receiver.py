@@ -41,6 +41,7 @@ REG_MODEM_CONFIG_1 = 0x1D
 REG_MODEM_CONFIG_2 = 0x1E
 REG_MODEM_CONFIG_3 = 0x26
 REG_DIO_MAPPING_1 = 0x40
+REG_SYNC_WORD = 0x39
 REG_VERSION = 0x42
 REG_PA_DAC = 0x4D
 
@@ -158,6 +159,9 @@ class LoRaReceiver:
 
         # PA config
         self._write_reg(REG_PA_CONFIG, 0x8F)
+
+        # Sync word (0x39) - MUST match RadioHead's default 0x12 (LoRa public)
+        self._write_reg(REG_SYNC_WORD, 0x12)
 
         # DIO mapping: DIO0 -> RxDone
         self._write_reg(REG_DIO_MAPPING_1, 0x00)
