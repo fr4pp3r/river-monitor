@@ -49,8 +49,8 @@ class LoRaReceiver:
     def setup_hardware(self):
         """Initialize SPI and RFM95 via adafruit blinka"""
         try:
-            # SPI bus
-            spi = busio.SPI(board.SCK, MOSI=board.MOSI, MISO=board.MISO)
+            # SPI bus - RFM95 needs slow SPI clock (100kHz) to respond reliably
+            spi = busio.SPI(board.SCK, MOSI=board.MOSI, MISO=board.MISO, baudrate=100000)
 
             # Chip select and reset pins (BCM numbering via blinka)
             cs = digitalio.DigitalInOut(getattr(board, f"D{LORA_CS_PIN}"))
