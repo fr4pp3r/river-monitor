@@ -18,7 +18,7 @@ SMS_ENABLED = False    # Enable/disable SMS handler module
 # LoRa Module (RFM95W) - SPI Configuration
 LORA_SPI_PORT = 0
 LORA_CE_PIN = 5      # Chip Enable GPIO pin
-LORA_CS_PIN = 7       # Chip Select GPIO pin  
+LORA_CS_PIN = 8       # Chip Select GPIO pin  
 LORA_RESET_PIN = 25   # Reset GPIO pin
 LORA_FREQUENCY = 915.0 # MHz - 915MHz band
 LORA_BANDWIDTH = 125  # kHz
