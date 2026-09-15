@@ -21,7 +21,10 @@ from src.data.database import insert_water_level, get_latest_water_level
 from src.data.sms_handler import trigger_sms_fallback
 
 
-# RFM95 register addresses
+# ============================================================
+# RFM95 / SX1276 REGISTERS
+# ============================================================
+
 REG_FIFO = 0x00
 REG_OP_MODE = 0x01
 REG_FRF_MSB = 0x06
@@ -32,13 +35,16 @@ REG_LNA = 0x0C
 REG_FIFO_ADDR_PTR = 0x0D
 REG_FIFO_TX_BASE_ADDR = 0x0E
 REG_FIFO_RX_BASE_ADDR = 0x0F
-REG_FIFO_RX_CURRENT_ADDR = 0x10
+REG_FIFO_RX_CURRENT = 0x10
 REG_IRQ_FLAGS = 0x12
 REG_RX_NB_BYTES = 0x13
+REG_MODEM_STAT = 0x18
 REG_PKT_SNR_VALUE = 0x19
 REG_PKT_RSSI_VALUE = 0x1A
 REG_MODEM_CONFIG_1 = 0x1D
 REG_MODEM_CONFIG_2 = 0x1E
+REG_PREAMBLE_MSB = 0x20
+REG_PREAMBLE_LSB = 0x21
 REG_MODEM_CONFIG_3 = 0x26
 REG_DIO_MAPPING_1 = 0x40
 REG_SYNC_WORD = 0x39
@@ -52,6 +58,17 @@ MODE_TX = 0x03
 MODE_RX_CONTINUOUS = 0x05
 MODE_RX_SINGLE = 0x06
 LONG_RANGE_MODE = 0x80
+
+# IRQ flags
+IRQ_RX_TIMEOUT = 0x80
+IRQ_RX_DONE = 0x40
+IRQ_PAYLOAD_CRC_ERROR = 0x20
+IRQ_VALID_HEADER = 0x10
+
+# SPI
+SPI_BUS = 0
+SPI_DEVICE = 0
+SPI_SPEED = 100000  # 100kHz - RFM95 needs slow clock
 
 
 class LoRaReceiver:
@@ -75,16 +92,21 @@ class LoRaReceiver:
         try:
             # Open SPI device - kernel manages CS on GPIO 8 (CE0) automatically
             self.spi = spidev.SpiDev()
-            self.spi.open(0, 0)  # /dev/spidev0.0
-            self.spi.max_speed_hz = 100000  # 100kHz - RFM95 needs slow clock
-            self.spi.mode = 0b00
+            self.spi.open(SPI_BUS, SPI_DEVICE)
+            self.spi.max_speed_hz = SPI_SPEED
+            self.spi.mode = 0
 
             # Open GPIO chip and claim only RST pin (kernel manages CS)
             self.gpio_handle = lgpio.gpiochip_open(0)
             lgpio.gpio_claim_output(self.gpio_handle, LORA_RESET_PIN, 1)
 
-            # Reset the module
+            # Reset module
             self.reset()
+
+            # Check version
+            version = self._read_reg(REG_VERSION)
+            if version != 0x12:
+                raise RuntimeError(f"RFM95 version check failed: got 0x{version:02x}, expected 0x12")
 
             # Configure LoRa registers
             self.configure_lora()
@@ -106,12 +128,17 @@ class LoRaReceiver:
 
     def _write_reg(self, address: int, value: int):
         """Write to a register (address | 0x80 for write)"""
-        self.spi.xfer2([address | 0x80, value])
+        self.spi.xfer2([address | 0x80, value & 0xFF])
 
     def _read_reg(self, address: int) -> int:
         """Read a register (address & 0x7F for read)"""
         resp = self.spi.xfer2([address & 0x7F, 0x00])
         return resp[1]
+
+    def _read_fifo(self, length: int) -> list:
+        """Read multiple bytes from FIFO"""
+        resp = self.spi.xfer2([REG_FIFO] + [0x00] * length)
+        return resp[1:]
 
     def _set_frequency(self, freq_mhz: float):
         """Set frequency in MHz"""
@@ -121,96 +148,119 @@ class LoRaReceiver:
         self._write_reg(REG_FRF_LSB, frf & 0xFF)
 
     def configure_lora(self):
-        """Configure LoRa module settings"""
-        # Put in sleep mode first
+        """Configure LoRa module settings - matches working test_lora.py"""
+        # LoRa + SLEEP
         self._write_reg(REG_OP_MODE, MODE_SLEEP | LONG_RANGE_MODE)
         time.sleep(0.01)
 
-        # Set frequency
+        # Frequency
         self._set_frequency(LORA_FREQUENCY)
 
-        # Set modem config 1: BW, CR, implicit header
-        bw_map = {125: 0x00, 250: 0x01, 500: 0x02}
-        bw = bw_map.get(LORA_BANDWIDTH, 0x00)
-        self._write_reg(REG_MODEM_CONFIG_1, (bw << 4) | (LORA_CODING_RATE << 1))
-
-        # Set modem config 2: SF, CRC enable
-        self._write_reg(REG_MODEM_CONFIG_2, (LORA_SPREADING_FACTOR << 4) | 0x04)
-
-        # Set modem config 3: low data rate optimize if SF >= 11
-        if LORA_SPREADING_FACTOR >= 11:
-            self._write_reg(REG_MODEM_CONFIG_3, 0x08)
-        else:
-            self._write_reg(REG_MODEM_CONFIG_3, 0x00)
-
-        # Preamble length
-        self._write_reg(0x20, 0x00)
-        self._write_reg(0x21, 0x08)
-
-        # Payload length
-        self._write_reg(0x22, 0x40)
-
-        # FIFO pointers
+        # FIFO
         self._write_reg(REG_FIFO_TX_BASE_ADDR, 0x00)
         self._write_reg(REG_FIFO_RX_BASE_ADDR, 0x00)
+        self._write_reg(REG_FIFO_ADDR_PTR, 0x00)
+
+        # MODEM CONFIG 1: BW=125kHz, CR=4/5, Explicit header
+        # BW125 = 7 << 4 = 0x70, CR4/5 = 1 << 1 = 0x02 -> 0x72
+        self._write_reg(REG_MODEM_CONFIG_1, 0x72)
+
+        # MODEM CONFIG 2: SF7, CRC ON
+        # SF7 = 7 << 4 = 0x70, CRC ON = 0x04 -> 0x74
+        self._write_reg(REG_MODEM_CONFIG_2, 0x74)
+
+        # MODEM CONFIG 3: AGC auto ON
+        self._write_reg(REG_MODEM_CONFIG_3, 0x04)
+
+        # PREAMBLE = 8
+        self._write_reg(REG_PREAMBLE_MSB, 0x00)
+        self._write_reg(REG_PREAMBLE_LSB, 0x08)
 
         # LNA boost
         self._write_reg(REG_LNA, 0x23)
 
-        # PA config
-        self._write_reg(REG_PA_CONFIG, 0x8F)
-
         # Sync word (0x39) - MUST match RadioHead's default 0x12 (LoRa public)
-        self._write_reg(REG_SYNC_WORD, 0x39)
+        self._write_reg(REG_SYNC_WORD, 0x12)
 
-        # DIO mapping: DIO0 -> RxDone
+        # DIO0 = RxDone
         self._write_reg(REG_DIO_MAPPING_1, 0x00)
 
-        # Set to standby
+        # STANDBY
         self._write_reg(REG_OP_MODE, MODE_STDBY | LONG_RANGE_MODE)
         time.sleep(0.01)
 
-        # Set to continuous receive mode
+        # START CONTINUOUS RX
+        self.start_receive()
+        time.sleep(0.05)
+
+        print(f"LoRa receiver initialized successfully: {LORA_FREQUENCY}MHz, "
+              f"SF{LORA_SPREADING_FACTOR}, BW{LORA_BANDWIDTH}kHz, CR4/{LORA_CODING_RATE}")
+
+    def start_receive(self):
+        """Put radio in continuous receive mode"""
+        # Clear all IRQ flags
+        self._write_reg(REG_IRQ_FLAGS, 0xFF)
+
+        # Set FIFO pointer to RX base
+        rx_base = self._read_reg(REG_FIFO_RX_BASE_ADDR)
+        self._write_reg(REG_FIFO_ADDR_PTR, rx_base)
+
+        # Continuous RX
         self._write_reg(REG_OP_MODE, MODE_RX_CONTINUOUS | LONG_RANGE_MODE)
 
-        # Verify version
-        version = self._read_reg(REG_VERSION)
-        if version != 0x12:
-            raise RuntimeError(f"RFM95 version check failed: got 0x{version:02x}, expected 0x12")
-
     def receive_packet(self, timeout: float = 1.0) -> Optional[str]:
-        """Receive a LoRa packet with timeout"""
+        """Receive a LoRa packet with timeout - handles RadioHead header"""
         start_time = time.time()
 
         while time.time() - start_time < timeout:
-            # Check IRQ flags
             irq_flags = self._read_reg(REG_IRQ_FLAGS)
 
-            if irq_flags & 0x40:  # RxDone
+            if irq_flags & IRQ_RX_DONE:
                 # Clear IRQ flags
                 self._write_reg(REG_IRQ_FLAGS, 0xFF)
 
-                # Read packet length
-                payload_len = self._read_reg(REG_RX_NB_BYTES)
+                # Check CRC
+                if irq_flags & IRQ_PAYLOAD_CRC_ERROR:
+                    print("CRC ERROR on received packet")
+                    self.start_receive()
+                    return None
 
-                # Set FIFO address pointer to current RX address
-                current_addr = self._read_reg(REG_FIFO_RX_CURRENT_ADDR)
-                self._write_reg(REG_FIFO_ADDR_PTR, current_addr)
+                # Check valid header
+                if not (irq_flags & IRQ_VALID_HEADER):
+                    print("Invalid header on received packet")
+                    self.start_receive()
+                    return None
 
-                # Read payload
-                payload = []
-                for _ in range(payload_len):
-                    resp = self.spi.xfer2([REG_FIFO & 0x7F, 0x00])
-                    payload.append(resp[1])
+                # Packet length
+                packet_length = self._read_reg(REG_RX_NB_BYTES)
+                if packet_length == 0:
+                    self.start_receive()
+                    return None
+
+                # FIFO current address
+                fifo_address = self._read_reg(REG_FIFO_RX_CURRENT)
+                self._write_reg(REG_FIFO_ADDR_PTR, fifo_address)
+
+                # Read packet
+                data = self._read_fifo(packet_length)
+
+                # Re-arm receiver
+                self.start_receive()
+
+                # Handle RadioHead header (first 4 bytes: TO, FROM, ID, FLAGS)
+                if len(data) >= 4:
+                    payload = data[4:]
+                else:
+                    payload = data
 
                 # Convert to string
                 try:
-                    packet_str = bytes(payload).decode('ascii').strip()
+                    packet_str = bytes(payload).decode('ascii', errors='replace').strip()
                     return packet_str
                 except UnicodeDecodeError:
                     return None
 
-            time.sleep(0.01)
+            time.sleep(0.005)  # 5ms polling - matches working test
 
         return None
 
@@ -332,7 +382,7 @@ class LoRaReceiver:
 
 
 def start_lora_receiver():
-    """Start the LoRa receiver as a standalone process"""
+    """Start the LoRa receiver as standalone process"""
     if not LORA_ENABLED:
         print("LoRa module is DISABLED in config. Skipping.")
         return
@@ -341,7 +391,7 @@ def start_lora_receiver():
 
 
 def start_lora_receiver_async():
-    """Start the LoRa receiver loop in a background daemon thread.
+    """Start the LoRa receiver loop in background daemon thread.
 
     Returns the created thread so callers can inspect/join it if needed.
     The thread is a daemon, so it dies automatically when the process exits.
