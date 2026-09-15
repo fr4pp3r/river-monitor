@@ -1,20 +1,15 @@
 """
 LoRa Receiver for River Monitor System
-Handles RFM95W module communication using adafruit-circuitpython-rfm9x
+Handles RFM95W module communication using spidev + lgpio (manual SPI)
 """
 
 import time
+import struct
 import threading
-import busio
-import digitalio
-import board
+import spidev
+import lgpio
 from datetime import datetime
 from typing import Optional, Callable
-
-try:
-    import adafruit_rfm9x
-except ImportError:
-    adafruit_rfm9x = None
 
 from src.config import (
     LORA_ENABLED, LORA_FREQUENCY, LORA_SPREADING_FACTOR, LORA_BANDWIDTH,
@@ -26,11 +21,44 @@ from src.data.database import insert_water_level, get_latest_water_level
 from src.data.sms_handler import trigger_sms_fallback
 
 
+# RFM95 register addresses
+REG_FIFO = 0x00
+REG_OP_MODE = 0x01
+REG_FRF_MSB = 0x06
+REG_FRF_MID = 0x07
+REG_FRF_LSB = 0x08
+REG_PA_CONFIG = 0x09
+REG_LNA = 0x0C
+REG_FIFO_ADDR_PTR = 0x0D
+REG_FIFO_TX_BASE_ADDR = 0x0E
+REG_FIFO_RX_BASE_ADDR = 0x0F
+REG_FIFO_RX_CURRENT_ADDR = 0x10
+REG_IRQ_FLAGS = 0x12
+REG_RX_NB_BYTES = 0x13
+REG_PKT_SNR_VALUE = 0x19
+REG_PKT_RSSI_VALUE = 0x1A
+REG_MODEM_CONFIG_1 = 0x1D
+REG_MODEM_CONFIG_2 = 0x1E
+REG_MODEM_CONFIG_3 = 0x26
+REG_DIO_MAPPING_1 = 0x40
+REG_VERSION = 0x42
+REG_PA_DAC = 0x4D
+
+# Op modes
+MODE_SLEEP = 0x00
+MODE_STDBY = 0x01
+MODE_TX = 0x03
+MODE_RX_CONTINUOUS = 0x05
+MODE_RX_SINGLE = 0x06
+LONG_RANGE_MODE = 0x80
+
+
 class LoRaReceiver:
-    """RFM95W LoRa module receiver using adafruit-circuitpython-rfm9x"""
+    """RFM95W LoRa module receiver using spidev + lgpio"""
 
     def __init__(self):
-        self.rfm9x = None
+        self.spi = None
+        self.gpio_handle = None
         self.last_receive_time = None
 
         if not LORA_ENABLED:
@@ -38,61 +66,148 @@ class LoRaReceiver:
             self.enabled = False
             return
 
-        if adafruit_rfm9x is None:
-            print("ERROR: adafruit-circuitpython-rfm9x not installed")
-            self.enabled = False
-            return
-
         self.enabled = True
         self.setup_hardware()
 
     def setup_hardware(self):
-        """Initialize SPI and RFM95 via adafruit blinka"""
+        """Initialize SPI and GPIO using spidev + lgpio (kernel manages CS)"""
         try:
-            # SPI bus - RFM95 needs slow SPI clock (100kHz) to respond reliably
-            spi = busio.SPI(board.SCK, MOSI=board.MOSI, MISO=board.MISO)
-            # Set SPI baudrate to 100kHz (RFM95 needs slow clock to respond)
-            spi.try_lock()
-            spi.configure(baudrate=100000)
-            spi.unlock()
+            # Open SPI device - kernel manages CS on GPIO 8 (CE0) automatically
+            self.spi = spidev.SpiDev()
+            self.spi.open(0, 0)  # /dev/spidev0.0
+            self.spi.max_speed_hz = 100000  # 100kHz - RFM95 needs slow clock
+            self.spi.mode = 0b00
 
-            # Chip select and reset pins (BCM numbering via blinka)
-            cs = digitalio.DigitalInOut(getattr(board, f"D{LORA_CS_PIN}"))
-            reset = digitalio.DigitalInOut(getattr(board, f"D{LORA_RESET_PIN}"))
+            # Open GPIO chip and claim only RST pin (kernel manages CS)
+            self.gpio_handle = lgpio.gpiochip_open(0)
+            lgpio.gpio_claim_output(self.gpio_handle, LORA_RESET_PIN, 1)
 
-            # Initialize RFM95
-            self.rfm9x = adafruit_rfm9x.RFM9x(
-                spi, cs, reset, LORA_FREQUENCY
-            )
+            # Reset the module
+            self.reset()
 
-            # Configure LoRa settings
-            self.rfm9x.spreading_factor = LORA_SPREADING_FACTOR
-            self.rfm9x.signal_bandwidth = LORA_BANDWIDTH
-            self.rfm9x.coding_rate = LORA_CODING_RATE
-            self.rfm9x.preamble_length = 8
-            self.rfm9x.enable_crc = True  # Match RadioHead's CRC-on default
+            # Configure LoRa registers
+            self.configure_lora()
 
             print(f"LoRa receiver initialized successfully: {LORA_FREQUENCY}MHz, "
                   f"SF{LORA_SPREADING_FACTOR}, BW{LORA_BANDWIDTH}kHz, CR4/{LORA_CODING_RATE}")
 
         except Exception as e:
             print(f"Error initializing LoRa hardware: {e}")
+            self.cleanup()
             raise
+
+    def reset(self):
+        """Reset the LoRa module"""
+        lgpio.gpio_write(self.gpio_handle, LORA_RESET_PIN, 0)
+        time.sleep(0.1)
+        lgpio.gpio_write(self.gpio_handle, LORA_RESET_PIN, 1)
+        time.sleep(0.1)
+
+    def _write_reg(self, address: int, value: int):
+        """Write to a register (address | 0x80 for write)"""
+        self.spi.xfer2([address | 0x80, value])
+
+    def _read_reg(self, address: int) -> int:
+        """Read a register (address & 0x7F for read)"""
+        resp = self.spi.xfer2([address & 0x7F, 0x00])
+        return resp[1]
+
+    def _set_frequency(self, freq_mhz: float):
+        """Set frequency in MHz"""
+        frf = int((freq_mhz * 1000000) / 61.03515625)
+        self._write_reg(REG_FRF_MSB, (frf >> 16) & 0xFF)
+        self._write_reg(REG_FRF_MID, (frf >> 8) & 0xFF)
+        self._write_reg(REG_FRF_LSB, frf & 0xFF)
+
+    def configure_lora(self):
+        """Configure LoRa module settings"""
+        # Put in sleep mode first
+        self._write_reg(REG_OP_MODE, MODE_SLEEP | LONG_RANGE_MODE)
+        time.sleep(0.01)
+
+        # Set frequency
+        self._set_frequency(LORA_FREQUENCY)
+
+        # Set modem config 1: BW, CR, implicit header
+        bw_map = {125: 0x00, 250: 0x01, 500: 0x02}
+        bw = bw_map.get(LORA_BANDWIDTH, 0x00)
+        self._write_reg(REG_MODEM_CONFIG_1, (bw << 4) | (LORA_CODING_RATE << 1))
+
+        # Set modem config 2: SF, CRC enable
+        self._write_reg(REG_MODEM_CONFIG_2, (LORA_SPREADING_FACTOR << 4) | 0x04)
+
+        # Set modem config 3: low data rate optimize if SF >= 11
+        if LORA_SPREADING_FACTOR >= 11:
+            self._write_reg(REG_MODEM_CONFIG_3, 0x08)
+        else:
+            self._write_reg(REG_MODEM_CONFIG_3, 0x00)
+
+        # Preamble length
+        self._write_reg(0x20, 0x00)
+        self._write_reg(0x21, 0x08)
+
+        # Payload length
+        self._write_reg(0x22, 0x40)
+
+        # FIFO pointers
+        self._write_reg(REG_FIFO_TX_BASE_ADDR, 0x00)
+        self._write_reg(REG_FIFO_RX_BASE_ADDR, 0x00)
+
+        # LNA boost
+        self._write_reg(REG_LNA, 0x23)
+
+        # PA config
+        self._write_reg(REG_PA_CONFIG, 0x8F)
+
+        # DIO mapping: DIO0 -> RxDone
+        self._write_reg(REG_DIO_MAPPING_1, 0x00)
+
+        # Set to standby
+        self._write_reg(REG_OP_MODE, MODE_STDBY | LONG_RANGE_MODE)
+        time.sleep(0.01)
+
+        # Set to continuous receive mode
+        self._write_reg(REG_OP_MODE, MODE_RX_CONTINUOUS | LONG_RANGE_MODE)
+
+        # Verify version
+        version = self._read_reg(REG_VERSION)
+        if version != 0x12:
+            raise RuntimeError(f"RFM95 version check failed: got 0x{version:02x}, expected 0x12")
 
     def receive_packet(self, timeout: float = 1.0) -> Optional[str]:
         """Receive a LoRa packet with timeout"""
-        if not self.rfm9x:
-            return None
-
         start_time = time.time()
+
         while time.time() - start_time < timeout:
-            packet = self.rfm9x.receive(timeout=0.1)
-            if packet:
+            # Check IRQ flags
+            irq_flags = self._read_reg(REG_IRQ_FLAGS)
+
+            if irq_flags & 0x40:  # RxDone
+                # Clear IRQ flags
+                self._write_reg(REG_IRQ_FLAGS, 0xFF)
+
+                # Read packet length
+                payload_len = self._read_reg(REG_RX_NB_BYTES)
+
+                # Set FIFO address pointer to current RX address
+                current_addr = self._read_reg(REG_FIFO_RX_CURRENT_ADDR)
+                self._write_reg(REG_FIFO_ADDR_PTR, current_addr)
+
+                # Read payload
+                payload = []
+                for _ in range(payload_len):
+                    resp = self.spi.xfer2([REG_FIFO & 0x7F, 0x00])
+                    payload.append(resp[1])
+
+                # Convert to string
                 try:
-                    return packet.decode('ascii').strip()
+                    packet_str = bytes(payload).decode('ascii').strip()
+                    return packet_str
                 except UnicodeDecodeError:
                     return None
+
             time.sleep(0.01)
+
         return None
 
     def parse_packet_data(self, packet: str) -> Optional[tuple]:
@@ -201,11 +316,15 @@ class LoRaReceiver:
         except Exception as e:
             print(f"LoRa receiver error: {e}")
             raise
+        finally:
+            self.cleanup()
 
     def cleanup(self):
-        """Clean up"""
-        if self.rfm9x:
-            self.rfm9x.sleep()
+        """Clean up SPI and GPIO"""
+        if self.spi:
+            self.spi.close()
+        if self.gpio_handle is not None:
+            lgpio.gpiochip_close(self.gpio_handle)
 
 
 def start_lora_receiver():
@@ -232,6 +351,8 @@ def start_lora_receiver_async():
             receiver = LoRaReceiver()
             receiver.run()
         except Exception as e:
+            # GPIO/SPI permission errors, missing hardware, etc. must not
+            # crash the web dashboard - log and keep serving.
             print(f"LoRa receiver thread failed: {e}")
 
     thread = threading.Thread(target=_run, name="lora-receiver", daemon=True)
