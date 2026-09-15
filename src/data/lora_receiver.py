@@ -7,7 +7,7 @@ import time
 import struct
 import threading
 import spidev
-from gpiozero import OutputDevice, InputDevice
+from src.data.gpio_libgpiod import OutputPin, InputPin
 from datetime import datetime
 from typing import Optional, Callable
 
@@ -40,12 +40,12 @@ class LoRaReceiver:
         self.setup_hardware()
 
     def setup_hardware(self):
-        """Initialize SPI and GPIO"""
+        """Initialize SPI and GPIO via libgpiod (C library)"""
         try:
-            # LoRa control pins (gpiozero uses BCM numbering by default)
-            self.cs_pin = OutputDevice(LORA_CS_PIN, active_high=True, initial_value=True)
-            self.rst_pin = OutputDevice(LORA_RESET_PIN, active_high=True, initial_value=False)
-            self.ce_pin = InputDevice(LORA_CE_PIN)
+            # LoRa control pins (libgpiod uses BCM numbering by default)
+            self.cs_pin = OutputPin(LORA_CS_PIN, initial=True)
+            self.rst_pin = OutputPin(LORA_RESET_PIN, initial=False)
+            self.ce_pin = InputPin(LORA_CE_PIN)
 
             # Setup SPI
             self.spi = spidev.SpiDev()

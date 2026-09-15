@@ -9,9 +9,10 @@ jinja2==3.1.3
 
 # Hardware Communication
 spidev==3.6
-# gpiozero replaces RPi.GPIO (RPi.GPIO cannot determine the SOC peripheral
-# base address on Raspberry Pi 5, where GPIO moved behind the RP1 controller)
-gpiozero>=2.0
+# libgpiod (system library, accessed via ctypes) replaces RPi.GPIO/gpiozero.
+# RPi.GPIO cannot determine the SOC peripheral base address on Raspberry Pi 5.
+# gpiozero pin-factory backends (lgpio, gpiod Python bindings) require
+# compilation which fails on this system. libgpiod ships preinstalled on Pi OS.
 pyserial==3.5
 
 # HTTP Requests
