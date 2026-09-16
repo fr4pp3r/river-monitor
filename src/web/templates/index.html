@@ -626,17 +626,66 @@
                 const liveDot = document.querySelector('.live-dot');
 
                 if (prediction.error) {
-                    setValue('current-water-level', 'No data');
+                    // Prediction pipeline unavailable (missing model/weather/RF).
+                    // Fall back to latest sensor reading so water level still displays.
                     setValue('current-risk-level', 'No data');
                     const riskBadge = $('current-risk-level');
                     riskBadge.className = 'risk-badge risk-badge--normal';
-                    setValue('last-updated', 'Waiting for sensor data');
-                    setValue('data-source', '—');
-                    setValue('current-trend', '—');
-                    setValue('trend-detail', 'No readings yet');
-                    updateRiskGauge(0);
-                    if (liveText) liveText.textContent = 'Waiting for sensor data';
-                    if (liveDot) liveDot.classList.remove('live-dot--active');
+
+                    try {
+                        const fallbackRes = await fetch('/api/water-levels?hours=1');
+                        const fallbackData = await fallbackRes.json();
+
+                        if (fallbackData.length > 0) {
+                            const latest = fallbackData[fallbackData.length - 1];
+                            const wl = latest.water_level_m;
+                            setValue('current-water-level', wl != null ? wl.toFixed(2) : '—');
+                            updateRiskGauge(wl);
+                            setValue('last-updated', timeAgo(latest.timestamp));
+                            setValue('last-updated-exact', formatTimestamp(latest.timestamp));
+                            setValue('data-source', (latest.source || '—').toUpperCase());
+                            setValue('data-source-detail', latest.source === 'lora' ? 'LoRa radio link' : 'SMS fallback');
+                            if (liveText) liveText.textContent = 'Live';
+                            if (liveDot) liveDot.classList.add('live-dot--active');
+                        } else {
+                            setValue('current-water-level', 'No data');
+                            setValue('last-updated', 'Waiting for sensor data');
+                            setValue('data-source', '—');
+                            updateRiskGauge(0);
+                            if (liveText) liveText.textContent = 'Waiting for sensor data';
+                            if (liveDot) liveDot.classList.remove('live-dot--active');
+                        }
+                    } catch (fbErr) {
+                        console.error('Fallback water level fetch failed:', fbErr);
+                        setValue('current-water-level', 'No data');
+                        setValue('last-updated', 'Waiting for sensor data');
+                        setValue('data-source', '—');
+                        updateRiskGauge(0);
+                        if (liveText) liveText.textContent = 'Waiting for sensor data';
+                        if (liveDot) liveDot.classList.remove('live-dot--active');
+                    }
+
+                    // Trend: still attempt from last 3 hours
+                    try {
+                        const trendResponse = await fetch('/api/water-levels?hours=3');
+                        const trendData = await trendResponse.json();
+                        if (trendData.length >= 2) {
+                            const first = trendData[0].water_level_m;
+                            const last = trendData[trendData.length - 1].water_level_m;
+                            const diff = last - first;
+                            const trend = diff > 0.01 ? 'Rising' : (diff < -0.01 ? 'Falling' : 'Steady');
+                            setValue('current-trend', trend);
+                            const el = $('current-trend');
+                            el.style.color = diff > 0.01 ? '#cf222e' : (diff < -0.01 ? '#0969da' : '#57606a');
+                            setValue('trend-detail', `Δ ${(diff >= 0 ? '+' : '') + diff.toFixed(2)} m over 3h`);
+                        } else {
+                            setValue('current-trend', '—');
+                            setValue('trend-detail', 'Insufficient readings');
+                        }
+                    } catch (trendErr) {
+                        setValue('current-trend', '—');
+                        setValue('trend-detail', 'No readings yet');
+                    }
                     return;
                 }
 
