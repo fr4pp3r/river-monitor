@@ -121,6 +121,8 @@
   --chart-grid: rgba(27, 31, 35, 0.06);
   --chart-text: var(--color-text-secondary);
   --chart-tooltip-bg: rgba(31, 35, 40, 0.92);
+  --chart-tooltip-title: #ffffff;
+  --chart-tooltip-body: #e6edf3;
 }
 
 /* ----------------------------------------------------------------------------
@@ -149,6 +151,8 @@
     --chart-grid: rgba(255, 255, 255, 0.06);
     --chart-text: var(--color-text-secondary);
     --chart-tooltip-bg: rgba(255, 255, 255, 0.92);
+    --chart-tooltip-title: #1b1f23;
+    --chart-tooltip-body: #24292f;
   }
 }
 
@@ -166,6 +170,8 @@
   --color-brand-focus: rgba(79, 170, 249, 0.35);
   --chart-grid: rgba(255, 255, 255, 0.06);
   --chart-tooltip-bg: rgba(255, 255, 255, 0.92);
+  --chart-tooltip-title: #1b1f23;
+  --chart-tooltip-body: #24292f;
 }
 
 /* ----------------------------------------------------------------------------

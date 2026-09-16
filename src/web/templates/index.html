@@ -995,8 +995,8 @@
                             },
                             tooltip: {
                                 backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-bg') || 'rgba(31,35,40,0.92)',
-                                titleColor: '#fff',
-                                bodyColor: '#e6edf3',
+                                titleColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-title') || '#fff',
+                                bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-body') || '#e6edf3',
                                 borderColor: 'rgba(0,0,0,0.1)',
                                 borderWidth: 1,
                                 padding: 12,
@@ -1100,8 +1100,8 @@
                             },
                             tooltip: {
                                 backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-bg') || 'rgba(31,35,40,0.92)',
-                                titleColor: '#fff',
-                                bodyColor: '#e6edf3',
+                                titleColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-title') || '#fff',
+                                bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-body') || '#e6edf3',
                                 borderColor: 'rgba(0,0,0,0.1)',
                                 borderWidth: 1,
                                 padding: 12,
