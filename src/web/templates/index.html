@@ -861,7 +861,7 @@
                      rf.toLowerCase() === 'medium' ? 'fuzzy-value--medium' :
                      rf.toLowerCase() === 'low' ? 'fuzzy-value--low' : '');
 
-                setValue('fuzzy-rule-triggered', details.rule_triggered || 'N/A');
+                setValue('fuzzy-rule-triggered', details.rule_triggered != null ? details.rule_triggered : 'N/A');
                 setValue('fuzzy-water-level', (details.current_water_level_mm || 0).toFixed(0));
                 setValue('fuzzy-rate-of-rise', (details.fuzzy_inputs?.rate_of_rise_mm_hour || 0).toFixed(1));
                 setValue('fuzzy-forecast-rain', (details.fuzzy_inputs?.forecast_rain_mm || 0).toFixed(1));

@@ -325,24 +325,25 @@ class FuzzyFloodRisk:
             memberships[f'Tide_{term}'] = round(fuzz.interp_membership(
                 self.tide.universe, self.tide[term].mf, tide), 3)
         
-        # RF Propensity
+# RF Propensity
         for term in ['Low', 'Medium', 'High']:
             memberships[f'RF_{term}'] = round(fuzz.interp_membership(
                 self.rf.universe, self.rf[term].mf, rf), 3)
-        
+
         return memberships
-    
-    def _estimate_rule(self, wl: float, ror: float, frain: float, 
+
+    def _estimate_rule(self, wl: float, ror: float, frain: float,
                        tide: float, rf: float) -> int:
         """Estimate which rule most likely fired based on input values"""
-        # Simple heuristic based on dominant terms
         wl_term = self._get_dominant_term(wl, self.wl, ['Low', 'Medium', 'High', 'Very High'])
         ror_term = self._get_dominant_term(ror, self.ror, ['Negative', 'Near-Zero', 'Moderate', 'Rapid'])
         frain_term = self._get_dominant_term(frain, self.frain, ['None', 'Light', 'Moderate', 'Heavy'])
         tide_term = self._get_dominant_term(tide, self.tide, ['Low', 'Mid', 'High', 'Extreme'])
         rf_term = self._get_dominant_term(rf, self.rf, ['Low', 'Medium', 'High'])
-        
-        # Map to rule number (simplified)
+
+        if wl_term == 'Very High':
+            return 11
+
         rule_map = {
             ('Low', 'Negative', 'None', 'Low', 'Low'): 1,
             ('Low', 'Negative', 'Light', 'Low', 'Low'): 1,
@@ -354,12 +355,30 @@ class FuzzyFloodRisk:
             ('Medium', 'Moderate', 'Moderate', 'Mid', 'Low'): 5,
             ('Medium', 'Moderate', 'Moderate', 'Mid', 'Medium'): 6,
             ('Medium', 'Moderate', 'Heavy', 'High', 'Medium'): 6,
+            ('Medium', 'Moderate', 'Heavy', 'Mid', 'Medium'): 6,
+            ('High', 'Rapid', 'Moderate', 'Mid', 'Medium'): 7,
+            ('High', 'Rapid', 'Heavy', 'Mid', 'Medium'): 7,
+            ('High', 'Rapid', 'Moderate', 'High', 'Medium'): 7,
+            ('High', 'Rapid', 'Heavy', 'High', 'Medium'): 7,
+            ('Medium', 'Rapid', 'Moderate', 'Mid', 'Medium'): 7,
+            ('Medium', 'Rapid', 'Heavy', 'Mid', 'Medium'): 7,
+            ('Medium', 'Rapid', 'Moderate', 'High', 'Medium'): 7,
+            ('Medium', 'Rapid', 'Heavy', 'High', 'Medium'): 7,
             ('High', 'Rapid', 'Heavy', 'High', 'High'): 8,
             ('High', 'Near-Zero', 'None', 'Mid', 'Low'): 9,
+            ('High', 'Near-Zero', 'Moderate', 'Mid', 'Medium'): 10,
             ('High', 'Near-Zero', 'Moderate', 'High', 'Medium'): 10,
-            ('Very High', 'Any', 'Any', 'Any', 'Any'): 11,
+            ('High', 'Near-Zero', 'Heavy', 'High', 'Medium'): 10,
+            ('Low', 'Negative', 'Moderate', 'Mid', 'High'): 12,
+            ('Low', 'Negative', 'Heavy', 'Mid', 'High'): 12,
+            ('Medium', 'Negative', 'Moderate', 'Mid', 'High'): 12,
+            ('Medium', 'Negative', 'Heavy', 'High', 'High'): 13,
+            ('Medium', 'Moderate', 'Moderate', 'High', 'High'): 14,
+            ('Medium', 'Rapid', 'Moderate', 'High', 'High'): 14,
+            ('High', 'Moderate', 'Moderate', 'High', 'High'): 15,
+            ('High', 'Moderate', 'Heavy', 'High', 'High'): 15,
         }
-        
+
         key = (wl_term, ror_term, frain_term, tide_term, rf_term)
         return rule_map.get(key, 0)
     
