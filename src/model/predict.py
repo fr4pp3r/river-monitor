@@ -112,6 +112,7 @@ class FloodPredictor:
             'TMAX': weather_data.get('TMAX', 0),
             'TMIN': weather_data.get('TMIN', 0),
             'TideMax': weather_data.get('TideMax', 0),
+            'TideMin': weather_data.get('TideMin', 0),
             'timestamp': datetime.now()
         }
         
