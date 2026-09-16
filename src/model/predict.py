@@ -13,7 +13,7 @@ import joblib
 
 from src.config import (
     MODEL_PATH, CRITICAL_LEVEL_M, RISK_THRESHOLDS,
-    FORECAST_DAYS, RECEDING_HOURS, ROR_WINDOW_MINUTES,
+    FORECAST_DAYS, RECEDING_HOURS,
     RF_CLASSES
 )
 from src.data.database import (
@@ -89,24 +89,21 @@ class FloodPredictor:
             print("No weather data available")
             return None
         
-        # Get historical water levels for RoR computation (last 5 minutes)
-        historical_levels = get_water_levels_since(hours=1)  # Last hour for 5-min window
-        
-        # Compute Rate of Rise (RoR) from last 5 minutes of 1-min data
-        rate_of_rise_mm_day = 0.0
+# Get historical water levels for RoR computation (last 2 hours for hourly resampling)
+        historical_levels = get_water_levels_since(hours=2)
+
+        # Compute Rate of Rise (RoR) from hourly resampled data (mm/hour)
+        rate_of_rise_mm_hour = 0.0
         if len(historical_levels) >= 2:
-            # Get last 5 minutes of data
-            recent_5min = historical_levels[-5:] if len(historical_levels) >= 5 else historical_levels
-            if len(recent_5min) >= 2:
-                # Water level in meters, convert to mm
-                current_level_mm = latest_water['water_level_m'] * 1000
-                prev_level_mm = recent_5min[0]['water_level_m'] * 1000
-                time_diff_minutes = len(recent_5min) - 1  # Approximate minutes
-                
-                if time_diff_minutes > 0:
-                    # Rate of rise in mm per minute, convert to mm/day
-                    rate_mm_per_min = (current_level_mm - prev_level_mm) / time_diff_minutes
-                    rate_of_rise_mm_day = rate_mm_per_min * 1440  # 1440 minutes in a day
+            df = pd.DataFrame(historical_levels)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df.set_index('timestamp', inplace=True)
+            hourly = df['water_level_m'].resample('h').last().dropna()
+
+            if len(hourly) >= 2:
+                current_mm = hourly.iloc[-1] * 1000
+                prev_mm = hourly.iloc[-2] * 1000
+                rate_of_rise_mm_hour = current_mm - prev_mm
         
         # Get current tide level
         tide_level_m = self.weather_fetcher.get_current_tide_level()
@@ -132,7 +129,7 @@ class FloodPredictor:
         # Also include data for fuzzy logic
         rf_features.update({
             'water_level_mm': latest_water['water_level_m'] * 1000,
-            'rate_of_rise_mm_day': rate_of_rise_mm_day,
+            'rate_of_rise_mm_hour': rate_of_rise_mm_hour,
             'forecast_rain_mm': forecast_rain_mm,
             'tide_level_m': tide_level_m
         })
@@ -150,47 +147,47 @@ class FloodPredictor:
         # Predict
         prediction = self.model.predict(X_scaled)[0]
         
-        # Map to class name
+# Map to class name
         propensity_class = RF_CLASSES.get(prediction, 'Unknown')
-        
+
         return prediction, propensity_class
-    
+
     def predict_fuzzy_risk(self, features: Dict, rf_propensity: int) -> Dict:
         """Predict flood risk using fuzzy logic"""
         # Extract fuzzy inputs
         water_level_mm = features.get('water_level_mm', 0)
-        rate_of_rise_mm_day = features.get('rate_of_rise_mm_day', 0)
+        rate_of_rise_mm_hour = features.get('rate_of_rise_mm_hour', 0)
         forecast_rain_mm = features.get('forecast_rain_mm', 0)
         tide_level_m = features.get('tide_level_m', 0)
-        
+
         # Compute fuzzy risk
         fuzzy_result = compute_flood_risk(
             water_level_mm=water_level_mm,
-            rate_of_rise_mm_day=rate_of_rise_mm_day,
+            rate_of_rise_mm_hour=rate_of_rise_mm_hour,
             forecast_rain_mm=forecast_rain_mm,
             tide_level_m=tide_level_m,
             rf_propensity=rf_propensity
         )
-        
+
         return fuzzy_result
-    
+
     def predict_forecast(self, features: Dict, days: int = FORECAST_DAYS) -> List[float]:
         """
         Predict water level forecast for the next N days
-        
+
         Note: This is a simplified approach. For better results, consider:
         1. Using a time series model (LSTM, ARIMA) for the forecast
         2. Using the Random Forest to predict changes rather than absolute values
-        
+
         For now, we'll use a simple linear extrapolation based on recent trends.
         """
         # Get current water level
         current_level = features.get('water_level_mm', 0) / 1000.0  # Convert to meters
-        
+
         # Get trend from recent changes (1-day change)
-        # We'll use the rate of rise to estimate daily change
-        rate_of_rise_mm_day = features.get('rate_of_rise_mm_day', 0)
-        daily_change = rate_of_rise_mm_day / 1000.0  # Convert to meters/day
+        # Convert mm/hour to meters/day
+        rate_of_rise_mm_hour = features.get('rate_of_rise_mm_hour', 0)
+        daily_change = rate_of_rise_mm_hour * 24 / 1000.0  # Convert to meters/day
         
         # Generate forecast
         forecast = []

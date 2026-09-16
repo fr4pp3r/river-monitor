@@ -41,14 +41,14 @@ class FuzzyFloodRisk:
                                                         WL_THRESHOLDS['high_max'] + 1])
         self.wl['Very High'] = fuzz.trapmf(self.wl.universe, [WL_THRESHOLDS['very_high_min'] - 1, 2000, 3000, 3000])
         
-# Rate of Rise (mm/day) - universe: -1000 to 1000
-        self.ror = ctrl.Antecedent(np.arange(-1000, 1001, 1), 'rate_of_rise')
-        self.ror['Negative'] = fuzz.trapmf(self.ror.universe, [-1000, -1000, -100, ROR_THRESHOLDS['negative_max'] + 1])
+# Rate of Rise (mm/hour) - universe: -100 to 100
+        self.ror = ctrl.Antecedent(np.arange(-100, 101, 1), 'rate_of_rise')
+        self.ror['Negative'] = fuzz.trapmf(self.ror.universe, [-100, -100, -10, ROR_THRESHOLDS['negative_max'] + 1])
         self.ror['Near-Zero'] = fuzz.trimf(self.ror.universe, [ROR_THRESHOLDS['near_zero_min'] - 1, 0, ROR_THRESHOLDS['near_zero_max'] + 1])
         self.ror['Moderate'] = fuzz.trimf(self.ror.universe, [ROR_THRESHOLDS['moderate_min'] - 1,
                                                               (ROR_THRESHOLDS['moderate_min'] + ROR_THRESHOLDS['moderate_max']) / 2,
                                                               ROR_THRESHOLDS['moderate_max'] + 1])
-        self.ror['Rapid'] = fuzz.trapmf(self.ror.universe, [ROR_THRESHOLDS['rapid_min'] - 1, 200, 1000, 1000])
+        self.ror['Rapid'] = fuzz.trapmf(self.ror.universe, [ROR_THRESHOLDS['rapid_min'] - 1, 20, 100, 100])
         
 # Forecast Rain (mm/day) - universe: 0 to 100
         self.frain = ctrl.Antecedent(np.arange(0, 101, 1), 'forecast_rain')
@@ -230,26 +230,26 @@ class FuzzyFloodRisk:
         # Create control system
         self.system = ctrl.ControlSystem(rules)
         self.simulation = ctrl.ControlSystemSimulation(self.system)
-    
-    def compute_risk(self, water_level_mm: float, rate_of_rise_mm_day: float, 
-                     forecast_rain_mm: float, tide_level_m: float, 
+
+    def compute_risk(self, water_level_mm: float, rate_of_rise_mm_hour: float,
+                     forecast_rain_mm: float, tide_level_m: float,
                      rf_propensity: int) -> Dict:
         """
         Compute flood risk using fuzzy inference
-        
+
         Args:
             water_level_mm: Current water level in mm
-            rate_of_rise_mm_day: Rate of rise in mm/day
+            rate_of_rise_mm_hour: Rate of rise in mm/hour
             forecast_rain_mm: Forecasted precipitation in mm/day
             tide_level_m: Current tide level in meters
             rf_propensity: RF model output (0=Low, 1=Medium, 2=High)
-        
+
         Returns:
             Dictionary with risk level, crisp output, and membership degrees
         """
         # Clip inputs to universe ranges
         wl = np.clip(water_level_mm, 0, 3000)
-        ror = np.clip(rate_of_rise_mm_day, -1000, 1000)
+        ror = np.clip(rate_of_rise_mm_hour, -100, 100)
         frain = np.clip(forecast_rain_mm, 0, 100)
         tide = np.clip(tide_level_m, 0, 5)
         rf = np.clip(rf_propensity, 0, 2)
@@ -293,7 +293,7 @@ class FuzzyFloodRisk:
             'rule_triggered': rule_triggered,
             'inputs': {
                 'water_level_mm': wl,
-                'rate_of_rise_mm_day': round(ror, 1),
+                'rate_of_rise_mm_hour': round(ror, 1),
                 'forecast_rain_mm': round(frain, 1),
                 'tide_level_m': round(tide, 2),
                 'rf_propensity': RF_PROPENSITY_MAP.get(rf, 'Unknown')
@@ -389,11 +389,11 @@ class FuzzyFloodRisk:
             score += 0.5
         
         # Rate of rise contribution (0-1.5)
-        if ror >= 100:
+        if ror >= 4.0:
             score += 1.5
-        elif ror >= 10:
+        elif ror >= 0.5:
             score += 1.0
-        elif ror <= -10:
+        elif ror <= -0.5:
             score -= 0.5
         
         # Forecast rain contribution (0-1.5)
@@ -434,24 +434,24 @@ def get_fuzzy_system() -> FuzzyFloodRisk:
     return _fuzzy_system
 
 
-def compute_flood_risk(water_level_mm: float, rate_of_rise_mm_day: float,
+def compute_flood_risk(water_level_mm: float, rate_of_rise_mm_hour: float,
                        forecast_rain_mm: float, tide_level_m: float,
                        rf_propensity: int) -> Dict:
     """
     Convenience function to compute flood risk
-    
+
     Args:
         water_level_mm: Current water level in mm
-        rate_of_rise_mm_day: Rate of rise in mm/day
+        rate_of_rise_mm_hour: Rate of rise in mm/hour
         forecast_rain_mm: Forecasted precipitation in mm/day
         tide_level_m: Current tide level in meters
         rf_propensity: RF model output (0=Low, 1=Medium, 2=High)
-    
+
     Returns:
         Dictionary with risk assessment
     """
     system = get_fuzzy_system()
-    return system.compute_risk(water_level_mm, rate_of_rise_mm_day,
+    return system.compute_risk(water_level_mm, rate_of_rise_mm_hour,
                                forecast_rain_mm, tide_level_m, rf_propensity)
 
 
@@ -461,29 +461,29 @@ if __name__ == "__main__":
     
     system = FuzzyFloodRisk()
     
-    # Test cases
+# Test cases
     test_cases = [
-        # (WL_mm, RoR_mm_day, FRain_mm, Tide_m, RF)
-        (300, -50, 2, 0.3, 0),      # Rule 1: Receding
+        # (WL_mm, RoR_mm_hour, FRain_mm, Tide_m, RF)
+        (300, -2, 2, 0.3, 0),      # Rule 1: Receding
         (500, 0, 3, 0.4, 0),        # Rule 2: Receding
         (800, 0, 10, 0.5, 0),       # Rule 3: Receding
-        (800, 50, 10, 0.5, 0),      # Rule 4: Alert
-        (1000, 50, 20, 0.8, 0),     # Rule 5: Alert
-        (1000, 50, 25, 1.0, 1),     # Rule 6: Alarm
-        (1500, 200, 30, 1.2, 1),    # Rule 7: Alarm
-        (2000, 300, 50, 2.0, 2),    # Rule 8: Critical
-        (2000, 0, 3, 0.8, 0),       # Rule 9: Alert
-        (2000, 0, 20, 1.2, 1),      # Rule 10: Alarm
-        (2500, 100, 50, 2.0, 2),    # Rule 11: Critical
-        (500, -50, 20, 1.0, 2),     # Rule 12: Alert
-        (1000, -50, 50, 1.5, 2),    # Rule 13: Alarm
-        (1500, 50, 20, 1.5, 2),     # Rule 14: Alarm
-        (2000, 50, 20, 1.5, 2),     # Rule 15: Critical
+        (800, 2, 10, 0.5, 0),      # Rule 4: Alert
+        (1000, 2, 20, 0.8, 0),     # Rule 5: Alert
+        (1000, 2, 25, 1.0, 1),     # Rule 6: Alarm
+        (1500, 8, 30, 1.2, 1),     # Rule 7: Alarm
+        (2000, 12, 50, 2.0, 2),    # Rule 8: Critical
+        (2000, 0, 3, 0.8, 0),      # Rule 9: Alert
+        (2000, 0, 20, 1.2, 1),     # Rule 10: Alarm
+        (2500, 4, 50, 2.0, 2),     # Rule 11: Critical
+        (500, -2, 20, 1.0, 2),     # Rule 12: Alert
+        (1000, -2, 50, 1.5, 2),    # Rule 13: Alarm
+        (1500, 2, 20, 1.5, 2),     # Rule 14: Alarm
+        (2000, 2, 20, 1.5, 2),     # Rule 15: Critical
     ]
-    
+
     print("\nRunning test cases:")
     for i, (wl, ror, frain, tide, rf) in enumerate(test_cases, 1):
         result = system.compute_risk(wl, ror, frain, tide, rf)
-        print(f"\nTest {i}: WL={wl}mm, RoR={ror}mm/d, FRain={frain}mm, Tide={tide}m, RF={RF_PROPENSITY_MAP[rf]}")
+        print(f"\nTest {i}: WL={wl}mm, RoR={ror}mm/hr, FRain={frain}mm, Tide={tide}m, RF={RF_PROPENSITY_MAP[rf]}")
         print(f"  Risk: {result['risk_level']} (crisp={result['risk_crisp']})")
         print(f"  Rule triggered: {result['rule_triggered']}")

@@ -169,12 +169,12 @@ FRAIN_THRESHOLDS = {
     'heavy_min': 30
 }
 
-# Rate of Rise (mm/day) - computed from 5-min water level data
+# Rate of Rise (mm/hour) - computed from hourly resampled water level data
 ROR_THRESHOLDS = {
-    'negative_max': -10,
-    'near_zero_min': -10, 'near_zero_max': 10,
-    'moderate_min': 10, 'moderate_max': 100,
-    'rapid_min': 100
+    'negative_max': -0.5,
+    'near_zero_min': -0.5, 'near_zero_max': 0.5,
+    'moderate_min': 0.5, 'moderate_max': 4.0,
+    'rapid_min': 4.0
 }
 
 # Tide Level (meters) - from Open-Meteo marine API
@@ -195,5 +195,5 @@ RISK_LEVELS = ['Receding', 'Alert', 'Alarm', 'Critical']
 # RoR COMPUTATION CONFIGURATION
 # ============================================================================
 
-# Rate of Rise computation window (minutes)
-ROR_WINDOW_MINUTES = 5  # Use last 5 minutes of 1-min data
+# Rate of Rise computation resampling window (hours)
+ROR_RESAMPLE_HOURS = 1  # Water levels resampled to 1-hour intervals

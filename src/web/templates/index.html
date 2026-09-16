@@ -365,7 +365,7 @@
                         <div class="fuzzy-item">
                             <span class="fuzzy-label">Rate of Rise</span>
                             <span class="fuzzy-value skeleton-text" id="fuzzy-rate-of-rise"></span>
-                            <span class="fuzzy-unit">mm/day</span>
+                            <span class="fuzzy-unit">mm/hour</span>
                         </div>
                         <div class="fuzzy-item">
                             <span class="fuzzy-label">Forecast Rain</span>
@@ -863,7 +863,7 @@
 
                 setValue('fuzzy-rule-triggered', details.rule_triggered || 'N/A');
                 setValue('fuzzy-water-level', (details.current_water_level_mm || 0).toFixed(0));
-                setValue('fuzzy-rate-of-rise', (details.fuzzy_inputs?.rate_of_rise_mm_day || 0).toFixed(1));
+                setValue('fuzzy-rate-of-rise', (details.fuzzy_inputs?.rate_of_rise_mm_hour || 0).toFixed(1));
                 setValue('fuzzy-forecast-rain', (details.fuzzy_inputs?.forecast_rain_mm || 0).toFixed(1));
                 setValue('fuzzy-tide-level', (details.fuzzy_inputs?.tide_level_m || 0).toFixed(2));
             } catch (error) {
