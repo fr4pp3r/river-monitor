@@ -26,6 +26,17 @@ from src.model.preprocess import load_scaler, preprocess_for_prediction_new
 from src.model.fuzzy_logic import compute_flood_risk, get_fuzzy_system
 
 
+def _to_native(obj):
+    """Recursively convert numpy scalars to native Python types for JSON serialization."""
+    if isinstance(obj, np.generic):
+        return obj.item()
+    if isinstance(obj, dict):
+        return {k: _to_native(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_native(v) for v in obj]
+    return obj
+
+
 class FloodPredictor:
     """Handles flood risk predictions using the trained model + fuzzy logic"""
     
@@ -218,20 +229,20 @@ class FloodPredictor:
         else:
             forecast_change = 0
         
-        # Store prediction in database
+# Store prediction in database
         insert_prediction(
             timestamp=datetime.now(),
             current_level_m=current_level,
             risk_level=risk_level,
             rf_propensity=rf_propensity_class,
-            fuzzy_inputs=fuzzy_result.get('inputs', {}),
+            fuzzy_inputs=_to_native(fuzzy_result.get('inputs', {})),
             rule_triggered=fuzzy_result.get('rule_triggered'),
             forecast_data=forecast,
             model_version="2.0"
         )
-        
+
         # Return prediction results
-        return {
+        return _to_native({
             'timestamp': datetime.now().isoformat(),
             'current_level_m': current_level,
             'risk_level': risk_level,
@@ -241,7 +252,7 @@ class FloodPredictor:
             'forecast': forecast,
             'forecast_change_1d': forecast_change,
             'features': features
-        }
+        })
     
     def get_latest_prediction(self) -> Optional[Dict]:
         """Get the latest prediction from database"""
