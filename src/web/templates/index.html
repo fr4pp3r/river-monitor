@@ -657,11 +657,12 @@
                             const first = trendData[0].water_level_m;
                             const last = trendData[trendData.length - 1].water_level_m;
                             const diff = last - first;
-                            const trend = diff > 0.01 ? 'Rising' : (diff < -0.01 ? 'Falling' : 'Steady');
+                            const diffMm = (last - first) * 1000;
+                            const trend = diffMm > 1 ? 'Rising' : (diffMm < -1 ? 'Falling' : 'Steady');
                             setValue('current-trend', trend);
                             const el = $('current-trend');
-                            el.style.color = diff > 0.01 ? '#cf222e' : (diff < -0.01 ? '#0969da' : '#57606a');
-                            setValue('trend-detail', `Δ ${(diff >= 0 ? '+' : '') + diff.toFixed(2)} m over 3h`);
+                            el.style.color = diffMm > 1 ? '#cf222e' : (diffMm < -1 ? '#0969da' : '#57606a');
+                            setValue('trend-detail', `Δ ${diff >= 0 ? '+' : ''}${diff.toFixed(4)} m over 3h`);
                         } else {
                             setValue('current-trend', '—');
                             setValue('trend-detail', 'Insufficient readings');
