@@ -30,53 +30,53 @@ class FuzzyFloodRisk:
         # INPUT VARIABLES
         # =========================================================================
         
-        # Water Level (mm) - universe: 0 to 3000
+# Water Level (mm) - universe: 0 to 3000
         self.wl = ctrl.Antecedent(np.arange(0, 3001, 1), 'water_level')
-        self.wl['Low'] = fuzz.trapmf(self.wl.universe, [0, 0, 300, WL_THRESHOLDS['low_max']])
-        self.wl['Medium'] = fuzz.trimf(self.wl.universe, [WL_THRESHOLDS['medium_min'], 
-                                                          (WL_THRESHOLDS['medium_min'] + WL_THRESHOLDS['medium_max']) / 2, 
-                                                          WL_THRESHOLDS['medium_max']])
-        self.wl['High'] = fuzz.trimf(self.wl.universe, [WL_THRESHOLDS['high_min'], 
-                                                        (WL_THRESHOLDS['high_min'] + WL_THRESHOLDS['high_max']) / 2, 
-                                                        WL_THRESHOLDS['high_max']])
-        self.wl['Very High'] = fuzz.trapmf(self.wl.universe, [WL_THRESHOLDS['very_high_min'], 2000, 3000, 3000])
+        self.wl['Low'] = fuzz.trapmf(self.wl.universe, [0, 0, 300, WL_THRESHOLDS['low_max'] + 1])
+        self.wl['Medium'] = fuzz.trimf(self.wl.universe, [WL_THRESHOLDS['medium_min'] - 1,
+                                                          (WL_THRESHOLDS['medium_min'] + WL_THRESHOLDS['medium_max']) / 2,
+                                                          WL_THRESHOLDS['medium_max'] + 1])
+        self.wl['High'] = fuzz.trimf(self.wl.universe, [WL_THRESHOLDS['high_min'] - 1,
+                                                        (WL_THRESHOLDS['high_min'] + WL_THRESHOLDS['high_max']) / 2,
+                                                        WL_THRESHOLDS['high_max'] + 1])
+        self.wl['Very High'] = fuzz.trapmf(self.wl.universe, [WL_THRESHOLDS['very_high_min'] - 1, 2000, 3000, 3000])
         
-        # Rate of Rise (mm/day) - universe: -1000 to 1000
+# Rate of Rise (mm/day) - universe: -1000 to 1000
         self.ror = ctrl.Antecedent(np.arange(-1000, 1001, 1), 'rate_of_rise')
-        self.ror['Negative'] = fuzz.trapmf(self.ror.universe, [-1000, -1000, -100, ROR_THRESHOLDS['negative_max']])
-        self.ror['Near-Zero'] = fuzz.trimf(self.ror.universe, [ROR_THRESHOLDS['near_zero_min'], 0, ROR_THRESHOLDS['near_zero_max']])
-        self.ror['Moderate'] = fuzz.trimf(self.ror.universe, [ROR_THRESHOLDS['moderate_min'], 
-                                                              (ROR_THRESHOLDS['moderate_min'] + ROR_THRESHOLDS['moderate_max']) / 2, 
-                                                              ROR_THRESHOLDS['moderate_max']])
-        self.ror['Rapid'] = fuzz.trapmf(self.ror.universe, [ROR_THRESHOLDS['rapid_min'], 200, 1000, 1000])
+        self.ror['Negative'] = fuzz.trapmf(self.ror.universe, [-1000, -1000, -100, ROR_THRESHOLDS['negative_max'] + 1])
+        self.ror['Near-Zero'] = fuzz.trimf(self.ror.universe, [ROR_THRESHOLDS['near_zero_min'] - 1, 0, ROR_THRESHOLDS['near_zero_max'] + 1])
+        self.ror['Moderate'] = fuzz.trimf(self.ror.universe, [ROR_THRESHOLDS['moderate_min'] - 1,
+                                                              (ROR_THRESHOLDS['moderate_min'] + ROR_THRESHOLDS['moderate_max']) / 2,
+                                                              ROR_THRESHOLDS['moderate_max'] + 1])
+        self.ror['Rapid'] = fuzz.trapmf(self.ror.universe, [ROR_THRESHOLDS['rapid_min'] - 1, 200, 1000, 1000])
         
-        # Forecast Rain (mm/day) - universe: 0 to 100
+# Forecast Rain (mm/day) - universe: 0 to 100
         self.frain = ctrl.Antecedent(np.arange(0, 101, 1), 'forecast_rain')
-        self.frain['None'] = fuzz.trapmf(self.frain.universe, [0, 0, 0, FRAIN_THRESHOLDS['none_max']])
-        self.frain['Light'] = fuzz.trimf(self.frain.universe, [FRAIN_THRESHOLDS['light_min'], 
-                                                                (FRAIN_THRESHOLDS['light_min'] + FRAIN_THRESHOLDS['light_max']) / 2, 
-                                                                FRAIN_THRESHOLDS['light_max']])
-        self.frain['Moderate'] = fuzz.trimf(self.frain.universe, [FRAIN_THRESHOLDS['moderate_min'], 
-                                                                   (FRAIN_THRESHOLDS['moderate_min'] + FRAIN_THRESHOLDS['moderate_max']) / 2, 
-                                                                   FRAIN_THRESHOLDS['moderate_max']])
-        self.frain['Heavy'] = fuzz.trapmf(self.frain.universe, [FRAIN_THRESHOLDS['heavy_min'], 40, 100, 100])
+        self.frain['None'] = fuzz.trapmf(self.frain.universe, [0, 0, 0, FRAIN_THRESHOLDS['none_max'] + 1])
+        self.frain['Light'] = fuzz.trimf(self.frain.universe, [FRAIN_THRESHOLDS['light_min'] - 1,
+                                                                 (FRAIN_THRESHOLDS['light_min'] + FRAIN_THRESHOLDS['light_max']) / 2,
+                                                                 FRAIN_THRESHOLDS['light_max'] + 1])
+        self.frain['Moderate'] = fuzz.trimf(self.frain.universe, [FRAIN_THRESHOLDS['moderate_min'] - 1,
+                                                                    (FRAIN_THRESHOLDS['moderate_min'] + FRAIN_THRESHOLDS['moderate_max']) / 2,
+                                                                    FRAIN_THRESHOLDS['moderate_max'] + 1])
+        self.frain['Heavy'] = fuzz.trapmf(self.frain.universe, [FRAIN_THRESHOLDS['heavy_min'] - 1, 40, 100, 100])
         
-        # Tide Level (meters) - universe: 0 to 5
+# Tide Level (meters) - universe: 0 to 5
         self.tide = ctrl.Antecedent(np.arange(0, 5.01, 0.01), 'tide_level')
-        self.tide['Low'] = fuzz.trapmf(self.tide.universe, [0, 0, 0.25, TIDE_THRESHOLDS['low_max']])
-        self.tide['Mid'] = fuzz.trimf(self.tide.universe, [TIDE_THRESHOLDS['mid_min'], 
-                                                           (TIDE_THRESHOLDS['mid_min'] + TIDE_THRESHOLDS['mid_max']) / 2, 
-                                                           TIDE_THRESHOLDS['mid_max']])
-        self.tide['High'] = fuzz.trimf(self.tide.universe, [TIDE_THRESHOLDS['high_min'], 
-                                                            (TIDE_THRESHOLDS['high_min'] + TIDE_THRESHOLDS['high_max']) / 2, 
-                                                            TIDE_THRESHOLDS['high_max']])
-        self.tide['Extreme'] = fuzz.trapmf(self.tide.universe, [TIDE_THRESHOLDS['extreme_min'], 3.5, 5.0, 5.0])
+        self.tide['Low'] = fuzz.trapmf(self.tide.universe, [0, 0, 0.25, TIDE_THRESHOLDS['low_max'] + 0.01])
+        self.tide['Mid'] = fuzz.trimf(self.tide.universe, [TIDE_THRESHOLDS['mid_min'] - 0.01,
+                                                           (TIDE_THRESHOLDS['mid_min'] + TIDE_THRESHOLDS['mid_max']) / 2,
+                                                           TIDE_THRESHOLDS['mid_max'] + 0.01])
+        self.tide['High'] = fuzz.trimf(self.tide.universe, [TIDE_THRESHOLDS['high_min'] - 0.01,
+                                                            (TIDE_THRESHOLDS['high_min'] + TIDE_THRESHOLDS['high_max']) / 2,
+                                                            TIDE_THRESHOLDS['high_max'] + 0.01])
+        self.tide['Extreme'] = fuzz.trapmf(self.tide.universe, [TIDE_THRESHOLDS['extreme_min'] - 0.01, 3.5, 5.0, 5.0])
         
         # RF Flood Propensity (crisp 0, 1, 2) - universe: 0 to 2
         self.rf = ctrl.Antecedent(np.arange(0, 2.01, 0.01), 'rf_propensity')
-        self.rf['Low'] = fuzz.trimf(self.rf.universe, [0, 0, 0.5])
-        self.rf['Medium'] = fuzz.trimf(self.rf.universe, [0.5, 1, 1.5])
-        self.rf['High'] = fuzz.trimf(self.rf.universe, [1.5, 2, 2])
+        self.rf['Low'] = fuzz.trimf(self.rf.universe, [0, 0, 0.5 + 0.01])
+        self.rf['Medium'] = fuzz.trimf(self.rf.universe, [0.5 - 0.01, 1, 1.5 + 0.01])
+        self.rf['High'] = fuzz.trimf(self.rf.universe, [1.5 - 0.01, 2, 2])
         
         # =========================================================================
         # OUTPUT VARIABLE
