@@ -119,11 +119,6 @@
         <header class="header">
             <h1>River Water Level Monitor</h1>
             <p class="subtitle">Real-time Flood Risk Prediction System</p>
-            <div class="flex items-center gap-2 mt-2" style="position:relative; z-index:1;">
-                <button id="theme-toggle" class="btn btn--ghost" style="color:inherit;" aria-label="Toggle dark mode" title="Toggle dark mode">
-                    <svg class="icon" style="width:18px;height:18px;"><use href="#i-moon"/></svg>
-                </button>
-            </div>
         </header>
 
         <!-- ==================== DASHBOARD ==================== -->
@@ -579,28 +574,17 @@
         }
 
         // =====================================================================
-        // THEME TOGGLE (dark mode, persisted)
+        // THEME (auto-detects system preference, no manual toggle)
         // =====================================================================
-        function initTheme() {
-            const stored = localStorage.getItem('flaire-theme');
+        function applySystemTheme() {
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const theme = stored || (prefersDark ? 'dark' : 'light');
-            document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
-            updateThemeIcon(theme);
+            document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
         }
 
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-            const next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('flaire-theme', next);
-            updateThemeIcon(next);
-        }
-
-        function updateThemeIcon(theme) {
-            const btn = $('theme-toggle');
-            if (!btn) return;
-            btn.innerHTML = `<svg style="width:18px;height:18px;"><use href="${theme === 'dark' ? '#i-sun' : '#i-moon'}"/></svg>`;
+        function initTheme() {
+            applySystemTheme();
+            // Re-apply when the OS/browser theme changes (e.g. automatic dark mode at sunset)
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystemTheme);
         }
 
         // =====================================================================
@@ -972,13 +956,13 @@
                                 type: 'time',
                                 time: { unit: 'hour', displayFormats: { hour: 'HH:mm' } },
                                 grid: { color: (context) => context.tick ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0)' },
-                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a' }
+                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a' }
                             },
                             y: {
                                 min: 0,
                                 max: 8,
-                                grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid') || 'rgba(0,0,0,0.06)' },
-                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a' },
+                                grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() || 'rgba(0,0,0,0.06)' },
+                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a' },
                                 title: { display: true, text: 'Water Level (m)' }
                             }
                         },
@@ -990,13 +974,13 @@
                                     usePointStyle: true,
                                     boxWidth: 8,
                                     padding: 16,
-                                    color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a'
+                                    color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a'
                                 }
                             },
                             tooltip: {
-                                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-bg') || 'rgba(31,35,40,0.92)',
-                                titleColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-title') || '#fff',
-                                bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-body') || '#e6edf3',
+                                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-bg').trim() || 'rgba(31,35,40,0.92)',
+                                titleColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-title').trim() || '#fff',
+                                bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-body').trim() || '#e6edf3',
                                 borderColor: 'rgba(0,0,0,0.1)',
                                 borderWidth: 1,
                                 padding: 12,
@@ -1077,13 +1061,13 @@
                                 type: 'time',
                                 time: { unit: 'day', displayFormats: { day: 'MMM dd' } },
                                 grid: { display: false },
-                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a' }
+                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a' }
                             },
                             y: {
                                 min: 0,
                                 max: 8,
-                                grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid') || 'rgba(0,0,0,0.06)' },
-                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a' },
+                                grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() || 'rgba(0,0,0,0.06)' },
+                                ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a' },
                                 title: { display: true, text: 'Water Level (m)' }
                             }
                         },
@@ -1095,13 +1079,13 @@
                                     usePointStyle: true,
                                     boxWidth: 8,
                                     padding: 16,
-                                    color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text') || '#57606a'
+                                    color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a'
                                 }
                             },
                             tooltip: {
-                                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-bg') || 'rgba(31,35,40,0.92)',
-                                titleColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-title') || '#fff',
-                                bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-body') || '#e6edf3',
+                                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-bg').trim() || 'rgba(31,35,40,0.92)',
+                                titleColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-title').trim() || '#fff',
+                                bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--chart-tooltip-body').trim() || '#e6edf3',
                                 borderColor: 'rgba(0,0,0,0.1)',
                                 borderWidth: 1,
                                 padding: 12,
@@ -1349,7 +1333,6 @@
         // =====================================================================
         document.addEventListener('DOMContentLoaded', () => {
             initTheme();
-            $('theme-toggle').addEventListener('click', toggleTheme);
             refreshAll();
         });
     </script>
