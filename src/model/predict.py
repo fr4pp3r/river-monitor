@@ -27,9 +27,11 @@ from src.model.fuzzy_logic import compute_flood_risk, get_fuzzy_system
 
 
 def _to_native(obj):
-    """Recursively convert numpy scalars to native Python types for JSON serialization."""
+    """Recursively convert numpy scalars and datetime to JSON-serializable native types."""
     if isinstance(obj, np.generic):
         return obj.item()
+    if isinstance(obj, (datetime,)):
+        return obj.isoformat()
     if isinstance(obj, dict):
         return {k: _to_native(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
