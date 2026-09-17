@@ -323,6 +323,37 @@ body {
   }
 }
 
+/* Page wrappers span the full grid; pages carry their own layout */
+#page-dashboard,
+#page-settings {
+  grid-column: 1 / -1;
+}
+
+#page-dashboard {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-4);
+  align-content: start;
+}
+
+@media (max-width: 1199px) {
+  #page-dashboard {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  #page-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+#page-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 /* ----------------------------------------------------------------------------
    Card — Base Component
    ---------------------------------------------------------------------------- */
@@ -1600,6 +1631,6 @@ body {
 @media print {
   .header, .footer, .btn, .status-actions, .modal, .toast-container { display: none !important; }
   .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
-  .dashboard { display: block; }
+  .dashboard, #page-dashboard { display: block; }
   .container { padding: 0; }
 }
