@@ -761,6 +761,7 @@
 
             <div class="settings-actions">
                 <button onclick="resetSettings()" class="btn btn--danger">Reset to Defaults</button>
+                <button onclick="restartServer()" class="btn btn--secondary">Restart Server</button>
                 <button onclick="saveSettings()" class="btn btn--primary">Save Settings</button>
             </div>
         </div><!-- /page-settings -->
@@ -1779,6 +1780,18 @@
                 }
             } catch (e) {
                 showToast('Error', 'Failed to reset settings', 'error');
+            }
+        }
+
+        async function restartServer() {
+            if (!confirm('Restart the server now? The dashboard will reconnect automatically.')) return;
+            try {
+                const resp = await fetch('/api/restart', { method: 'POST' });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                showToast('Restarting', 'Server is restarting...', 'success');
+                setTimeout(() => location.reload(), 4000);
+            } catch (e) {
+                showToast('Error', 'Failed to restart server: ' + e.message, 'error');
             }
         }
 

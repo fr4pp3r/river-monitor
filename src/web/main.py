@@ -6,6 +6,8 @@ Provides a LAN-accessible dashboard for visualizing water levels, weather, and p
 import json
 import os
 import sys
+import threading
+import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
@@ -466,6 +468,31 @@ async def reset_config() -> JSONResponse:
         if ok:
             return JSONResponse(content={"status": "success"})
         return JSONResponse(content={"error": err}, status_code=500)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+def _restart_dashboard() -> None:
+    """Re-exec the dashboard process in-place after a short delay.
+
+    Runs in a background thread so the HTTP response flushes first.
+    Under systemd (Restart=always) an os._exit fallback is safe because
+    the service supervisor brings the process right back.
+    """
+    time.sleep(1.2)
+    try:
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    except Exception as e:
+        print(f"Restart failed, exiting for supervisor: {e}")
+        os._exit(0)
+
+
+@app.post("/api/restart")
+async def restart_server() -> JSONResponse:
+    try:
+        t = threading.Thread(target=_restart_dashboard, name="dashboard-restart", daemon=True)
+        t.start()
+        return JSONResponse(content={"status": "restarting"})
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
