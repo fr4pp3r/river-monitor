@@ -1,15 +1,14 @@
 # River Monitor System
 
-A **LAN-accessible web dashboard** for real-time river water level monitoring and flood risk prediction using **LoRa sensors**, **SMS fallback**, **Open-Meteo weather/tide data**, **Random Forest + Fuzzy Logic AI** on **Raspberry Pi 5**.
+A **LAN-accessible web dashboard** for real-time river water level monitoring and flood risk prediction using **LoRa sensors**, **SMS alerts**, **Open-Meteo weather/tide data**, **Random Forest + Fuzzy Logic AI** on **Raspberry Pi 5**.
 
 ## Features
 
 - **Real-time Monitoring**: Water level data from LoRa-connected sensors (RFM95W @915MHz) every minute
-- **SMS Fallback**: Automatic fallback to SMS (A7608e-H module) when LoRa fails (5 min timeout)
+- **SMS Alerts**: Send-only SMS notifications via the A7608e-H module to configured phone numbers when risk is high
 - **Weather & Tide Integration**: 7-day forecast from Open-Meteo (precipitation, max/min temp, tide levels)
 - **AI Prediction**: Random Forest (7 features) + Fuzzy Logic (15 rules) for flood risk classification
 - **Fuzzy Logic Risk Levels**: Receding, Alert, Alarm, Critical based on 5 inputs
-- **SMS Alerts**: Sends SMS alerts for Alarm and Critical risk levels
 - **Web Dashboard**: Responsive, real-time dashboard with charts, fuzzy logic details, and status monitoring
 
 ## System Architecture
@@ -25,7 +24,7 @@ A **LAN-accessible web dashboard** for real-time river water level monitoring an
 |                        Raspberry Pi 5                            |
 |  +------------------+  +------------------+  +------------------+ |
 |  |  LoRa Receiver   |  |  SMS Handler     |  | Weather/Tide     | |
-|  |  (1-min data)    |  |  (fallback)      |  | Fetcher (6-hr)   | |
+|  |  (1-min data)    |  |  (alerts)        |  | Fetcher (6-hr)   | |
 |  +--------+---------+  +--------+---------+  +--------+---------+ |
 |           |                  |                        |            |
 |           v                  v                        v            |
@@ -99,7 +98,7 @@ river-monitor/
 │   │   ├── __init__.py
 │   │   ├── database.py           # Database operations + migration
 │   │   ├── lora_receiver.py      # LoRa data ingestion (1-min)
-│   │   ├── sms_handler.py        # SMS fallback and alerts
+│   │   ├── sms_handler.py        # SMS alert sending
 │   │   └── weather_fetcher.py    # Open-Meteo weather + tide client
 │   ├── model/
 │   │   ├── __init__.py
@@ -126,7 +125,7 @@ river-monitor/
 |-----------|-------|------------|---------|
 | Raspberry Pi 5 | - | - | Main processing unit |
 | LoRa Module | RFM95W | SPI | Receive sensor data (1-min) |
-| SMS Module | A7608e-H | UART | Fallback communication |
+| SMS Module | A7608e-H | UART | Send SMS alerts (send-only) |
 | Water Level Sensor | - | LoRa | Measure river water level (mm) |
 
 ### Wiring Guide
@@ -257,7 +256,7 @@ python src/web/main.py
 
 # In separate terminals, start the data collectors
 python src/data/lora_receiver.py
-# SMS handler runs on demand (triggered by LoRa receiver when needed)
+# SMS handler is invoked on demand for high-risk alerts
 ```
 
 #### Option B: Systemd Service (Recommended)
@@ -290,11 +289,10 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
    - Current risk level (color-coded: Receding/Alert/Alarm/Critical)
    - RF Propensity (Low/Medium/High)
    - Last update time
-   - Data source (LoRa or SMS)
+   - Data source (LoRa)
 
 2. **Water Level Chart**
    - Shows water level over the last 24 hours (1-min resolution)
-   - Color-coded by data source (green = LoRa, yellow = SMS)
 
 3. **7-Day Forecast Chart**
    - Predicted water levels for the next 7 days
@@ -354,10 +352,9 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
    - Rain tips converted to rainfall: `rainfall = tips * 0.2mm`
    - Data stored in SQLite with source="lora"
 
-2. **Fallback Mechanism** (5 min timeout)
-   - If no LoRa data for 5 minutes, SMS fallback triggered
-   - SMS module requests data from sensor via SMS
-   - Data stored with source="sms"
+2. **Stale-Data Warning** (5 min timeout)
+   - If no LoRa data for 5 minutes, the receiver logs a warning
+   - Sensor is LoRa-only; there is no SMS data fallback
 
 3. **Weather & Tide Data** (every 6 hours)
    - Fetched from Open-Meteo API (weather + marine)

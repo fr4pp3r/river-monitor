@@ -171,7 +171,7 @@
                         <div class="status-item">
                             <span class="status-label">Data Source</span>
                             <span class="status-value" style="font-size:var(--text-lg);" id="data-source">—</span>
-                            <span class="status-unit" id="data-source-detail">LoRa or SMS fallback</span>
+                            <span class="status-unit" id="data-source-detail">LoRa radio link</span>
                         </div>
                     </div>
 
@@ -262,7 +262,7 @@
                 <header class="card__header">
                     <div>
                         <h2 class="card__title" id="water-chart-title">Water Level — Last 24 Hours</h2>
-                        <p class="card__subtitle">Readings from LoRa sensor with SMS fallback</p>
+                        <p class="card__subtitle">Readings from LoRa sensor</p>
                     </div>
                 </header>
                 <div class="card__content">
@@ -450,8 +450,8 @@
                             <label class="toggle"><input type="checkbox" id="cfg_lora_enabled" data-config-key="lora_enabled"><span class="toggle__slider"></span></label>
                         </div>
                         <div class="settings-field">
-                            <label class="settings-label" for="cfg_sms_enabled">SMS Handler</label>
-                            <p class="settings-desc">Enable/disable the A7608e-H SMS fallback module</p>
+<label class="settings-label" for="cfg_sms_enabled">SMS Handler</label>
+                                <p class="settings-desc">Enable/disable SMS alert sending via the A7608e-H module</p>
                             <label class="toggle"><input type="checkbox" id="cfg_sms_enabled" data-config-key="sms_enabled"><span class="toggle__slider"></span></label>
                         </div>
                     </div>
@@ -692,7 +692,7 @@
                             <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="water_level_interval" min="10"><span class="settings-unit">seconds</span></div>
                         </div>
                         <div class="settings-field">
-                            <label class="settings-label">LoRa Fallback Timeout</label>
+                            <label class="settings-label">LoRa Stale-Data Timeout</label>
                             <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="lora_fallback_timeout" min="60"><span class="settings-unit">seconds</span></div>
                         </div>
                         <div class="settings-field">
@@ -1026,7 +1026,7 @@
                             setValue('last-updated', timeAgo(latest.timestamp));
                             setValue('last-updated-exact', formatTimestamp(latest.timestamp));
                             setValue('data-source', (latest.source || '—').toUpperCase());
-                            setValue('data-source-detail', latest.source === 'lora' ? 'LoRa radio link' : 'SMS fallback');
+                            setValue('data-source-detail', latest.source === 'lora' ? 'LoRa radio link' : latest.source);
                             if (liveText) liveText.textContent = 'Live';
                             if (liveDot) liveDot.classList.add('live-dot--active');
                         } else {
@@ -1098,7 +1098,7 @@
                 const waterData = await waterResponse.json();
                 if (waterData.length > 0) {
                     setValue('data-source', (waterData[0].source || '—').toUpperCase());
-                    setValue('data-source-detail', waterData[0].source === 'lora' ? 'LoRa radio link' : 'SMS fallback');
+                    setValue('data-source-detail', waterData[0].source === 'lora' ? 'LoRa radio link' : waterData[0].source);
                 }
 
                 // Trend: compare first vs last reading in the last 3 hours

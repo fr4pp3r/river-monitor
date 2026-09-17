@@ -1,21 +1,22 @@
 """
 SMS Handler for River Monitor System
-Handles A7608e-H module communication for SMS fallback and alerts
+Handles A7608e-H module communication for SMS alerts (send-only).
+
+The sensor node is LoRa-only (no SMS module), so the SMS module on the
+Raspberry Pi is used solely to send alert messages to configured phone
+numbers. It does not request or receive data from the sensor.
 """
 
 import time
 import serial
 from datetime import datetime
-from typing import List, Optional
 
 from src.config import (
     SMS_ENABLED, SMS_UART_PORT, SMS_BAUD_RATE, SMS_TIMEOUT,
-    SMS_ALERT_TEMPLATE, SMS_ALERT_RISK_LEVELS,
-    WATER_LEVEL_INTERVAL
+    SMS_ALERT_TEMPLATE, SMS_ALERT_RISK_LEVELS
 )
 from src.data.database import (
-    insert_water_level, get_latest_water_level,
-    insert_alert, update_alert_status, get_recent_alerts,
+    insert_alert, update_alert_status,
     get_active_alert_phone_numbers
 )
 
@@ -109,8 +110,7 @@ class SMSHandler:
             ("AT", "OK"),
             ("AT+CPIN?", "READY"),  # Check SIM card
             ("AT+CREG?", "OK"),     # Check network registration
-            ("AT+CMGF=1", "OK"),    # Set SMS to text mode
-            ("AT+CNMI=2,2,0,0,0", "OK")  # Configure SMS storage
+            ("AT+CMGF=1", "OK")     # Set SMS to text mode
         ]
         
         for cmd, expected in commands:
@@ -146,64 +146,6 @@ class SMSHandler:
         else:
             print(f"Failed to send SMS to {phone_number}")
             return False
-    
-    def read_sms(self) -> Optional[str]:
-        """Read the latest SMS message (for fallback data collection)"""
-        if not self.initialize_module():
-            return None
-        
-        # List messages
-        if not self.send_at_command('AT+CMGL="ALL"', expected_response="+CMGL:"):
-            return None
-        
-        # Read response (this is simplified - actual parsing would be more complex)
-        time.sleep(1)
-        response = ""
-        while self.serial_port.in_waiting:
-            response += self.serial_port.readline().decode()
-        
-        # Parse response to extract message
-        # This is a simplified parser - actual implementation would need to handle
-        # the full +CMGL response format
-        if "+CMGL:" in response:
-            # Find the message content (after the last quote)
-            parts = response.split('"')
-            if len(parts) >= 3:
-                message = parts[-2]  # Message is between quotes
-                return message
-        
-        return None
-    
-    def parse_sms_distance(self, message: str) -> Optional[float]:
-        """Parse distance from SMS message"""
-        # Expected format: "DIST:<value>" or similar
-        if "DIST:" in message:
-            try:
-                distance_str = message.split("DIST:")[1].split()[0]
-                return float(distance_str)
-            except (ValueError, IndexError):
-                return None
-        return None
-    
-    def request_sensor_data(self) -> bool:
-        """Request sensor data via SMS (for fallback)"""
-        # This would send a command to the remote sensor to transmit its data
-        # Implementation depends on your SMS-based sensor protocol
-        # For now, we'll assume the sensor sends data automatically via SMS
-        
-        # Try to read any pending SMS
-        message = self.read_sms()
-        if message:
-            distance = self.parse_sms_distance(message)
-            if distance is not None:
-                from src.config import SENSOR_MAX_DISTANCE
-                water_level = SENSOR_MAX_DISTANCE - distance
-                timestamp = datetime.now()
-                insert_water_level(timestamp, water_level, distance, "sms")
-                print(f"Received SMS data: Distance={distance:.2f}m, Water Level={water_level:.2f}m")
-                return True
-        
-        return False
     
     def send_alert(self, risk_level: str, water_level_m: float, forecast_change: float) -> bool:
         """Send SMS alerts for high risk levels"""
@@ -252,22 +194,6 @@ class SMSHandler:
         """Clean up serial connection"""
         if self.serial_port and self.serial_port.is_open:
             self.serial_port.close()
-
-
-def trigger_sms_fallback():
-    """Trigger SMS fallback to get sensor data"""
-    if not SMS_ENABLED:
-        print("SMS fallback skipped: SMS module is DISABLED in config")
-        return
-    
-    handler = SMSHandler()
-    try:
-        if handler.request_sensor_data():
-            print("SMS fallback: Data received successfully")
-        else:
-            print("SMS fallback: No data received")
-    finally:
-        handler.cleanup()
 
 
 def send_alert_sms(risk_level: str, water_level_m: float, forecast_change: float):
@@ -326,13 +252,6 @@ if __name__ == "__main__":
         try:
             if handler.connect():
                 print("Testing SMS module...")
-                # Try to read any existing messages
-                message = handler.read_sms()
-                if message:
-                    print(f"Found message: {message}")
-                else:
-                    print("No messages found")
-                
                 # Test sending (uncomment to test)
                 # handler.send_sms("+639123456789", "Test message from River Monitor")
         finally:

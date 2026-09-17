@@ -13,12 +13,11 @@ from typing import Optional, Callable
 
 from src.config import (
     LORA_ENABLED, LORA_FREQUENCY, LORA_SPREADING_FACTOR, LORA_BANDWIDTH,
-    LORA_CODING_RATE, LORA_CS_PIN, LORA_RESET_PIN, LORA_CE_PIN,
-    SENSOR_MAX_DISTANCE, RAIN_BUCKET_TIP_MM, WATER_LEVEL_INTERVAL,
-    SMS_ENABLED
+    LORA_CODING_RATE, LORA_RESET_PIN,
+    SENSOR_MAX_DISTANCE, RAIN_BUCKET_TIP_MM,
+    LORA_FALLBACK_TIMEOUT
 )
-from src.data.database import insert_water_level, get_latest_water_level
-from src.data.sms_handler import trigger_sms_fallback
+from src.data.database import insert_water_level
 
 
 # ============================================================
@@ -332,13 +331,12 @@ class LoRaReceiver:
 
         return True
 
-    def check_fallback_needed(self) -> bool:
-        """Check if SMS fallback should be triggered"""
+    def has_stale_data(self) -> bool:
         if self.last_receive_time is None:
             return True
 
         time_since_last = (datetime.now() - self.last_receive_time).total_seconds()
-        return time_since_last > WATER_LEVEL_INTERVAL * 5  # 5 missed intervals
+        return time_since_last > LORA_FALLBACK_TIMEOUT
 
     def run(self, callback: Optional[Callable] = None):
         """Main receive loop"""
@@ -356,13 +354,8 @@ class LoRaReceiver:
                         if callback:
                             callback()
 
-                # Check if fallback needed
-                if self.check_fallback_needed():
-                    if SMS_ENABLED:
-                        print("No LoRa data received, triggering SMS fallback...")
-                        trigger_sms_fallback()
-                    else:
-                        print("No LoRa data received, SMS fallback is DISABLED")
+                if self.has_stale_data():
+                    print("No LoRa data received - sensor may be offline or out of range")
                     self.last_receive_time = datetime.now()  # Reset timer
 
         except KeyboardInterrupt:

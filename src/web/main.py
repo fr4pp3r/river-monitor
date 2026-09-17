@@ -95,7 +95,7 @@ async def get_status() -> JSONResponse:
                 "enabled": SMS_ENABLED,
                 "status": "disabled" if not SMS_ENABLED else "ok",
                 "last_update": latest_water['timestamp'] if latest_water and latest_water['source'] == 'sms' else None,
-                "message": "Module disabled" if not SMS_ENABLED else "Fallback available"
+                "message": "Module disabled" if not SMS_ENABLED else "Alert sending enabled"
             },
             "weather": {
                 "status": "ok" if latest_weather else "warning",

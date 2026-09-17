@@ -9,7 +9,9 @@ Adjust these values according to your hardware setup and requirements
 
 # Set to False to disable hardware modules (useful for development/testing)
 LORA_ENABLED = True    # Enable/disable LoRa receiver module
-SMS_ENABLED = False    # Enable/disable SMS handler module
+# SMS is send-only: the sensor node has no SMS module, so the A7608e-H is
+# used solely to deliver alert messages to configured phone numbers.
+SMS_ENABLED = False    # Enable/disable SMS alert sending
 
 # ============================================================================
 # HARDWARE CONFIGURATION
@@ -119,7 +121,7 @@ AUTO_REFRESH_SECONDS = 30   # Dashboard auto-refresh interval
 # Water level data collection interval (seconds)
 WATER_LEVEL_INTERVAL = 60  # 1 minute
 
-# Maximum time without LoRa data before triggering SMS fallback (seconds)
+# Maximum time without LoRa data before the receiver logs a stale-data warning (seconds)
 LORA_FALLBACK_TIMEOUT = 300  # 5 minutes (5 missed intervals at 1 min each)
 
 # Weather data fetch interval (seconds)
