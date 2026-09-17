@@ -888,8 +888,8 @@
             if (legendAlarm) legendAlarm.textContent = fmt(ALARM_THRESHOLD_M);
             if (legendCritical) legendCritical.textContent = fmt(CRITICAL_LEVEL_M);
 
-            if (waterLevelChart) waterLevelChart.update();
-            if (forecastChart) forecastChart.update();
+            if (waterLevelChart) updateWaterLevelChart();
+            if (forecastChart) updateForecastChart();
         }
 
         async function loadRiskThresholds() {
@@ -1359,7 +1359,7 @@
                             },
                             y: {
                                 min: 0,
-                                max: 8,
+                                max: Math.max(CRITICAL_LEVEL_M + 1, ...levels),
                                 grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() || 'rgba(0,0,0,0.06)' },
                                 ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a' },
                                 title: { display: true, text: 'Water Level (m)' }
@@ -1464,7 +1464,7 @@
                             },
                             y: {
                                 min: 0,
-                                max: 8,
+                                max: Math.max(CRITICAL_LEVEL_M + 1, ...levels, currentLevel),
                                 grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() || 'rgba(0,0,0,0.06)' },
                                 ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a' },
                                 title: { display: true, text: 'Water Level (m)' }
