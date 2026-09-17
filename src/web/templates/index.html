@@ -73,6 +73,9 @@
             <line x1="12" y1="9" x2="12" y2="13"/>
             <line x1="12" y1="17" x2="12.01" y2="17"/>
         </symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </symbol>
         <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="16" x2="12" y2="12"/>
@@ -121,8 +124,20 @@
             <p class="subtitle">Real-time Flood Risk Prediction System</p>
         </header>
 
+        <nav class="page-nav" aria-label="Main navigation">
+            <button class="page-nav__btn active" data-page="dashboard" onclick="switchPage('dashboard')">
+                <svg class="icon" style="width:18px;height:18px;"><use href="#i-radar"/></svg>
+                Dashboard
+            </button>
+            <button class="page-nav__btn" data-page="settings" onclick="switchPage('settings')">
+                <svg class="icon" style="width:18px;height:18px;"><use href="#i-settings"/></svg>
+                Settings
+            </button>
+        </nav>
+
         <!-- ==================== DASHBOARD ==================== -->
         <main class="dashboard">
+        <div id="page-dashboard">
 
             <!-- ========== Current Status (Hero) ========== -->
             <section class="card status-card card--span-6" aria-labelledby="status-title">
@@ -410,6 +425,346 @@
                     </div>
                 </div>
             </section>
+        </div><!-- /page-dashboard -->
+
+        <!-- ==================== SETTINGS PAGE ==================== -->
+        <div id="page-settings" style="display:none">
+            <div class="settings-restart-note">
+                <svg class="icon" style="width:16px;height:16px;"><use href="#i-info"/></svg>
+                Some settings (Host, Port) require a server restart to take effect.
+            </div>
+
+            <!-- Module Control -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">Module Control</h2>
+                        <p class="card__subtitle">Enable or disable hardware modules</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label class="settings-label" for="cfg_lora_enabled">LoRa Receiver</label>
+                            <p class="settings-desc">Enable/disable the LoRa RFM95W receiver module</p>
+                            <label class="toggle"><input type="checkbox" id="cfg_lora_enabled" data-config-key="lora_enabled"><span class="toggle__slider"></span></label>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label" for="cfg_sms_enabled">SMS Handler</label>
+                            <p class="settings-desc">Enable/disable the A7608e-H SMS fallback module</p>
+                            <label class="toggle"><input type="checkbox" id="cfg_sms_enabled" data-config-key="sms_enabled"><span class="toggle__slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LoRa Hardware -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">LoRa Hardware</h2>
+                        <p class="card__subtitle">RFM95W SPI and radio configuration</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label class="settings-label">SPI Port</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="lora_spi_port" min="0"><span class="settings-unit">bus</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">CE Pin (GPIO)</label>
+                            <input type="number" class="settings-input" data-config-key="lora_ce_pin" min="0">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">CS Pin (GPIO)</label>
+                            <input type="number" class="settings-input" data-config-key="lora_cs_pin" min="0">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Reset Pin (GPIO)</label>
+                            <input type="number" class="settings-input" data-config-key="lora_reset_pin" min="0">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Frequency</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="lora_frequency" step="0.1" min="100"><span class="settings-unit">MHz</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Bandwidth</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="lora_bandwidth" min="1"><span class="settings-unit">kHz</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Spreading Factor</label>
+                            <input type="number" class="settings-input" data-config-key="lora_spreading_factor" min="6" max="12">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Coding Rate</label>
+                            <input type="number" class="settings-input" data-config-key="lora_coding_rate" min="5" max="8">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SMS Hardware -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">SMS Hardware</h2>
+                        <p class="card__subtitle">A7608e-H modem UART configuration</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label class="settings-label">UART Port</label>
+                            <input type="text" class="settings-input" data-config-key="sms_uart_port">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Baud Rate</label>
+                            <input type="number" class="settings-input" data-config-key="sms_baud_rate" min="1">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Timeout</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="sms_timeout" step="0.5" min="1"><span class="settings-unit">seconds</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sensor & Rain Gauge -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">Sensor Configuration</h2>
+                        <p class="card__subtitle">Ultrasonic distance sensor and rain gauge calibration</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label class="settings-label">Max Sensor Distance</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="sensor_max_distance" step="0.1" min="0"><span class="settings-unit">meters</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Rain Bucket Tip</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="rain_bucket_tip_mm" step="0.01" min="0"><span class="settings-unit">mm per tip</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Risk Thresholds -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">Risk Thresholds</h2>
+                        <p class="card__subtitle">PAGASA-compliant water level risk levels</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label class="settings-label">Critical Water Level</label>
+                            <p class="settings-desc">100% risk reference level</p>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="critical_level_m" step="0.1" min="0"><span class="settings-unit">meters</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Receding Hours</label>
+                            <p class="settings-desc">Hours of dropping level before "Receding"</p>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="receding_hours" step="1" min="1"><span class="settings-unit">hours</span></div>
+                        </div>
+                    </div>
+                    <div class="settings-nested">
+                        <span class="settings-nested-title">Risk Threshold Ratios (fraction of critical level)</span>
+                        <div class="settings-grid">
+                            <div class="settings-field">
+                                <label class="settings-label">Normal → Alert</label>
+                                <input type="number" class="settings-input" data-config-key="alert" data-config-nested="risk_thresholds" step="0.01" min="0" max="1">
+                            </div>
+                            <div class="settings-field">
+                                <label class="settings-label">Alert → Alarm</label>
+                                <input type="number" class="settings-input" data-config-key="alarm" data-config-nested="risk_thresholds" step="0.01" min="0" max="1">
+                            </div>
+                            <div class="settings-field">
+                                <label class="settings-label">Alarm → Critical</label>
+                                <input type="number" class="settings-input" data-config-key="critical" data-config-nested="risk_thresholds" step="0.01" min="0" max="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Weather API -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">Weather API</h2>
+                        <p class="card__subtitle">Open-Meteo location and caching settings</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label class="settings-label">Latitude</label>
+                            <input type="number" class="settings-input" data-config-key="weather_latitude" step="0.0001" min="-90" max="90">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Longitude</label>
+                            <input type="number" class="settings-input" data-config-key="weather_longitude" step="0.0001" min="-180" max="180">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Cache Expiry</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="weather_cache_expiry" min="60"><span class="settings-unit">seconds</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Forecast Days</label>
+                            <input type="number" class="settings-input" data-config-key="weather_forecast_days" min="1" max="16">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Timezone</label>
+                            <input type="text" class="settings-input" data-config-key="weather_timezone">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SMS Alert Configuration -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">SMS Alert Configuration</h2>
+                        <p class="card__subtitle">Control which risk levels trigger SMS alerts</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-field">
+                        <label class="settings-label">Alert Risk Levels</label>
+                        <p class="settings-desc">Select which risk levels send SMS notifications</p>
+                        <div class="settings-checkbox-group">
+                            <label class="settings-checkbox-item"><input type="checkbox" data-config-key="sms_alert_risk_level" value="Receding">Receding</label>
+                            <label class="settings-checkbox-item"><input type="checkbox" data-config-key="sms_alert_risk_level" value="Alert">Alert</label>
+                            <label class="settings-checkbox-item"><input type="checkbox" data-config-key="sms_alert_risk_level" value="Alarm">Alarm</label>
+                            <label class="settings-checkbox-item"><input type="checkbox" data-config-key="sms_alert_risk_level" value="Critical">Critical</label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Settings -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">Dashboard</h2>
+                        <p class="card__subtitle">Web server and refresh settings</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label class="settings-label">Host</label>
+                            <p class="settings-desc">Requires restart</p>
+                            <input type="text" class="settings-input" data-config-key="dashboard_host">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Port</label>
+                            <p class="settings-desc">Requires restart</p>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="dashboard_port" min="1" max="65535"><span class="settings-unit">port</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Auto-Refresh Interval</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="auto_refresh_seconds" min="5"><span class="settings-unit">seconds</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Collection Intervals -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">Data Collection</h2>
+                        <p class="card__subtitle">Polling and timeout intervals</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label class="settings-label">Water Level Interval</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="water_level_interval" min="10"><span class="settings-unit">seconds</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">LoRa Fallback Timeout</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="lora_fallback_timeout" min="60"><span class="settings-unit">seconds</span></div>
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Weather Fetch Interval</label>
+                            <div class="settings-input-group"><input type="number" class="settings-input" data-config-key="weather_fetch_interval" min="60"><span class="settings-unit">seconds</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fuzzy Logic Thresholds -->
+            <section class="card settings-card">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title">Fuzzy Logic Thresholds</h2>
+                        <p class="card__subtitle">Membership function boundaries for risk inference</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <div class="settings-nested">
+                        <span class="settings-nested-title">Water Level (mm)</span>
+                        <div class="settings-grid">
+                            <div class="settings-field"><label class="settings-label">Low Max</label><input type="number" class="settings-input" data-config-key="low_max" data-config-nested="wl_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">Medium Min</label><input type="number" class="settings-input" data-config-key="medium_min" data-config-nested="wl_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">Medium Max</label><input type="number" class="settings-input" data-config-key="medium_max" data-config-nested="wl_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">High Min</label><input type="number" class="settings-input" data-config-key="high_min" data-config-nested="wl_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">High Max</label><input type="number" class="settings-input" data-config-key="high_max" data-config-nested="wl_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">Very High Min</label><input type="number" class="settings-input" data-config-key="very_high_min" data-config-nested="wl_thresholds"></div>
+                        </div>
+                    </div>
+                    <div class="settings-nested">
+                        <span class="settings-nested-title">Forecast Rain (mm/day)</span>
+                        <div class="settings-grid">
+                            <div class="settings-field"><label class="settings-label">None Max</label><input type="number" class="settings-input" data-config-key="none_max" data-config-nested="frain_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">Light Min</label><input type="number" class="settings-input" data-config-key="light_min" data-config-nested="frain_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">Light Max</label><input type="number" class="settings-input" data-config-key="light_max" data-config-nested="frain_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">Moderate Min</label><input type="number" class="settings-input" data-config-key="moderate_min" data-config-nested="frain_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">Moderate Max</label><input type="number" class="settings-input" data-config-key="moderate_max" data-config-nested="frain_thresholds"></div>
+                            <div class="settings-field"><label class="settings-label">Heavy Min</label><input type="number" class="settings-input" data-config-key="heavy_min" data-config-nested="frain_thresholds"></div>
+                        </div>
+                    </div>
+                    <div class="settings-nested">
+                        <span class="settings-nested-title">Rate of Rise (mm/hour)</span>
+                        <div class="settings-grid">
+                            <div class="settings-field"><label class="settings-label">Negative Max</label><input type="number" class="settings-input" data-config-key="negative_max" data-config-nested="ror_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">Near Zero Min</label><input type="number" class="settings-input" data-config-key="near_zero_min" data-config-nested="ror_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">Near Zero Max</label><input type="number" class="settings-input" data-config-key="near_zero_max" data-config-nested="ror_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">Moderate Min</label><input type="number" class="settings-input" data-config-key="moderate_min" data-config-nested="ror_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">Moderate Max</label><input type="number" class="settings-input" data-config-key="moderate_max" data-config-nested="ror_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">Rapid Min</label><input type="number" class="settings-input" data-config-key="rapid_min" data-config-nested="ror_thresholds" step="0.1"></div>
+                        </div>
+                    </div>
+                    <div class="settings-nested">
+                        <span class="settings-nested-title">Tide Level (meters)</span>
+                        <div class="settings-grid">
+                            <div class="settings-field"><label class="settings-label">Low Max</label><input type="number" class="settings-input" data-config-key="low_max" data-config-nested="tide_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">Mid Min</label><input type="number" class="settings-input" data-config-key="mid_min" data-config-nested="tide_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">Mid Max</label><input type="number" class="settings-input" data-config-key="mid_max" data-config-nested="tide_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">High Min</label><input type="number" class="settings-input" data-config-key="high_min" data-config-nested="tide_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">High Max</label><input type="number" class="settings-input" data-config-key="high_max" data-config-nested="tide_thresholds" step="0.1"></div>
+                            <div class="settings-field"><label class="settings-label">Extreme Min</label><input type="number" class="settings-input" data-config-key="extreme_min" data-config-nested="tide_thresholds" step="0.1"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="settings-actions">
+                <button onclick="resetSettings()" class="btn btn--danger">Reset to Defaults</button>
+                <button onclick="saveSettings()" class="btn btn--primary">Save Settings</button>
+            </div>
+        </div><!-- /page-settings -->
+
         </main>
 
         <!-- ==================== FOOTER ==================== -->
@@ -1308,6 +1663,124 @@
                 if (e.target === modal) modal.classList.remove('is-open');
             });
         });
+
+        // =====================================================================
+        // PAGE NAVIGATION
+        // =====================================================================
+        function switchPage(page) {
+            document.getElementById('page-dashboard').style.display = page === 'dashboard' ? '' : 'none';
+            document.getElementById('page-settings').style.display = page === 'settings' ? '' : 'none';
+            document.querySelectorAll('.page-nav__btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.page === page);
+            });
+            if (page === 'settings') loadSettings();
+        }
+
+        // =====================================================================
+        // SETTINGS PAGE
+        // =====================================================================
+        let _settingsLoaded = false;
+
+        async function loadSettings() {
+            try {
+                const resp = await fetch('/api/config');
+                if (!resp.ok) throw new Error('Failed to fetch config');
+                const cfg = await resp.json();
+                populateSettingsForm(cfg);
+                _settingsLoaded = true;
+            } catch (e) {
+                showToast('Error', 'Failed to load settings: ' + e.message, 'error');
+            }
+        }
+
+        function populateSettingsForm(cfg) {
+            document.querySelectorAll('[data-config-key]').forEach(input => {
+                const key = input.dataset.configKey;
+                const nested = input.dataset.configNested;
+                let value = nested ? (cfg[nested] || {})[key] : cfg[key];
+                if (value === undefined || value === null) return;
+
+                if (input.type === 'checkbox' && !nested) {
+                    input.checked = !!value;
+                } else if (input.type === 'number') {
+                    input.value = Number(value);
+                } else {
+                    input.value = String(value);
+                }
+            });
+
+            const smsLevels = cfg.sms_alert_risk_levels || [];
+            document.querySelectorAll('[data-config-key="sms_alert_risk_level"]').forEach(cb => {
+                cb.checked = smsLevels.includes(cb.value);
+            });
+        }
+
+        async function saveSettings() {
+            const data = {};
+
+            document.querySelectorAll('[data-config-key]').forEach(input => {
+                const key = input.dataset.configKey;
+                const nested = input.dataset.configNested;
+                if (key === 'sms_alert_risk_level') return;
+
+                let value;
+                if (input.type === 'checkbox' && !nested) {
+                    data[key] = input.checked;
+                    return;
+                } else if (input.type === 'number') {
+                    value = parseFloat(input.value);
+                    if (isNaN(value)) return;
+                } else {
+                    value = input.value;
+                }
+
+                if (nested) {
+                    if (!data[nested]) data[nested] = {};
+                    data[nested][key] = value;
+                } else {
+                    data[key] = value;
+                }
+            });
+
+            const smsLevels = [];
+            document.querySelectorAll('[data-config-key="sms_alert_risk_level"]:checked').forEach(cb => {
+                smsLevels.push(cb.value);
+            });
+            if (smsLevels.length) data.sms_alert_risk_levels = smsLevels;
+
+            try {
+                const resp = await fetch('/api/config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    showToast('Settings Saved', 'Configuration updated. Some settings require a restart.', 'success');
+                    loadSettings();
+                } else {
+                    showToast('Error', result.error || 'Failed to save settings', 'error');
+                }
+            } catch (e) {
+                showToast('Error', 'Failed to save settings: ' + e.message, 'error');
+            }
+        }
+
+        async function resetSettings() {
+            if (!confirm('Reset all settings to defaults? This cannot be undone.')) return;
+            try {
+                const resp = await fetch('/api/config/reset');
+                const result = await resp.json();
+                if (resp.ok) {
+                    showToast('Settings Reset', 'All settings restored to defaults.', 'success');
+                    loadSettings();
+                } else {
+                    showToast('Error', result.error || 'Failed to reset settings', 'error');
+                }
+            } catch (e) {
+                showToast('Error', 'Failed to reset settings', 'error');
+            }
+        }
 
         // =====================================================================
         // REFRESH LOOP

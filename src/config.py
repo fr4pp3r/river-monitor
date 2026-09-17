@@ -33,8 +33,8 @@ SMS_BAUD_RATE = 115200        # Baud rate for A7608e-H
 SMS_TIMEOUT = 5               # Timeout in seconds for SMS operations
 
 # Sensor Configuration
-SENSOR_MAX_DISTANCE = 7.5    # Maximum distance sensor can measure (meters)
-SENSOR_MAX_DISTANCE_MM = 7500  # Maximum distance in millimeters
+SENSOR_MAX_DISTANCE = 3.0   # Maximum distance sensor can measure (meters)
+SENSOR_MAX_DISTANCE_MM = 3000  # Maximum distance in millimeters
 
 # Rain Gauge Configuration
 RAIN_BUCKET_TIP_MM = 0.2  # Rainfall per tip in mm (adjust based on your bucket calibration)
@@ -53,7 +53,7 @@ RISK_THRESHOLDS = {
 
 # Critical water level (meters) - Adjust after hydrological survey
 # This is the water level at which risk is considered 100%
-CRITICAL_LEVEL_M = 7.5
+CRITICAL_LEVEL_M = 3.0
 
 # Receding condition: Water level must drop for this many hours to be considered receding
 RECEDING_HOURS = 2
@@ -197,3 +197,13 @@ RISK_LEVELS = ['Receding', 'Alert', 'Alarm', 'Critical']
 
 # Rate of Rise computation resampling window (hours)
 ROR_RESAMPLE_HOURS = 1  # Water levels resampled to 1-hour intervals
+
+# ============================================================================
+# JSON OVERRIDE LOADING
+# ============================================================================
+# Apply any user-saved overrides from config.json at import time.
+try:
+    from src.config_manager import load_config_from_json
+    load_config_from_json()
+except Exception:
+    pass  # Gracefully ignore if config_manager has issues

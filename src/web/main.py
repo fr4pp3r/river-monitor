@@ -22,12 +22,14 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+import src.config as config_module
 from src.config import (
     DASHBOARD_HOST, DASHBOARD_PORT,
     AUTO_REFRESH_SECONDS, CRITICAL_LEVEL_M,
     RISK_THRESHOLDS, RISK_LEVELS,
     LORA_ENABLED, SMS_ENABLED
 )
+from src.config_manager import get_config_dict, apply_config_dict, reset_to_defaults
 from src.data.database import (
     get_latest_water_level, get_water_levels_since,
     get_latest_weather, get_weather_since,
@@ -429,6 +431,41 @@ async def get_contact(contact_id: int) -> JSONResponse:
             return JSONResponse(content=contact)
         else:
             return JSONResponse(content={"error": "Contact not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+# ============================================================================
+# CONFIGURATION API ENDPOINTS
+# ============================================================================
+
+@app.get("/api/config")
+async def get_config() -> JSONResponse:
+    try:
+        return JSONResponse(content=get_config_dict())
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.put("/api/config")
+async def update_config(request: Request) -> JSONResponse:
+    try:
+        data = await request.json()
+        ok, err = apply_config_dict(data)
+        if ok:
+            return JSONResponse(content={"status": "success"})
+        return JSONResponse(content={"error": err}, status_code=400)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/config/reset")
+async def reset_config() -> JSONResponse:
+    try:
+        ok, err = reset_to_defaults()
+        if ok:
+            return JSONResponse(content={"status": "success"})
+        return JSONResponse(content={"error": err}, status_code=500)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
