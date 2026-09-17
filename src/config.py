@@ -33,8 +33,8 @@ SMS_BAUD_RATE = 115200        # Baud rate for A7608e-H
 SMS_TIMEOUT = 5               # Timeout in seconds for SMS operations
 
 # Sensor Configuration
-SENSOR_MAX_DISTANCE = 3.0   # Maximum distance sensor can measure (meters)
-SENSOR_MAX_DISTANCE_MM = 3000  # Maximum distance in millimeters
+SENSOR_MAX_DISTANCE = 2.5   # Maximum distance sensor can measure (meters)
+SENSOR_MAX_DISTANCE_MM = 2500  # Maximum distance in millimeters
 
 # Rain Gauge Configuration
 RAIN_BUCKET_TIP_MM = 0.2  # Rainfall per tip in mm (adjust based on your bucket calibration)
@@ -53,7 +53,7 @@ RISK_THRESHOLDS = {
 
 # Critical water level (meters) - Adjust after hydrological survey
 # This is the water level at which risk is considered 100%
-CRITICAL_LEVEL_M = 3.0
+CRITICAL_LEVEL_M = 2.0
 
 # Receding condition: Water level must drop for this many hours to be considered receding
 RECEDING_HOURS = 2
