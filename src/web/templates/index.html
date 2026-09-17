@@ -189,16 +189,16 @@
                             <span class="risk-gauge__seg risk-gauge__seg--alarm"></span>
                             <span class="risk-gauge__seg risk-gauge__seg--critical"></span>
                             <!-- threshold markers -->
-                            <span class="risk-gauge__marker" style="left:40%" data-threshold="Alert 3.0m"></span>
-                            <span class="risk-gauge__marker" style="left:60%" data-threshold="Alarm 4.5m"></span>
-                            <span class="risk-gauge__marker" style="left:100%" data-threshold="Critical 7.5m"></span>
+                            <span class="risk-gauge__marker" id="marker-alert" style="left:40%" data-threshold="Alert 3.0m"></span>
+                            <span class="risk-gauge__marker" id="marker-alarm" style="left:60%" data-threshold="Alarm 4.5m"></span>
+                            <span class="risk-gauge__marker" id="marker-critical" style="left:100%" data-threshold="Critical 7.5m"></span>
                             <!-- needle -->
                             <span class="risk-gauge__needle" id="risk-gauge-needle" style="left:0%"></span>
                         </div>
                         <div class="risk-gauge__legend">
-                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alert-soft);border:1px solid var(--color-alert)"></span> Alert ≥ 3.0 m</span>
-                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alarm-soft);border:1px solid var(--color-alarm)"></span> Alarm ≥ 4.5 m</span>
-                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-critical-soft);border:1px solid var(--color-critical)"></span> Critical ≥ 7.5 m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alert-soft);border:1px solid var(--color-alert)"></span> Alert ≥ <span id="legend-alert">3.0</span> m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alarm-soft);border:1px solid var(--color-alarm)"></span> Alarm ≥ <span id="legend-alarm">4.5</span> m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-critical-soft);border:1px solid var(--color-critical)"></span> Critical ≥ <span id="legend-critical">7.5</span> m</span>
                         </div>
                     </div>
 
@@ -850,15 +850,57 @@
             'disabled': '#8b949e'
         };
 
-        // Thresholds (mirrors config: CRITICAL_LEVEL_M = 7.5, alert 40%, alarm 60%)
-        const CRITICAL_LEVEL_M = 7.5;
-        const ALERT_THRESHOLD_M = CRITICAL_LEVEL_M * 0.40; // 3.0
-        const ALARM_THRESHOLD_M = CRITICAL_LEVEL_M * 0.60;  // 4.5
+        // Risk threshold defaults; overridden from /api/config at runtime
+        let CRITICAL_LEVEL_M = 7.5;
+        let ALERT_THRESHOLD_M = CRITICAL_LEVEL_M * 0.40;
+        let ALARM_THRESHOLD_M = CRITICAL_LEVEL_M * 0.60;
 
         // =====================================================================
         // UTILITIES
         // =====================================================================
         function $(id) { return document.getElementById(id); }
+
+        function applyRiskThresholds(cfg) {
+            const critical = cfg.critical_level_m;
+            const ratios = cfg.risk_thresholds || {};
+            if (!critical || isNaN(critical)) return;
+
+            CRITICAL_LEVEL_M = critical;
+            ALERT_THRESHOLD_M = critical * (ratios.alert ?? 0.40);
+            ALARM_THRESHOLD_M = critical * (ratios.alarm ?? 0.60);
+
+            const markerAlert = $('marker-alert');
+            const markerAlarm = $('marker-alarm');
+            const markerCritical = $('marker-critical');
+            if (markerAlert) markerAlert.style.left = (ALERT_THRESHOLD_M / CRITICAL_LEVEL_M * 100).toFixed(1) + '%';
+            if (markerAlarm) markerAlarm.style.left = (ALARM_THRESHOLD_M / CRITICAL_LEVEL_M * 100).toFixed(1) + '%';
+            if (markerCritical) markerCritical.style.left = '100%';
+
+            const fmt = v => v.toFixed(1);
+            if (markerAlert) markerAlert.dataset.threshold = `Alert ${fmt(ALERT_THRESHOLD_M)}m`;
+            if (markerAlarm) markerAlarm.dataset.threshold = `Alarm ${fmt(ALARM_THRESHOLD_M)}m`;
+            if (markerCritical) markerCritical.dataset.threshold = `Critical ${fmt(CRITICAL_LEVEL_M)}m`;
+
+            const legendAlert = $('legend-alert');
+            const legendAlarm = $('legend-alarm');
+            const legendCritical = $('legend-critical');
+            if (legendAlert) legendAlert.textContent = fmt(ALERT_THRESHOLD_M);
+            if (legendAlarm) legendAlarm.textContent = fmt(ALARM_THRESHOLD_M);
+            if (legendCritical) legendCritical.textContent = fmt(CRITICAL_LEVEL_M);
+
+            if (waterLevelChart) waterLevelChart.update();
+            if (forecastChart) forecastChart.update();
+        }
+
+        async function loadRiskThresholds() {
+            try {
+                const resp = await fetch('/api/config');
+                if (!resp.ok) return;
+                applyRiskThresholds(await resp.json());
+            } catch (e) {
+                console.error('Failed to load risk thresholds:', e);
+            }
+        }
 
         // Set a metric value, clearing skeleton shimmer and replacing em-dash defaults
         function setValue(id, text) {
@@ -1688,6 +1730,7 @@
                 if (!resp.ok) throw new Error('Failed to fetch config');
                 const cfg = await resp.json();
                 populateSettingsForm(cfg);
+                applyRiskThresholds(cfg);
                 _settingsLoaded = true;
             } catch (e) {
                 showToast('Error', 'Failed to load settings: ' + e.message, 'error');
@@ -1818,8 +1861,9 @@
         // =====================================================================
         // INIT
         // =====================================================================
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             initTheme();
+            await loadRiskThresholds();
             refreshAll();
         });
     </script>
