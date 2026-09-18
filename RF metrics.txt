@@ -1,7 +1,8 @@
+D:\Projects\Thesis code\river-monitor>python src/model/train.py --mode new --csv training_data4.csv --output data/models/rf_model.pkl
 Starting model training (new 7-feature model)...
-Loading data from: training_data_target.csv
+Loading data from: training_data4.csv
 Dataset shape: (1826, 8)
-Feature columns: ['R1', 'R3', 'R7', 'rainy_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
+Feature columns: ['R1', 'R3', 'R7', 'rain_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
 Class distribution:
 target
 0    918
@@ -54,12 +55,12 @@ Model saved to: data/models/rf_model.pkl
 Test Accuracy: 0.9426
 
 Feature Importance:
-   feature  importance
-        R7    0.400675
-        R3    0.242313
-        R1    0.110405
-rainy_days    0.091770
-      TMAX    0.044008
-   TideMax    0.041186
-   TideMin    0.035747
-      TMIN    0.033896
+  feature  importance
+       R7    0.400675
+       R3    0.242313
+       R1    0.110405
+rain_days    0.091770
+     TMAX    0.044008
+  TideMax    0.041186
+  TideMin    0.035747
+     TMIN    0.033896

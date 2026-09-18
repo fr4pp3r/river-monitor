@@ -12,6 +12,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 import joblib
 import os
+import sys
+
+# Ensure the project root is on the module search path so that
+# "from src.config import ..." styles of absolute imports work
+# regardless of the directory this script is invoked from.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 from src.config import (
     MODEL_PATH, MODEL_N_ESTIMATORS, MODEL_MAX_DEPTH,
