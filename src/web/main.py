@@ -201,7 +201,9 @@ async def get_prediction() -> JSONResponse:
                     'forecast': fresh_prediction['forecast'],
                     'forecast_change_1d': fresh_prediction['forecast_change_1d'],
                     'fuzzy_result': fresh_prediction.get('fuzzy_result', {}),
-                    'fuzzy_result_48h': fresh_prediction.get('fuzzy_result_48h', {})
+                    'fuzzy_result_48h': fresh_prediction.get('fuzzy_result_48h', {}),
+                    'used_fallback': bool(fresh_prediction.get('fuzzy_result', {}).get('used_fallback')),
+                    'used_fallback_48h': bool(fresh_prediction.get('fuzzy_result_48h', {}).get('used_fallback'))
                 })
 
             # No fresh prediction possible: serve the stored (stale) one when it
@@ -232,7 +234,9 @@ async def get_prediction() -> JSONResponse:
             'fuzzy_inputs': prediction.get('fuzzy_inputs', {}),
             'fuzzy_inputs_48h': prediction.get('fuzzy_inputs_48h', {}),
             'rule_triggered': prediction.get('rule_triggered'),
-            'rule_triggered_48h': prediction.get('rule_triggered_48h')
+            'rule_triggered_48h': prediction.get('rule_triggered_48h'),
+            'used_fallback': bool(prediction.get('used_fallback')),
+            'used_fallback_48h': bool(prediction.get('used_fallback_48h'))
         })
 
     except Exception as e:
@@ -276,6 +280,8 @@ async def get_fuzzy_details() -> JSONResponse:
             'rf_propensity_48h': rf_propensity_48h,
             'rule_triggered': rule_triggered,
             'rule_triggered_48h': rule_triggered_48h,
+            'used_fallback': bool(prediction.get('used_fallback')),
+            'used_fallback_48h': bool(prediction.get('used_fallback_48h')),
             'current_water_level_mm': current_water_level_mm,
             'fuzzy_inputs': fuzzy_inputs,
             'fuzzy_inputs_48h': fuzzy_inputs_48h,

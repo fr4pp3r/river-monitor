@@ -245,6 +245,8 @@ class FloodPredictor:
             rf_propensity_48h=rf_48h_class,
             fuzzy_inputs_48h=_to_native(fuzzy_48h.get('inputs', {})),
             rule_triggered_48h=fuzzy_48h.get('rule_triggered'),
+            used_fallback=fuzzy_24h.get('used_fallback'),
+            used_fallback_48h=fuzzy_48h.get('used_fallback'),
             forecast_data=forecast,
             model_version="3.0"
         )

@@ -115,8 +115,10 @@ def init_database():
                 rf_propensity_48h TEXT,  -- 'Low', 'Medium', 'High'
                 fuzzy_inputs TEXT,   -- JSON of WL, RoR, FRain, Tide, RF
                 fuzzy_inputs_48h TEXT,   -- JSON of WL, RoR, FRain, Tide, RF
-                rule_triggered INTEGER,  -- Which rule fired (1-15)
-                rule_triggered_48h INTEGER,  -- Which rule fired (1-15)
+                rule_triggered INTEGER,  -- Which rule fired (1-20)
+                rule_triggered_48h INTEGER,  -- Which rule fired (1-20)
+                used_fallback INTEGER DEFAULT 0,  -- 1 if fallback scoring used (no fuzzy rule matched)
+                used_fallback_48h INTEGER DEFAULT 0,
                 forecast_data TEXT NOT NULL,  -- JSON array of 7 daily predictions
                 model_version TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -330,7 +332,8 @@ def insert_prediction(timestamp: datetime, current_level_m: float,
                       risk_level: str, forecast_data: list, model_version: str = "1.0",
                       rf_propensity: str = None, fuzzy_inputs: dict = None, rule_triggered: int = None,
                       risk_level_48h: str = None, rf_propensity_48h: str = None,
-                      fuzzy_inputs_48h: dict = None, rule_triggered_48h: int = None) -> int:
+                      fuzzy_inputs_48h: dict = None, rule_triggered_48h: int = None,
+                      used_fallback: int = None, used_fallback_48h: int = None) -> int:
     """Insert a prediction"""
     import json
     with db_transaction() as conn:
@@ -338,13 +341,15 @@ def insert_prediction(timestamp: datetime, current_level_m: float,
         cursor.execute("""
             INSERT INTO predictions (timestamp, current_level_m, risk_level, risk_level_48h,
                                      rf_propensity, rf_propensity_48h, fuzzy_inputs, fuzzy_inputs_48h,
-                                     rule_triggered, rule_triggered_48h, forecast_data, model_version)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                     rule_triggered, rule_triggered_48h, used_fallback, used_fallback_48h,
+                                     forecast_data, model_version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (timestamp.isoformat(), current_level_m, risk_level, risk_level_48h,
               rf_propensity, rf_propensity_48h,
               json.dumps(fuzzy_inputs) if fuzzy_inputs else None,
               json.dumps(fuzzy_inputs_48h) if fuzzy_inputs_48h else None,
               rule_triggered, rule_triggered_48h,
+              used_fallback, used_fallback_48h,
               json.dumps(forecast_data), model_version))
         return cursor.lastrowid
 
@@ -850,7 +855,9 @@ def migrate_database():
             'risk_level_48h': 'TEXT',
             'rf_propensity_48h': 'TEXT',
             'fuzzy_inputs_48h': 'TEXT',
-            'rule_triggered_48h': 'INTEGER'
+            'rule_triggered_48h': 'INTEGER',
+            'used_fallback': 'INTEGER DEFAULT 0',
+            'used_fallback_48h': 'INTEGER DEFAULT 0'
         }
         
         for col, col_type in new_pred_columns.items():

@@ -313,12 +313,14 @@ class FuzzyFloodRisk:
         simulation.input['rf_propensity'] = rf
         
         # Compute
+        used_fallback = False
         try:
             simulation.compute()
             risk_crisp = simulation.output['flood_risk']
         except Exception as e:
             print(f"Fuzzy computation error: {e}")
             risk_crisp = self._fallback_risk(wl, ror, frain, tide, rf)
+            used_fallback = True
         
         # Determine risk level from crisp output
         if risk_crisp < 1.5:
@@ -341,6 +343,7 @@ class FuzzyFloodRisk:
             'risk_crisp': round(risk_crisp, 2),
             'memberships': memberships,
             'rule_triggered': rule_triggered,
+            'used_fallback': used_fallback,
             'inputs': {
                 'water_level_mm': wl,
                 'rate_of_rise_mm_hour': round(ror, 1),

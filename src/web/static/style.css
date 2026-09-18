@@ -541,6 +541,19 @@ body {
   color: var(--color-text-secondary);
 }
 
+/* Inference source caption under each risk badge (Fuzzy inference vs Fallback) */
+.risk-badge-source {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.risk-badge-source--fallback {
+  color: var(--color-alert);
+}
+
 /* Status actions */
 .status-actions {
   display: flex;

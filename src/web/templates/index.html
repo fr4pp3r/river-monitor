@@ -162,10 +162,12 @@
                         <span class="risk-badge-group">
                             <span class="risk-badge-group__label">24h</span>
                             <span class="risk-badge risk-badge--normal" id="current-risk-level"></span>
+                            <span class="risk-badge-source" id="risk-source"></span>
                         </span>
                         <span class="risk-badge-group">
                             <span class="risk-badge-group__label">48h</span>
                             <span class="risk-badge risk-badge--normal" id="current-risk-level-48h"></span>
+                            <span class="risk-badge-source" id="risk-source-48h"></span>
                         </span>
                     </div>
                 </header>
@@ -175,6 +177,11 @@
                             <span class="status-label">Water Level</span>
                             <span class="status-value skeleton-text" id="current-water-level"></span>
                             <span class="status-unit">meters above sensor</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Rainfall</span>
+                            <span class="status-value skeleton-text" id="current-rainfall"></span>
+                            <span class="status-unit">mm · this hour</span>
                         </div>
                         <div class="status-item">
                             <span class="status-label">Trend</span>
@@ -400,7 +407,7 @@
                                 <div class="fuzzy-item">
                                     <span class="fuzzy-label">Rule Triggered</span>
                                     <span class="fuzzy-value skeleton-text" id="fuzzy-rule-triggered"></span>
-                                    <span class="fuzzy-unit">Fuzzy rule #</span>
+                                    <span class="fuzzy-unit" id="fuzzy-rule-triggered-unit">Fuzzy rule #</span>
                                 </div>
                                 <div class="fuzzy-item">
                                     <span class="fuzzy-label">Forecast Rain</span>
@@ -426,7 +433,7 @@
                                 <div class="fuzzy-item">
                                     <span class="fuzzy-label">Rule Triggered</span>
                                     <span class="fuzzy-value skeleton-text" id="fuzzy-rule-triggered-48h"></span>
-                                    <span class="fuzzy-unit">Fuzzy rule #</span>
+                                    <span class="fuzzy-unit" id="fuzzy-rule-triggered-unit-48h">Fuzzy rule #</span>
                                 </div>
                                 <div class="fuzzy-item">
                                     <span class="fuzzy-label">Forecast Rain</span>
@@ -1094,6 +1101,8 @@
                     // Fall back to latest sensor reading so water level still displays.
                     setValue('current-risk-level', 'No data');
                     setValue('current-risk-level-48h', 'No data');
+                    setValue('risk-source', '—');
+                    setValue('risk-source-48h', '—');
                     const riskBadge = $('current-risk-level');
                     riskBadge.className = 'risk-badge risk-badge--normal';
                     const riskBadge48h = $('current-risk-level-48h');
@@ -1174,6 +1183,16 @@
                 renderRiskBadge('current-risk-level', prediction.risk_level);
                 renderRiskBadge('current-risk-level-48h', prediction.risk_level_48h);
 
+                // Inference source: fuzzy engine vs fallback scoring (no fuzzy rule matched)
+                const renderRiskSource = (id, usedFallback) => {
+                    const el = $(id);
+                    if (!el) return;
+                    el.textContent = usedFallback ? 'Fallback scoring' : 'Fuzzy inference';
+                    el.classList.toggle('risk-badge-source--fallback', !!usedFallback);
+                };
+                renderRiskSource('risk-source', prediction.used_fallback);
+                renderRiskSource('risk-source-48h', prediction.used_fallback_48h);
+
                 // Last updated
                 setValue('last-updated', timeAgo(prediction.timestamp));
                 setValue('last-updated-exact', formatTimestamp(prediction.timestamp));
@@ -1182,13 +1201,33 @@
                 if (liveText) liveText.textContent = 'Live';
                 if (liveDot) liveDot.classList.add('live-dot--active');
 
-                // Data source (from most recent water reading)
+                // Data source + real-time water level (from most recent sensor reading)
                 const waterResponse = await fetch('/api/water-levels?hours=1');
                 const waterData = await waterResponse.json();
                 if (waterData.length > 0) {
                     const latestWater = waterData[waterData.length - 1];
                     setValue('data-source', (latestWater.source || '—').toUpperCase());
                     setValue('data-source-detail', latestWater.source === 'lora' ? 'LoRa radio link' : latestWater.source);
+                    if (latestWater.water_level_m != null) {
+                        setValue('current-water-level', latestWater.water_level_m.toFixed(2));
+                        updateRiskGauge(latestWater.water_level_m);
+                        setValue('last-updated', timeAgo(latestWater.timestamp));
+                        setValue('last-updated-exact', formatTimestamp(latestWater.timestamp));
+                    }
+                }
+
+                // Current rainfall: mm accumulated in the most recent (current) hour
+                try {
+                    const rainResponse = await fetch('/api/rainfall?hours=1');
+                    const rainData = await rainResponse.json();
+                    if (rainData.length > 0 && rainData[rainData.length - 1].total_rainfall_mm != null) {
+                        setValue('current-rainfall', rainData[rainData.length - 1].total_rainfall_mm.toFixed(1));
+                    } else {
+                        setValue('current-rainfall', '—');
+                    }
+                } catch (rainErr) {
+                    console.error('Error updating current rainfall:', rainErr);
+                    setValue('current-rainfall', '—');
                 }
 
                 // Trend: compare first vs last reading in the last 3 hours
@@ -1338,8 +1377,20 @@
                 setRfPropensity('fuzzy-rf-propensity', details.rf_propensity);
                 setRfPropensity('fuzzy-rf-propensity-48h', details.rf_propensity_48h);
 
-                setValue('fuzzy-rule-triggered', details.rule_triggered != null ? details.rule_triggered : 'N/A');
-                setValue('fuzzy-rule-triggered-48h', details.rule_triggered_48h != null ? details.rule_triggered_48h : 'N/A');
+                // Rule triggered (falls back to membership-weighted scoring when no rule matches)
+                const renderRuleTriggered = (valueId, unitId, ruleNum, usedFallback) => {
+                    if (usedFallback) {
+                        setValue(valueId, 'Fallback');
+                        const unitEl = $(unitId);
+                        if (unitEl) unitEl.textContent = 'no rule fired · weighted scoring';
+                    } else {
+                        setValue(valueId, ruleNum != null ? ruleNum : 'N/A');
+                        const unitEl = $(unitId);
+                        if (unitEl) unitEl.textContent = 'Fuzzy rule #';
+                    }
+                };
+                renderRuleTriggered('fuzzy-rule-triggered', 'fuzzy-rule-triggered-unit', details.rule_triggered, details.used_fallback);
+                renderRuleTriggered('fuzzy-rule-triggered-48h', 'fuzzy-rule-triggered-unit-48h', details.rule_triggered_48h, details.used_fallback_48h);
                 setValue('fuzzy-water-level', (details.current_water_level_mm || 0).toFixed(0));
                 setValue('fuzzy-rate-of-rise', (details.fuzzy_inputs?.rate_of_rise_mm_hour || 0).toFixed(1));
                 setValue('fuzzy-forecast-rain', (details.fuzzy_inputs?.forecast_rain_mm || 0).toFixed(1));
