@@ -5,6 +5,7 @@ Provides a LAN-accessible dashboard for visualizing water levels, weather, and p
 
 import json
 import os
+import sqlite3
 import sys
 import threading
 import time
@@ -14,7 +15,7 @@ from typing import List, Dict, Optional
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 import uvicorn
 
 # Ensure the project root is on the module search path so that
@@ -29,10 +30,11 @@ from src.config import (
     DASHBOARD_HOST, DASHBOARD_PORT,
     AUTO_REFRESH_SECONDS, CRITICAL_LEVEL_M,
     RISK_THRESHOLDS, RISK_LEVELS,
-    LORA_ENABLED, SMS_ENABLED
+    LORA_ENABLED, SMS_ENABLED, DATABASE_PATH
 )
 from src.config_manager import get_config_dict, apply_config_dict, reset_to_defaults
 from src.data.database import (
+    get_db_connection,
     get_latest_water_level, get_water_levels_since,
     get_latest_weather, get_weather_since,
     get_latest_prediction, get_predictions_since,
@@ -293,6 +295,92 @@ async def get_rainfall_stats(hours: int = 24) -> JSONResponse:
         return JSONResponse(content=stats)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+# ============================================================================
+# DATABASE VIEWER API
+# ============================================================================
+
+def _db_table_names() -> List[str]:
+    """Return user table names from sqlite_master (excludes sqlite_% internals)"""
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+        ).fetchall()
+        return [r['name'] for r in rows]
+    finally:
+        conn.close()
+
+
+@app.get("/api/db/tables")
+async def db_tables() -> JSONResponse:
+    """Get list of database tables with row counts"""
+    try:
+        conn = get_db_connection()
+        try:
+            tables = []
+            for name in _db_table_names():
+                count = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
+                tables.append({"name": name, "rows": count})
+            return JSONResponse(content={"tables": tables})
+        finally:
+            conn.close()
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/db/table/{table_name}")
+async def db_table_rows(table_name: str, limit: int = 50, offset: int = 0,
+                        sort_by: Optional[str] = None, sort_dir: str = "desc") -> JSONResponse:
+    """Get paginated rows from a database table"""
+    try:
+        if table_name not in _db_table_names():
+            raise HTTPException(status_code=404, detail=f"Unknown table: {table_name}")
+
+        limit = max(1, min(limit, 200))
+        offset = max(0, offset)
+        sort_dir = "ASC" if sort_dir.lower() == "asc" else "DESC"
+
+        conn = get_db_connection()
+        try:
+            columns = [r['name'] for r in conn.execute(f'PRAGMA table_info("{table_name}")')]
+            if not sort_by or sort_by not in columns:
+                sort_by = columns[0] if columns else "id"
+            total = conn.execute(f'SELECT COUNT(*) FROM "{table_name}"').fetchone()[0]
+            rows = conn.execute(
+                f'SELECT * FROM "{table_name}" ORDER BY "{sort_by}" {sort_dir} LIMIT ? OFFSET ?',
+                (limit, offset)
+            ).fetchall()
+            return JSONResponse(content={
+                "table": table_name,
+                "columns": columns,
+                "rows": [dict(r) for r in rows],
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "sort_by": sort_by,
+                "sort_dir": sort_dir.lower()
+            })
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/db/download")
+async def download_database() -> FileResponse:
+    """Download the SQLite database file"""
+    db_path = DATABASE_PATH if os.path.isabs(DATABASE_PATH) else os.path.join(_PROJECT_ROOT, DATABASE_PATH)
+    if not os.path.exists(db_path):
+        raise HTTPException(status_code=404, detail="Database file not found")
+    return FileResponse(
+        db_path,
+        media_type="application/octet-stream",
+        filename=os.path.basename(db_path)
+    )
 
 
 # ============================================================================

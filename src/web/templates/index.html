@@ -76,6 +76,9 @@
         <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
         </symbol>
+        <symbol id="i-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </symbol>
         <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="16" x2="12" y2="12"/>
@@ -132,6 +135,10 @@
             <button class="page-nav__btn" data-page="settings" onclick="switchPage('settings')">
                 <svg class="icon" style="width:18px;height:18px;"><use href="#i-settings"/></svg>
                 Settings
+            </button>
+            <button class="page-nav__btn" data-page="database" onclick="switchPage('database')">
+                <svg class="icon" style="width:18px;height:18px;"><use href="#i-database"/></svg>
+                Database
             </button>
         </nav>
 
@@ -765,6 +772,35 @@
                 <button onclick="saveSettings()" class="btn btn--primary">Save Settings</button>
             </div>
         </div><!-- /page-settings -->
+
+        <!-- ==================== DATABASE ==================== -->
+        <div id="page-database" style="display:none">
+            <section class="card settings-card" aria-labelledby="db-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="db-title">Database</h2>
+                        <p class="card__subtitle">Browse and download data stored in the SQLite database</p>
+                    </div>
+                    <div class="db-actions">
+                        <button onclick="loadDatabase()" class="btn btn--secondary">Refresh</button>
+                        <button onclick="downloadDatabase()" class="btn btn--primary">Download Database</button>
+                    </div>
+                </header>
+
+                <div class="db-layout">
+                    <aside class="db-sidebar" aria-label="Tables">
+                        <div id="db-table-list" class="db-table-list"></div>
+                    </aside>
+                    <div class="db-viewer">
+                        <div class="db-meta" id="db-meta"></div>
+                        <div class="db-table-wrap">
+                            <table class="db-table" id="db-table"></table>
+                        </div>
+                        <div class="db-pagination" id="db-pagination"></div>
+                    </div>
+                </div>
+            </section>
+        </div><!-- /page-database -->
 
         </main>
 
@@ -1713,10 +1749,136 @@
         function switchPage(page) {
             document.getElementById('page-dashboard').style.display = page === 'dashboard' ? '' : 'none';
             document.getElementById('page-settings').style.display = page === 'settings' ? '' : 'none';
+            document.getElementById('page-database').style.display = page === 'database' ? '' : 'none';
             document.querySelectorAll('.page-nav__btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.page === page);
             });
+            if (page === 'database') loadDatabase();
             if (page === 'settings') loadSettings();
+        }
+
+        // =====================================================================
+        // DATABASE PAGE
+        // =====================================================================
+        let _dbTables = [];
+        let _dbTable = null;
+        let _dbOffset = 0;
+        let _dbLimit = 100;
+        let _dbSortBy = 'id';
+        let _dbSortDir = 'desc';
+
+        async function loadDatabase() {
+            try {
+                const resp = await fetch('/api/db/tables');
+                if (!resp.ok) throw new Error('Failed to fetch tables');
+                const data = await resp.json();
+                _dbTables = data.tables || [];
+                renderDbTableList();
+                if (!_dbTable || !_dbTables.some(t => t.name === _dbTable)) {
+                    _dbTable = _dbTables.length ? _dbTables[0].name : null;
+                }
+                if (_dbTable) {
+                    $('db-meta').textContent = '';
+                    _dbOffset = 0;
+                    loadDbTableRows();
+                }
+            } catch (e) {
+                $('db-table-list').innerHTML = '';
+                $('db-meta').textContent = '';
+                showToast('Error', 'Failed to load database tables: ' + e.message, 'error');
+            }
+        }
+
+        function renderDbTableList() {
+            const list = $('db-table-list');
+            list.innerHTML = _dbTables.map(t =>
+                `<button class="db-table-item${t.name === _dbTable ? ' active' : ''}" onclick="selectDbTable('${t.name}')">
+                    <span class="db-table-item__name">${escapeHtml(t.name)}</span>
+                    <span class="db-table-item__count">${t.rows.toLocaleString()} rows</span>
+                </button>`
+            ).join('');
+        }
+
+        function selectDbTable(name) {
+            _dbTable = name;
+            _dbOffset = 0;
+            _dbSortBy = 'id';
+            _dbSortDir = 'desc';
+            renderDbTableList();
+            loadDbTableRows();
+        }
+
+        async function loadDbTableRows() {
+            const table = $('db-table');
+            table.innerHTML = '<tbody><tr><td class="db-empty">Loading…</td></tr></tbody>';
+            try {
+                const params = new URLSearchParams({
+                    limit: String(_dbLimit),
+                    offset: String(_dbOffset),
+                    sort_by: _dbSortBy,
+                    sort_dir: _dbSortDir
+                });
+                const resp = await fetch(`/api/db/table/${encodeURIComponent(_dbTable)}?${params}`);
+                if (!resp.ok) throw new Error('Failed to fetch rows');
+                const data = await resp.json();
+                renderDbTable(data);
+            } catch (e) {
+                table.innerHTML = '<tbody><tr><td class="db-empty">Error loading rows</td></tr></tbody>';
+                showToast('Error', 'Failed to load rows: ' + e.message, 'error');
+            }
+        }
+
+        function renderDbTable(data) {
+            $('db-meta').textContent = data.rows.length
+                ? `${escapeHtml(data.table)} — ${data.total.toLocaleString()} rows (${data.offset + 1}–${data.offset + data.rows.length})`
+                : `${escapeHtml(data.table)} — no rows`;
+            const table = $('db-table');
+            if (!data.columns.length || !data.rows.length) {
+                table.innerHTML = '<tbody><tr><td class="db-empty">No data</td></tr></tbody>';
+                $('db-pagination').innerHTML = '';
+                return;
+            }
+            const thead = '<thead><tr>' + data.columns.map(col => {
+                const dirToggle = data.sort_by === col && data.sort_dir === 'desc' ? 'asc' : 'desc';
+                const arrow = data.sort_by === col ? (data.sort_dir === 'desc' ? '▾' : '▴') : '';
+                return `<th class="db-th" onclick="sortDbTable('${col}', '${dirToggle}')">${escapeHtml(col)} ${arrow}</th>`;
+            }).join('') + '</tr></thead>';
+            const tbody = '<tbody>' + data.rows.map(row =>
+                '<tr>' + data.columns.map(col =>
+                    `<td class="db-td" title="${escapeHtml(fmtDbValue(row[col]))}">${escapeHtml(fmtDbValue(row[col]))}</td>`
+                ).join('') + '</tr>'
+            ).join('') + '</tbody>';
+            $('db-table').innerHTML = thead + tbody;
+
+            const totalPages = Math.max(1, Math.ceil(data.total / data.limit));
+            const curPage = Math.floor(data.offset / data.limit) + 1;
+            $('db-pagination').innerHTML = `
+                <button class="btn btn--secondary" onclick="pageDb(-1)" ${data.offset === 0 ? 'disabled' : ''}>Prev</button>
+                <span class="db-page-info">Page ${curPage} of ${totalPages}</span>
+                <button class="btn btn--secondary" onclick="pageDb(1)" ${data.offset + data.limit >= data.total ? 'disabled' : ''}>Next</button>`;
+        }
+
+        function pageDb(dir) {
+            _dbOffset = Math.max(0, _dbOffset + dir * _dbLimit);
+            loadDbTableRows();
+        }
+
+        function sortDbTable(col, dir) {
+            _dbSortBy = col;
+            _dbSortDir = dir;
+            _dbOffset = 0;
+            loadDbTableRows();
+        }
+
+        function fmtDbValue(value) {
+            if (value === null || value === undefined) return 'NULL';
+            if (typeof value === 'object') return JSON.stringify(value);
+            const s = String(value);
+            return s.length > 120 ? s.slice(0, 117) + '…' : s;
+        }
+
+        function downloadDatabase() {
+            window.location.href = '/api/db/download';
         }
 
         // =====================================================================
