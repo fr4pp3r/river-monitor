@@ -35,19 +35,24 @@ from src.config import (
 from src.config_manager import get_config_dict, apply_config_dict, reset_to_defaults
 from src.data.database import (
     get_db_connection,
-    get_latest_water_level, get_water_levels_since,
+    get_latest_sensor_data, get_sensor_data_since,
     get_latest_weather, get_weather_since,
     get_latest_prediction, get_predictions_since,
     get_recent_alerts, get_system_status, get_database_stats,
     get_rainfall_since, get_rainfall_stats,
     get_all_alert_contacts, get_alert_contact,
     insert_alert_contact, update_alert_contact, delete_alert_contact,
-    get_active_alert_phone_numbers
+    get_active_alert_phone_numbers,
+    update_system_status
 )
 from src.data.sms_handler import test_alert_sms
 from src.data.lora_receiver import start_lora_receiver_async
 from src.model.predict import FloodPredictor
 from src.data.weather_fetcher import WeatherFetcher
+
+
+PREDICTION_INTERVAL_SECONDS = 300
+WEATHER_REFRESH_INTERVAL_SECONDS = 21600
 
 
 # Initialize FastAPI app
@@ -95,7 +100,7 @@ async def get_status() -> JSONResponse:
     """Get system status"""
     try:
         # Get latest data timestamps
-        latest_water = get_latest_water_level()
+        latest_water = get_latest_sensor_data()
         latest_weather = get_latest_weather()
         latest_prediction = get_latest_prediction()
         
@@ -140,7 +145,7 @@ async def get_status() -> JSONResponse:
 async def get_water_levels(hours: int = 24) -> JSONResponse:
     """Get water level readings for the last N hours"""
     try:
-        water_levels = get_water_levels_since(hours=hours)
+        water_levels = get_sensor_data_since(hours=hours)
         return JSONResponse(content=[dict(wl) for wl in water_levels])
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
@@ -170,48 +175,66 @@ async def get_prediction() -> JSONResponse:
     try:
         # Try to get existing prediction first
         prediction = get_latest_prediction()
-        
-        if not prediction:
-            # Try to make a new prediction from live data
+
+        try:
+            stored_at = datetime.fromisoformat(prediction['timestamp']) if prediction else None
+            fresh = stored_at is not None and (datetime.now() - stored_at).total_seconds() < PREDICTION_INTERVAL_SECONDS * 2
+        except (ValueError, TypeError):
+            fresh = False
+
+        if not prediction or not fresh:
+            fresh_prediction = None
             try:
                 predictor = FloodPredictor()
-                prediction = predictor.make_prediction()
+                fresh_prediction = predictor.make_prediction()
             except Exception as pred_err:
-                return JSONResponse(content={"error": str(pred_err)}, status_code=500)
+                print(f"Fresh prediction failed: {pred_err}")
 
-            if prediction:
-                # Convert to dict format
-                prediction_dict = {
-                    'timestamp': prediction['timestamp'],
-                    'current_level_m': prediction['current_level_m'],
-                    'risk_level': prediction['risk_level'],
-                    'rf_propensity': prediction.get('rf_propensity', 'Unknown'),
-                    'forecast': prediction['forecast'],
-                    'forecast_change_1d': prediction['forecast_change_1d'],
-                    'fuzzy_result': prediction.get('fuzzy_result', {})
-                }
-                return JSONResponse(content=prediction_dict)
+            if fresh_prediction:
+                return JSONResponse(content={
+                    'timestamp': fresh_prediction['timestamp'],
+                    'current_level_m': fresh_prediction['current_level_m'],
+                    'risk_level': fresh_prediction['risk_level'],
+                    'risk_level_48h': fresh_prediction.get('risk_level_48h'),
+                    'rf_propensity': fresh_prediction.get('rf_propensity', 'Unknown'),
+                    'rf_propensity_48h': fresh_prediction.get('rf_propensity_48h', 'Unknown'),
+                    'forecast': fresh_prediction['forecast'],
+                    'forecast_change_1d': fresh_prediction['forecast_change_1d'],
+                    'fuzzy_result': fresh_prediction.get('fuzzy_result', {}),
+                    'fuzzy_result_48h': fresh_prediction.get('fuzzy_result_48h', {})
+                })
 
-            # No data available yet (e.g. no water level readings)
-            return JSONResponse(content={"error": "No data available yet"}, status_code=409)
+            # No fresh prediction possible: serve the stored (stale) one when it
+            # exists, otherwise there is nothing to display yet.
+            if not prediction:
+                return JSONResponse(content={"error": "No data available yet"}, status_code=409)
 
         # Format existing prediction
         if isinstance(prediction['forecast_data'], str):
             prediction['forecast_data'] = json.loads(prediction['forecast_data'])
         if isinstance(prediction['fuzzy_inputs'], str):
             prediction['fuzzy_inputs'] = json.loads(prediction['fuzzy_inputs'])
-        
+        if isinstance(prediction.get('fuzzy_inputs_48h'), str):
+            prediction['fuzzy_inputs_48h'] = json.loads(prediction['fuzzy_inputs_48h'])
+
+        forecast = prediction['forecast_data'] or []
+        forecast_change_1d = round(forecast[0] - prediction['current_level_m'], 3) if forecast else 0
+
         return JSONResponse(content={
             'timestamp': prediction['timestamp'],
             'current_level_m': prediction['current_level_m'],
             'risk_level': prediction['risk_level'],
+            'risk_level_48h': prediction.get('risk_level_48h'),
             'rf_propensity': prediction.get('rf_propensity', 'Unknown'),
-            'forecast': prediction['forecast_data'],
-            'forecast_change_1d': 0,  # Will be calculated in frontend
+            'rf_propensity_48h': prediction.get('rf_propensity_48h', 'Unknown'),
+            'forecast': forecast,
+            'forecast_change_1d': forecast_change_1d,
             'fuzzy_inputs': prediction.get('fuzzy_inputs', {}),
-            'rule_triggered': prediction.get('rule_triggered')
+            'fuzzy_inputs_48h': prediction.get('fuzzy_inputs_48h', {}),
+            'rule_triggered': prediction.get('rule_triggered'),
+            'rule_triggered_48h': prediction.get('rule_triggered_48h')
         })
-        
+
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -228,25 +251,34 @@ async def get_fuzzy_details() -> JSONResponse:
         fuzzy_inputs = prediction.get('fuzzy_inputs', {})
         if isinstance(fuzzy_inputs, str):
             fuzzy_inputs = json.loads(fuzzy_inputs)
+        fuzzy_inputs_48h = prediction.get('fuzzy_inputs_48h', {})
+        if isinstance(fuzzy_inputs_48h, str):
+            fuzzy_inputs_48h = json.loads(fuzzy_inputs_48h)
         
         # Get rule triggered
         rule_triggered = prediction.get('rule_triggered')
+        rule_triggered_48h = prediction.get('rule_triggered_48h')
         
         # Get RF propensity
         rf_propensity = prediction.get('rf_propensity', 'Unknown')
+        rf_propensity_48h = prediction.get('rf_propensity_48h', 'Unknown')
         
         # Get current water level for display
-        latest_water = get_latest_water_level()
+        latest_water = get_latest_sensor_data()
         current_water_level_mm = latest_water['water_level_m'] * 1000 if latest_water else 0
         
         # Build detailed response
         details = {
             'timestamp': prediction['timestamp'],
             'risk_level': prediction['risk_level'],
+            'risk_level_48h': prediction.get('risk_level_48h'),
             'rf_propensity': rf_propensity,
+            'rf_propensity_48h': rf_propensity_48h,
             'rule_triggered': rule_triggered,
+            'rule_triggered_48h': rule_triggered_48h,
             'current_water_level_mm': current_water_level_mm,
             'fuzzy_inputs': fuzzy_inputs,
+            'fuzzy_inputs_48h': fuzzy_inputs_48h,
             'risk_levels': RISK_LEVELS
         }
         
@@ -267,11 +299,11 @@ async def get_forecast(days: int = 7) -> JSONResponse:
             else:
                 forecast = prediction['forecast_data']
             
-            # Return forecast with timestamps (daily)
+            # Return forecast with timestamps (daily, day 1..N ahead of today)
             now = datetime.now()
             forecast_with_timestamps = [
                 {
-                    'timestamp': (now + timedelta(days=i)).isoformat(),
+                    'timestamp': (now + timedelta(days=i + 1)).isoformat(),
                     'water_level_m': level
                 }
                 for i, level in enumerate(forecast[:days])
@@ -408,9 +440,9 @@ async def download_database() -> FileResponse:
 async def refresh_prediction() -> JSONResponse:
     """Manually trigger a new prediction"""
     try:
-        predictor = FloodPredictor()
-        prediction = predictor.make_prediction()
-        
+        from src.model.predict import predict_and_alert
+        prediction = predict_and_alert()
+
         if prediction:
             return JSONResponse(content={
                 "status": "success",
@@ -418,7 +450,7 @@ async def refresh_prediction() -> JSONResponse:
             })
         else:
             return JSONResponse(content={"status": "error", "message": "Failed to make prediction"}, status_code=500)
-            
+
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
@@ -606,11 +638,61 @@ async def restart_server() -> JSONResponse:
 # MAIN
 # ============================================================================
 
+def _background_scheduler() -> None:
+    """Periodically refresh weather, run predictions (which auto-alerts),
+    and record component status. Runs as a daemon thread so a failure in any
+    action never terminates the dashboard."""
+    last_weather_refresh = time.monotonic()
+    last_prediction = time.monotonic()
+
+    while True:
+        try:
+            now = time.monotonic()
+
+            if now - last_weather_refresh >= WEATHER_REFRESH_INTERVAL_SECONDS:
+                try:
+                    fetcher = WeatherFetcher()
+                    if fetcher.store_weather_in_db():
+                        update_system_status('weather', 'ok', 'Weather data refreshed')
+                    else:
+                        update_system_status('weather', 'warning', 'Weather refresh returned no data')
+                except Exception as e:
+                    update_system_status('weather', 'error', str(e))
+                last_weather_refresh = now
+
+            if now - last_prediction >= PREDICTION_INTERVAL_SECONDS:
+                try:
+                    from src.model.predict import predict_and_alert
+                    prediction = predict_and_alert()
+                    if prediction:
+                        update_system_status('model', 'ok', 'Prediction updated')
+                    else:
+                        update_system_status('model', 'warning', 'Prediction failed (no data?)')
+                except Exception as e:
+                    update_system_status('model', 'error', str(e))
+                last_prediction = now
+
+            try:
+                latest_water = get_latest_sensor_data()
+                if latest_water and (datetime.now() - datetime.fromisoformat(latest_water['timestamp'])).total_seconds() < 300:
+                    update_system_status('lora', 'ok', 'Receiving data')
+                elif latest_water:
+                    update_system_status('lora', 'warning', 'No recent LoRa data')
+                else:
+                    update_system_status('lora', 'error', 'No LoRa data')
+            except Exception as e:
+                update_system_status('lora', 'error', str(e))
+        except Exception as e:
+            print(f"Background scheduler error: {e}")
+
+        time.sleep(60)
+
+
 def run_dashboard():
     """Run the FastAPI dashboard server"""
     print(f"Starting River Monitor Dashboard on {DASHBOARD_HOST}:{DASHBOARD_PORT}")
     print(f"Access the dashboard at: http://{DASHBOARD_HOST}:{DASHBOARD_PORT}")
-    
+
 # Try to fetch and store fresh weather/tide data so the dashboard has
     # up-to-date readings even before the first sensor packet arrives.
     try:
@@ -625,6 +707,9 @@ def run_dashboard():
     # Start the LoRa receiver loop in a background thread so sensor packets
     # are ingested and stored while the web dashboard keeps running.
     start_lora_receiver_async()
+
+    # Start the periodic weather/prediction scheduler as a daemon thread.
+    threading.Thread(target=_background_scheduler, name="background-scheduler", daemon=True).start()
 
     uvicorn.run(
         app,

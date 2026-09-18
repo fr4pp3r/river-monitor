@@ -519,6 +519,28 @@ body {
 .risk-badge--alarm { background: var(--color-alarm); }
 .risk-badge--critical { background: var(--color-critical); }
 
+/* Dual-horizon risk badge groups */
+.risk-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.risk-badge-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.risk-badge-group__label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
 /* Status actions */
 .status-actions {
   display: flex;
@@ -833,6 +855,29 @@ body {
 .fuzzy-value--high { color: var(--color-critical); }
 .fuzzy-value--medium { color: var(--color-alarm); }
 .fuzzy-value--low { color: var(--color-normal); }
+
+/* Dual-horizon fuzzy blocks */
+.fuzzy-horizons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.fuzzy-horizon {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.fuzzy-horizon__title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-3);
+}
 
 /* ----------------------------------------------------------------------------
    Alerts Card

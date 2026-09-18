@@ -9,7 +9,7 @@ import os
 import threading
 
 _CONFIG_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "config.json",
 )
 _lock = threading.Lock()
@@ -44,6 +44,7 @@ _FLAT_SCHEMA = {
     "water_level_interval": "WATER_LEVEL_INTERVAL",
     "lora_fallback_timeout": "LORA_FALLBACK_TIMEOUT",
     "weather_fetch_interval": "WEATHER_FETCH_INTERVAL",
+    "sms_alert_cooldown_minutes": "SMS_ALERT_COOLDOWN_MINUTES",
     "model_path": "MODEL_PATH",
     "forecast_days": "FORECAST_DAYS",
     "ror_resample_hours": "ROR_RESAMPLE_HOURS",
@@ -86,6 +87,7 @@ _TYPE_MAP = {
     "water_level_interval": (int, float),
     "lora_fallback_timeout": (int, float),
     "weather_fetch_interval": (int, float),
+    "sms_alert_cooldown_minutes": (int, float),
     "forecast_days": int,
     "ror_resample_hours": (int, float),
 }

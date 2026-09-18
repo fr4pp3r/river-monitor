@@ -15,7 +15,7 @@ import os
 from src.config import (
     RISK_THRESHOLDS, CRITICAL_LEVEL_M,
     MODEL_RANDOM_STATE, MODEL_TEST_SIZE,
-    RF_FEATURES, RF_CLASSES
+    RF_FEATURES, RF_CLASSES, RAIN_DAY_THRESHOLD_MM
 )
 
 
@@ -58,7 +58,7 @@ def load_training_data(csv_path: str) -> pd.DataFrame:
     """
     Load training data from a single CSV with all features and target
     
-    Expected columns: R1, R3, R7, rainy_days, TMAX, TMIN, TideMax, target
+    Expected columns: R1, R3, R7, rain_days, TMAX, TMIN, TideMax, target
     Target values: 0=Low, 1=Medium, 2=High
     
     Args:
@@ -167,7 +167,7 @@ def create_rf_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Create RF model features from daily data
     
-    Features: R1, R3, R7, rainy_days, TMAX, TMIN, TideMax
+    Features: R1, R3, R7, rain_days, TMAX, TMIN, TideMax, TideMin
     
     Args:
         df: DataFrame with daily weather data (precipitation_mm, temperature_max_c, 
@@ -188,8 +188,8 @@ def create_rf_features(df: pd.DataFrame) -> pd.DataFrame:
     # R7: 7-day precipitation sum
     df['R7'] = df['precipitation_mm'].rolling(window=7, min_periods=1).sum()
     
-    # rainy_days: count of days with precipitation > 0 in last 7 days
-    df['rainy_days'] = (df['precipitation_mm'] > 0).rolling(window=7, min_periods=1).sum()
+    # rain_days: count of days with precipitation above threshold in last 7 days
+    df['rain_days'] = (df['precipitation_mm'] > RAIN_DAY_THRESHOLD_MM).rolling(window=7, min_periods=1).sum()
     
     # TMAX: daily max temperature
     df['TMAX'] = df['temperature_max_c']
@@ -368,7 +368,7 @@ def preprocess_training_data_new(csv_path: str) -> Tuple[pd.DataFrame, pd.Series
     New preprocessing pipeline for training data with RF features
     
     Args:
-        csv_path: Path to training CSV with R1,R3,R7,rainy_days,TMAX,TMIN,TideMax,target
+        csv_path: Path to training CSV with R1,R3,R7,rain_days,TMAX,TMIN,TideMax,TideMin,target
     
     Returns:
         Tuple of (X_scaled, y, scaler)
@@ -434,7 +434,7 @@ def preprocess_for_prediction_new(data: Dict, scaler: StandardScaler) -> pd.Data
     Preprocess real-time data for new RF model prediction
     
     Args:
-        data: Dictionary with RF features (R1, R3, R7, rainy_days, TMAX, TMIN, TideMax)
+        data: Dictionary with RF features (R1, R3, R7, rain_days, TMAX, TMIN, TideMax, TideMin)
         scaler: Fitted scaler
     
     Returns:

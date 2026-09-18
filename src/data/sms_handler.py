@@ -9,16 +9,44 @@ numbers. It does not request or receive data from the sensor.
 
 import time
 import serial
+import threading
 from datetime import datetime
 
 from src.config import (
     SMS_ENABLED, SMS_UART_PORT, SMS_BAUD_RATE, SMS_TIMEOUT,
-    SMS_ALERT_TEMPLATE, SMS_ALERT_RISK_LEVELS
+    SMS_ALERT_TEMPLATE, SMS_ALERT_RISK_LEVELS, SMS_ALERT_COOLDOWN_MINUTES
 )
 from src.data.database import (
     insert_alert, update_alert_status,
     get_active_alert_phone_numbers
 )
+
+
+# Module-level alert cooldown (SMSHandler is instantiated per use, so the
+# state must live at module scope to persist across sends).
+_RISK_SEVERITY = {'receding': 0, 'alert': 1, 'alarm': 2, 'critical': 3}
+_alert_state_lock = threading.Lock()
+_last_alert_at = None
+_last_alert_severity = -1
+
+
+def _cooldown_blocks(risk_key: str) -> bool:
+    """True if a same-or-lower-severity alert was sent within the cooldown window."""
+    global _last_alert_at, _last_alert_severity
+    with _alert_state_lock:
+        if _last_alert_at is None:
+            return False
+        elapsed = (datetime.now() - _last_alert_at).total_seconds()
+        severity = _RISK_SEVERITY.get(risk_key, 0)
+        return elapsed < SMS_ALERT_COOLDOWN_MINUTES * 60 and severity <= _last_alert_severity
+
+
+def _mark_sent(risk_key: str):
+    """Record that an alert was sent so the cooldown can suppress repeats."""
+    global _last_alert_at, _last_alert_severity
+    with _alert_state_lock:
+        _last_alert_at = datetime.now()
+        _last_alert_severity = _RISK_SEVERITY.get(risk_key, 0)
 
 
 class SMSHandler:
@@ -149,17 +177,18 @@ class SMSHandler:
     
     def send_alert(self, risk_level: str, water_level_m: float, forecast_change: float) -> bool:
         """Send SMS alerts for high risk levels"""
-        if risk_level not in SMS_ALERT_RISK_LEVELS:
+        risk_key = (risk_level or '').strip().lower()
+        if risk_key not in [str(r).lower() for r in SMS_ALERT_RISK_LEVELS]:
             return False
-        
+
         message = SMS_ALERT_TEMPLATE.format(
-            risk_level=risk_level.upper(),
+            risk_level=risk_key.upper(),
             water_level=water_level_m,
             forecast_change=forecast_change
         )
-        
+
         # Get phone numbers from database based on risk level
-        phone_numbers = get_active_alert_phone_numbers(risk_level)
+        phone_numbers = get_active_alert_phone_numbers(risk_key)
         
         if not phone_numbers:
             print(f"No active contacts configured for {risk_level} alerts")
@@ -168,7 +197,7 @@ class SMSHandler:
         # Record alert in database
         alert_id = insert_alert(
             datetime.now(),
-            risk_level,
+            risk_key.capitalize(),
             water_level_m,
             message,
             ",".join(phone_numbers),
@@ -201,13 +230,23 @@ def send_alert_sms(risk_level: str, water_level_m: float, forecast_change: float
     if not SMS_ENABLED:
         print("Alert SMS skipped: SMS module is DISABLED in config")
         return
-    
+
+    risk_key = (risk_level or '').strip().lower()
+    if risk_key not in [str(r).lower() for r in SMS_ALERT_RISK_LEVELS]:
+        print(f"Alert SMS skipped: {risk_level} not in configured alert levels")
+        return
+
+    if _cooldown_blocks(risk_key):
+        print(f"Alert SMS suppressed by cooldown ({risk_key})")
+        return
+
     handler = SMSHandler()
     try:
-        if handler.send_alert(risk_level, water_level_m, forecast_change):
-            print(f"Alert SMS sent for {risk_level} risk level")
+        if handler.send_alert(risk_key, water_level_m, forecast_change):
+            _mark_sent(risk_key)
+            print(f"Alert SMS sent for {risk_key} risk level")
         else:
-            print(f"Failed to send alert SMS for {risk_level}")
+            print(f"Failed to send alert SMS for {risk_key}")
     finally:
         handler.cleanup()
 

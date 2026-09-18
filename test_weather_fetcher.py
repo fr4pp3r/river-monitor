@@ -72,7 +72,7 @@ def test_weather_fetcher():
         print(f"   R1 (1-day precip): {model_data.get('R1', 0)} mm")
         print(f"   R3 (3-day precip): {model_data.get('R3', 0)} mm")
         print(f"   R7 (7-day precip): {model_data.get('R7', 0)} mm")
-        print(f"   Rainy days (7d): {model_data.get('rainy_days', 0)}")
+        print(f"   Rain days (7d): {model_data.get('rain_days', 0)}")
         print(f"   TMAX: {model_data.get('TMAX', 0)} °C")
         print(f"   TMIN: {model_data.get('TMIN', 0)} °C")
         print(f"   TideMax: {model_data.get('TideMax', 0)} m")
@@ -89,10 +89,20 @@ def test_weather_fetcher():
     else:
         print("   [WARN] Could not determine current tide level (using cached data)")
     
-    # Test 6: Get forecast rain 24h
-    print("\n6. Getting 24-hour forecast rain...")
-    forecast_rain = fetcher.get_forecast_rain_24h()
-    print(f"   Forecast rain (24h): {forecast_rain:.1f} mm")
+    # Test 6: Verify both prediction horizons (24h + 48h)
+    print("\n6. Verifying dual-horizon model data (24h + 48h)...")
+    ok = True
+    for horizon in ('24h', '48h'):
+        h_data = fetcher.get_weather_for_model(horizon=horizon)
+        if h_data and h_data.get('horizon') == horizon:
+            print(f"   [{horizon}] OK - forecast rain: {h_data.get('forecast_rain_mm', 0):.1f} mm, "
+                  f"rain_days: {h_data.get('rain_days', 0)}, "
+                  f"tide_level: {h_data.get('tide_level_m', 0):.2f} m")
+        else:
+            print(f"   [{horizon}] [FAIL] Could not prepare model data")
+            ok = False
+    if not ok:
+        return False
     
     # Test 7: Test caching
     print("\n7. Testing cache...")

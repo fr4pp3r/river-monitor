@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
+from src.config import RAIN_DAY_THRESHOLD_MM
+
 # Generate sample data for 5 years (daily)
 np.random.seed(42)
 n_days = 5 * 365
@@ -29,7 +31,7 @@ df = pd.DataFrame(data)
 df['R1'] = df['precipitation_mm']
 df['R3'] = df['precipitation_mm'].rolling(3, min_periods=1).sum()
 df['R7'] = df['precipitation_mm'].rolling(7, min_periods=1).sum()
-df['rainy_days'] = (df['precipitation_mm'] > 0).rolling(7, min_periods=1).sum()
+df['rain_days'] = (df['precipitation_mm'] > RAIN_DAY_THRESHOLD_MM).rolling(7, min_periods=1).sum()
 df['TMAX'] = df['temperature_max_c']
 df['TMIN'] = df['temperature_min_c']
 df['TideMax'] = df['tide_max_m'].rolling(7, min_periods=1).max()
@@ -43,6 +45,6 @@ print(f"Columns: {list(df.columns)}")
 print("\nFirst 5 rows:")
 print(df.head())
 print("\nRequired columns for training:")
-print("  R1, R3, R7, rainy_days, TMAX, TMIN, TideMax, TideMin, target")
+print("  R1, R3, R7, rain_days, TMAX, TMIN, TideMax, TideMin, target")
 print("\nAfter adding target column, use:")
 print("  python src/model/train.py --mode new --csv training_data.csv --output data/models/rf_model.pkl")

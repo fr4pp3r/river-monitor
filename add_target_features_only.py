@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 # Feature columns (must match RF_FEATURES in config.py)
-RF_FEATURES = ['R1', 'R3', 'R7', 'rainy_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
+RF_FEATURES = ['R1', 'R3', 'R7', 'rain_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
 
 
 def compute_target_from_features(row):
@@ -54,8 +54,8 @@ def compute_target_from_features(row):
     elif r7 > 25:
         score += 0.5
     
-    # rainy_days: consecutive wet days (0-1.5 points)
-    rd = row.get('rainy_days', 0)
+    # rain_days: consecutive wet days (0-1.5 points)
+    rd = row.get('rain_days', 0)
     if rd >= 6:
         score += 1.5
     elif rd >= 4:
@@ -114,7 +114,7 @@ def compute_target_percentile_based(row, feature_stats):
         ('R7', 0.30),      # 7-day rain - most important
         ('R3', 0.20),      # 3-day rain
         ('R1', 0.15),      # 1-day rain
-        ('rainy_days', 0.10),
+        ('rain_days', 0.10),
         ('TideMax', 0.10),
         ('TideMin', 0.05),
         ('TMAX', 0.05),

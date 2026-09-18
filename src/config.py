@@ -96,6 +96,10 @@ SMS_ALERT_RISK_LEVELS = ["alarm", "critical"]
 # SMS message template
 SMS_ALERT_TEMPLATE = "[RIVER ALERT] Risk: {risk_level} | Water: {water_level:.2f}m | Forecast: {forecast_change:+.2f}m in 1d"
 
+# Minimum minutes between identical-or-lower-severity alert SMS sends
+# (an escalation, e.g. Alarm -> Critical, bypasses the cooldown)
+SMS_ALERT_COOLDOWN_MINUTES = 30
+
 # ============================================================================
 # DATABASE CONFIGURATION
 # ============================================================================
@@ -144,7 +148,11 @@ MODEL_TEST_SIZE = 0.2
 FORECAST_DAYS = 7  # Predict next 7 days
 
 # RF Model features (8 features for daily model)
-RF_FEATURES = ['R1', 'R3', 'R7', 'rainy_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
+RF_FEATURES = ['R1', 'R3', 'R7', 'rain_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
+
+# A calendar day counts as a "rainy day" when its daily rainfall total exceeds
+# this amount (used by the RF rain_days feature and the fuzzy pipeline).
+RAIN_DAY_THRESHOLD_MM = 2.0
 
 # RF Model target classes
 RF_CLASSES = {0: 'Low', 1: 'Medium', 2: 'High'}

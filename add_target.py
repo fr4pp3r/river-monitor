@@ -45,10 +45,10 @@ def compute_target_composite(row, critical_level_m=7.5):
         score += 1
     
     # Rainy days contribution (0-1 point)
-    rainy_days = row.get('rainy_days', 0)
-    if rainy_days >= 5:
+    rain_days = row.get('rain_days', 0)
+    if rain_days >= 5:
         score += 1
-    elif rainy_days >= 3:
+    elif rain_days >= 3:
         score += 0.5
     
     # Tide contribution (0-1 point)
@@ -129,7 +129,7 @@ def add_target_column(input_csv, output_csv, method='composite', critical_level=
     
     # Show sample
     print("\nSample rows:")
-    sample_cols = ['date', 'water_level_m', 'R1', 'R3', 'R7', 'rainy_days', 
+    sample_cols = ['date', 'water_level_m', 'R1', 'R3', 'R7', 'rain_days', 
                    'TMAX', 'TMIN', 'TideMax', 'target']
     available = [c for c in sample_cols if c in df.columns]
     print(df[available].head(10).to_string())

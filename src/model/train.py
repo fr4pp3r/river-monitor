@@ -115,7 +115,7 @@ def train_model_new(
     Train a Random Forest classifier for flood propensity prediction (new 7-feature model)
     
     Args:
-        csv_path: Path to training CSV with columns: R1, R3, R7, rainy_days, TMAX, TMIN, TideMax, target
+        csv_path: Path to training CSV with columns: R1, R3, R7, rain_days, TMAX, TMIN, TideMax, TideMin, target
         model_path: Path to save the trained model
         n_estimators: Number of trees in the forest
         max_depth: Maximum depth of the trees

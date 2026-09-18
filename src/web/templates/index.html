@@ -158,7 +158,16 @@
                             <span id="live-text">Waiting for data…</span>
                         </p>
                     </div>
-                    <span class="risk-badge risk-badge--normal" id="current-risk-level" role="status" aria-live="polite"></span>
+                    <div class="risk-badges" role="status" aria-live="polite">
+                        <span class="risk-badge-group">
+                            <span class="risk-badge-group__label">24h</span>
+                            <span class="risk-badge risk-badge--normal" id="current-risk-level"></span>
+                        </span>
+                        <span class="risk-badge-group">
+                            <span class="risk-badge-group__label">48h</span>
+                            <span class="risk-badge risk-badge--normal" id="current-risk-level-48h"></span>
+                        </span>
+                    </div>
                 </header>
                 <div class="card__content">
                     <div class="status-grid">
@@ -198,16 +207,16 @@
                             <span class="risk-gauge__seg risk-gauge__seg--alarm"></span>
                             <span class="risk-gauge__seg risk-gauge__seg--critical"></span>
                             <!-- threshold markers -->
-                            <span class="risk-gauge__marker" id="marker-alert" style="left:40%" data-threshold="Alert 3.0m"></span>
-                            <span class="risk-gauge__marker" id="marker-alarm" style="left:60%" data-threshold="Alarm 4.5m"></span>
-                            <span class="risk-gauge__marker" id="marker-critical" style="left:100%" data-threshold="Critical 7.5m"></span>
+                            <span class="risk-gauge__marker" id="marker-alert" style="left:40%" data-threshold="Alert 0.8m"></span>
+                            <span class="risk-gauge__marker" id="marker-alarm" style="left:60%" data-threshold="Alarm 1.2m"></span>
+                            <span class="risk-gauge__marker" id="marker-critical" style="left:100%" data-threshold="Critical 2.0m"></span>
                             <!-- needle -->
                             <span class="risk-gauge__needle" id="risk-gauge-needle" style="left:0%"></span>
                         </div>
                         <div class="risk-gauge__legend">
-                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alert-soft);border:1px solid var(--color-alert)"></span> Alert ≥ <span id="legend-alert">3.0</span> m</span>
-                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alarm-soft);border:1px solid var(--color-alarm)"></span> Alarm ≥ <span id="legend-alarm">4.5</span> m</span>
-                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-critical-soft);border:1px solid var(--color-critical)"></span> Critical ≥ <span id="legend-critical">7.5</span> m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alert-soft);border:1px solid var(--color-alert)"></span> Alert ≥ <span id="legend-alert">0.8</span> m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alarm-soft);border:1px solid var(--color-alarm)"></span> Alarm ≥ <span id="legend-alarm">1.2</span> m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-critical-soft);border:1px solid var(--color-critical)"></span> Critical ≥ <span id="legend-critical">2.0</span> m</span>
                         </div>
                     </div>
 
@@ -290,7 +299,7 @@
             <section class="card chart-card card--span-full" aria-labelledby="forecast-chart-title">
                 <header class="card__header">
                     <div>
-                        <h2 class="card__title" id="forecast-chart-title">48-Hour Water Level Forecast</h2>
+                        <h2 class="card__title" id="forecast-chart-title">7-Day Water Level Forecast</h2>
                         <p class="card__subtitle">AI prediction from Random Forest + Fuzzy Logic</p>
                     </div>
                 </header>
@@ -357,25 +366,16 @@
             </section>
 
             <!-- ========== Fuzzy Logic ========== -->
-            <section class="card fuzzy-card card--span-6" aria-labelledby="fuzzy-title">
+            <section class="card fuzzy-card card--span-full" aria-labelledby="fuzzy-title">
                 <header class="card__header">
                     <div>
                         <h2 class="card__title" id="fuzzy-title">Fuzzy Logic Details</h2>
-                        <p class="card__subtitle">15-rule decision engine inputs &amp; result</p>
+                        <p class="card__subtitle">15-rule decision engine inputs &amp; result — 24h &amp; 48h horizons</p>
                     </div>
                 </header>
                 <div class="card__content">
+                    <h3 class="fuzzy-horizon__title">Shared Inputs</h3>
                     <div class="fuzzy-grid" id="fuzzy-details">
-                        <div class="fuzzy-item">
-                            <span class="fuzzy-label">RF Propensity</span>
-                            <span class="fuzzy-value skeleton-text" id="fuzzy-rf-propensity"></span>
-                            <span class="fuzzy-unit">Random Forest</span>
-                        </div>
-                        <div class="fuzzy-item">
-                            <span class="fuzzy-label">Rule Triggered</span>
-                            <span class="fuzzy-value skeleton-text" id="fuzzy-rule-triggered"></span>
-                            <span class="fuzzy-unit">Fuzzy rule #</span>
-                        </div>
                         <div class="fuzzy-item">
                             <span class="fuzzy-label">Water Level</span>
                             <span class="fuzzy-value skeleton-text" id="fuzzy-water-level"></span>
@@ -386,15 +386,59 @@
                             <span class="fuzzy-value skeleton-text" id="fuzzy-rate-of-rise"></span>
                             <span class="fuzzy-unit">mm/hour</span>
                         </div>
-                        <div class="fuzzy-item">
-                            <span class="fuzzy-label">Forecast Rain</span>
-                            <span class="fuzzy-value skeleton-text" id="fuzzy-forecast-rain"></span>
-                            <span class="fuzzy-unit">mm</span>
+                    </div>
+
+                    <div class="fuzzy-horizons">
+                        <div class="fuzzy-horizon">
+                            <h3 class="fuzzy-horizon__title">24-Hour Horizon</h3>
+                            <div class="fuzzy-grid">
+                                <div class="fuzzy-item">
+                                    <span class="fuzzy-label">RF Propensity</span>
+                                    <span class="fuzzy-value skeleton-text" id="fuzzy-rf-propensity"></span>
+                                    <span class="fuzzy-unit">Random Forest</span>
+                                </div>
+                                <div class="fuzzy-item">
+                                    <span class="fuzzy-label">Rule Triggered</span>
+                                    <span class="fuzzy-value skeleton-text" id="fuzzy-rule-triggered"></span>
+                                    <span class="fuzzy-unit">Fuzzy rule #</span>
+                                </div>
+                                <div class="fuzzy-item">
+                                    <span class="fuzzy-label">Forecast Rain</span>
+                                    <span class="fuzzy-value skeleton-text" id="fuzzy-forecast-rain"></span>
+                                    <span class="fuzzy-unit">mm</span>
+                                </div>
+                                <div class="fuzzy-item">
+                                    <span class="fuzzy-label">Tide Level</span>
+                                    <span class="fuzzy-value skeleton-text" id="fuzzy-tide-level"></span>
+                                    <span class="fuzzy-unit">m</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="fuzzy-item">
-                            <span class="fuzzy-label">Tide Level</span>
-                            <span class="fuzzy-value skeleton-text" id="fuzzy-tide-level"></span>
-                            <span class="fuzzy-unit">m</span>
+
+                        <div class="fuzzy-horizon">
+                            <h3 class="fuzzy-horizon__title">48-Hour Horizon</h3>
+                            <div class="fuzzy-grid">
+                                <div class="fuzzy-item">
+                                    <span class="fuzzy-label">RF Propensity</span>
+                                    <span class="fuzzy-value skeleton-text" id="fuzzy-rf-propensity-48h"></span>
+                                    <span class="fuzzy-unit">Random Forest</span>
+                                </div>
+                                <div class="fuzzy-item">
+                                    <span class="fuzzy-label">Rule Triggered</span>
+                                    <span class="fuzzy-value skeleton-text" id="fuzzy-rule-triggered-48h"></span>
+                                    <span class="fuzzy-unit">Fuzzy rule #</span>
+                                </div>
+                                <div class="fuzzy-item">
+                                    <span class="fuzzy-label">Forecast Rain</span>
+                                    <span class="fuzzy-value skeleton-text" id="fuzzy-forecast-rain-48h"></span>
+                                    <span class="fuzzy-unit">mm</span>
+                                </div>
+                                <div class="fuzzy-item">
+                                    <span class="fuzzy-label">Tide Level</span>
+                                    <span class="fuzzy-value skeleton-text" id="fuzzy-tide-level-48h"></span>
+                                    <span class="fuzzy-unit">m</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -889,7 +933,7 @@
         };
 
         // Risk threshold defaults; overridden from /api/config at runtime
-        let CRITICAL_LEVEL_M = 7.5;
+        let CRITICAL_LEVEL_M = 2.0;
         let ALERT_THRESHOLD_M = CRITICAL_LEVEL_M * 0.40;
         let ALARM_THRESHOLD_M = CRITICAL_LEVEL_M * 0.60;
 
@@ -1049,8 +1093,11 @@
                     // Prediction pipeline unavailable (missing model/weather/RF).
                     // Fall back to latest sensor reading so water level still displays.
                     setValue('current-risk-level', 'No data');
+                    setValue('current-risk-level-48h', 'No data');
                     const riskBadge = $('current-risk-level');
                     riskBadge.className = 'risk-badge risk-badge--normal';
+                    const riskBadge48h = $('current-risk-level-48h');
+                    riskBadge48h.className = 'risk-badge risk-badge--normal';
 
                     try {
                         const fallbackRes = await fetch('/api/water-levels?hours=1');
@@ -1115,13 +1162,17 @@
                 setValue('current-water-level', waterLevel != null ? waterLevel.toFixed(2) : '—');
                 updateRiskGauge(waterLevel);
 
-                // Risk badge
-                const riskLevel = prediction.risk_level || 'normal';
-                const meta = riskMeta(riskLevel);
-                const riskBadge = $('current-risk-level');
-                riskBadge.textContent = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1);
-                riskBadge.className = 'risk-badge ' + meta.badge;
-                riskBadge.style.color = (meta.badge === 'risk-badge--alert') ? '#1f2328' : '';
+                // Risk badges (24h + 48h)
+                const renderRiskBadge = (id, level) => {
+                    const lvl = level || 'normal';
+                    const m = riskMeta(lvl);
+                    const el = $(id);
+                    el.textContent = lvl.charAt(0).toUpperCase() + lvl.slice(1);
+                    el.className = 'risk-badge ' + m.badge;
+                    el.style.color = (m.badge === 'risk-badge--alert') ? '#1f2328' : '';
+                };
+                renderRiskBadge('current-risk-level', prediction.risk_level);
+                renderRiskBadge('current-risk-level-48h', prediction.risk_level_48h);
 
                 // Last updated
                 setValue('last-updated', timeAgo(prediction.timestamp));
@@ -1135,8 +1186,9 @@
                 const waterResponse = await fetch('/api/water-levels?hours=1');
                 const waterData = await waterResponse.json();
                 if (waterData.length > 0) {
-                    setValue('data-source', (waterData[0].source || '—').toUpperCase());
-                    setValue('data-source-detail', waterData[0].source === 'lora' ? 'LoRa radio link' : waterData[0].source);
+                    const latestWater = waterData[waterData.length - 1];
+                    setValue('data-source', (latestWater.source || '—').toUpperCase());
+                    setValue('data-source-detail', latestWater.source === 'lora' ? 'LoRa radio link' : latestWater.source);
                 }
 
                 // Trend: compare first vs last reading in the last 3 hours
@@ -1166,7 +1218,7 @@
                 const weatherData = await response.json();
 
                 if (weatherData.length > 0) {
-                    const latest = weatherData[0];
+                    const latest = weatherData[weatherData.length - 1];
                     setValue('current-precip', (latest.precipitation_mm || 0).toFixed(1));
                     setValue('current-pressure', (latest.pressure_hpa || 0).toFixed(1));
                     setValue('current-temp', (latest.temperature_c || 0).toFixed(1));
@@ -1273,20 +1325,27 @@
                     return;
                 }
 
-                // RF Propensity
-                const rf = details.rf_propensity || 'Unknown';
-                const rfEl = $('fuzzy-rf-propensity');
-                setValue('fuzzy-rf-propensity', rf);
-                rfEl.className = 'fuzzy-value ' +
-                    (rf.toLowerCase() === 'high' ? 'fuzzy-value--high' :
-                     rf.toLowerCase() === 'medium' ? 'fuzzy-value--medium' :
-                     rf.toLowerCase() === 'low' ? 'fuzzy-value--low' : '');
+                // RF Propensity (shared helper for both horizons)
+                const setRfPropensity = (elId, value) => {
+                    const rf = value || 'Unknown';
+                    setValue(elId, rf);
+                    const el = $(elId);
+                    el.className = 'fuzzy-value ' +
+                        (rf.toLowerCase() === 'high' ? 'fuzzy-value--high' :
+                         rf.toLowerCase() === 'medium' ? 'fuzzy-value--medium' :
+                         rf.toLowerCase() === 'low' ? 'fuzzy-value--low' : '');
+                };
+                setRfPropensity('fuzzy-rf-propensity', details.rf_propensity);
+                setRfPropensity('fuzzy-rf-propensity-48h', details.rf_propensity_48h);
 
                 setValue('fuzzy-rule-triggered', details.rule_triggered != null ? details.rule_triggered : 'N/A');
+                setValue('fuzzy-rule-triggered-48h', details.rule_triggered_48h != null ? details.rule_triggered_48h : 'N/A');
                 setValue('fuzzy-water-level', (details.current_water_level_mm || 0).toFixed(0));
                 setValue('fuzzy-rate-of-rise', (details.fuzzy_inputs?.rate_of_rise_mm_hour || 0).toFixed(1));
                 setValue('fuzzy-forecast-rain', (details.fuzzy_inputs?.forecast_rain_mm || 0).toFixed(1));
+                setValue('fuzzy-forecast-rain-48h', (details.fuzzy_inputs_48h?.forecast_rain_mm || 0).toFixed(1));
                 setValue('fuzzy-tide-level', (details.fuzzy_inputs?.tide_level_m || 0).toFixed(2));
+                setValue('fuzzy-tide-level-48h', (details.fuzzy_inputs_48h?.tide_level_m || 0).toFixed(2));
             } catch (error) {
                 console.error('Error updating fuzzy details:', error);
             }

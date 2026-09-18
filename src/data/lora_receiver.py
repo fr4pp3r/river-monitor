@@ -17,7 +17,7 @@ from src.config import (
     SENSOR_MAX_DISTANCE, RAIN_BUCKET_TIP_MM,
     LORA_FALLBACK_TIMEOUT
 )
-from src.data.database import insert_water_level
+from src.data.database import insert_sensor_data, get_sensor_data_range, insert_rainfall_hourly, upsert_rainfall_daily
 
 
 # ============================================================
@@ -315,7 +315,7 @@ class LoRaReceiver:
 
         # Store in database
         timestamp = datetime.now()
-        insert_water_level(
+        insert_sensor_data(
             timestamp=timestamp,
             water_level_m=water_level,
             raw_distance_m=distance_m,
@@ -324,6 +324,28 @@ class LoRaReceiver:
             rainfall_mm=rainfall_mm,
             source="lora"
         )
+
+        # Aggregate the current clock-hour's rainfall (upsert into rainfall_hourly).
+        # Assumption: Tips is a per-interval count, so the hourly total is the SUM of
+        # this hour's readings; revisit if the node reports a cumulative counter.
+        try:
+            hour_start = timestamp.replace(minute=0, second=0, microsecond=0)
+            hour_readings = get_sensor_data_range(hour_start, timestamp)
+            total_tips = sum(int(r.get('rain_tips') or 0) for r in hour_readings)
+            total_rain = round(sum(float(r.get('rainfall_mm') or 0) for r in hour_readings), 3)
+            insert_rainfall_hourly(timestamp, total_tips, total_rain)
+        except Exception as e:
+            print(f"Warning: failed to aggregate hourly rainfall: {e}")
+
+        # Aggregate the current calendar day's rainfall (upsert into rainfall_daily).
+        try:
+            day_start = timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_readings = get_sensor_data_range(day_start, timestamp)
+            day_tips = sum(int(r.get('rain_tips') or 0) for r in day_readings)
+            day_rain = round(sum(float(r.get('rainfall_mm') or 0) for r in day_readings), 3)
+            upsert_rainfall_daily(timestamp, day_tips, day_rain)
+        except Exception as e:
+            print(f"Warning: failed to aggregate daily rainfall: {e}")
 
         self.last_receive_time = timestamp
         print(f"Received LoRa data: Distance={distance_mm}mm ({distance_m:.3f}m), "

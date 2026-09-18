@@ -22,9 +22,13 @@ from src.config import (
     WEATHER_LATITUDE, WEATHER_LONGITUDE,
     WEATHER_DAILY_PARAMS, WEATHER_HOURLY_PARAMS, MARINE_HOURLY_PARAMS,
     WEATHER_TIMEZONE, WEATHER_FORECAST_DAYS,
-    WEATHER_CACHE_EXPIRY
+    WEATHER_CACHE_EXPIRY, RAIN_DAY_THRESHOLD_MM
 )
-from src.data.database import insert_weather_data, get_latest_weather
+from src.data.database import (
+    insert_weather_data, get_latest_weather,
+    insert_tidal_data, clear_tidal_data_since, get_tide_level_at,
+    get_rainfall_daily_range
+)
 
 
 class WeatherFetcher:
@@ -167,10 +171,11 @@ class WeatherFetcher:
         return processed
     
     def process_tide_data(self, api_data: Dict) -> Dict:
-        """Process raw tide API data (hourly) into daily max/min format"""
+        """Process raw tide API data (hourly) into daily max/min + hourly series"""
         processed = {
             'timestamp': datetime.now(),
-            'daily': []
+            'daily': [],
+            'hourly': []
         }
         
         if 'hourly' in api_data:
@@ -193,6 +198,8 @@ class WeatherFetcher:
                     date_key = dt.date().isoformat()
                 except ValueError:
                     continue
+                
+                processed['hourly'].append({'timestamp': dt, 'tide_level_m': sea_level})
                 
                 if date_key not in daily_data:
                     daily_data[date_key] = {'max': sea_level, 'min': sea_level}
@@ -265,9 +272,9 @@ class WeatherFetcher:
         except (json.JSONDecodeError, ValueError):
             return None
     
-    def store_weather_in_db(self):
+    def store_weather_in_db(self, data: Optional[Dict] = None):
         """Fetch weather and tide data and store in database"""
-        data = self.fetch_all_data()
+        data = data or self.fetch_all_data()
         if data:
             # Prepare current weather data
             current = data.get('current', {})
@@ -304,7 +311,22 @@ class WeatherFetcher:
             }
             
             insert_weather_data(datetime.now(), current_data)
-            
+
+            # Clear from today 00:00 onward so the fresh forecast replaces the
+            # predictive window while preserving earlier stored tidal readings
+            tide_hourly = data.get('tide', {}).get('hourly', [])
+            if tide_hourly:
+                try:
+                    since = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                    clear_tidal_data_since(since)
+                    for pt in tide_hourly:
+                        ts = pt.get('timestamp')
+                        tl = pt.get('tide_level_m')
+                        if ts is not None and tl is not None:
+                            insert_tidal_data(ts, float(tl))
+                except Exception as e:
+                    print(f"Warning: failed to store hourly tide data: {e}")
+
             # Cache the data
             self.cache_weather_data(data)
             
@@ -313,8 +335,14 @@ class WeatherFetcher:
         
         return False
     
-    def get_weather_for_model(self) -> Dict:
-        """Get weather data formatted for the prediction model"""
+    def get_weather_for_model(self, horizon: str = "24h") -> Dict:
+        """Get weather data formatted for the prediction model.
+
+        horizon selects the reference day: '24h' uses today, '48h' uses tomorrow.
+        Precipitation features blend sensor rainfall (past days) with the saved
+        forecast (today/tomorrow): R1 = reference-day total, R3 = 3-day total
+        ending at reference day, R7 = 7-day total ending at reference day.
+        """
         # Get latest weather from DB
         latest_weather = get_latest_weather()
         if not latest_weather:
@@ -322,71 +350,104 @@ class WeatherFetcher:
             if not self.store_weather_in_db():
                 return {}
             latest_weather = get_latest_weather()
-        
+
         # Get forecast data
         forecast_data = json.loads(latest_weather.get('forecast_data', '[]'))
         tide_forecast_data = json.loads(latest_weather.get('tide_forecast_data', '[]'))
-        
-        # Calculate aggregated values for daily model
-        R1 = 0
-        R3 = 0
-        R7 = 0
-        rainy_days = 0
-        TMAX = latest_weather.get('temperature_max_c', 0)
-        TMIN = latest_weather.get('temperature_min_c', 0)
-        TideMax = latest_weather.get('tide_max_m', 0)
-        TideMin = latest_weather.get('tide_min_m', 0)
-        
-        if forecast_data:
-            # R1: Today's precipitation
-            R1 = forecast_data[0].get('precipitation_mm', 0) if forecast_data else 0
-            
-            # R3: 3-day precipitation sum
-            for day in forecast_data[:3]:
-                R3 += day.get('precipitation_mm', 0)
-            
-            # R7: 7-day precipitation sum
-            for day in forecast_data[:7]:
-                R7 += day.get('precipitation_mm', 0)
-            
-            # Rainy days in next 7 days
-            for day in forecast_data[:7]:
-                if day.get('precipitation_mm', 0) > 0:
-                    rainy_days += 1
-        
-        if tide_forecast_data:
-            # TideMax: Maximum tide in next 7 days
-            tide_maxes = [day.get('tide_max_m', 0) for day in tide_forecast_data[:7] if day.get('tide_max_m') is not None]
-            if tide_maxes:
-                TideMax = max(tide_maxes)
-            
-            # TideMin: Minimum tide in next 7 days
-            tide_mins = [day.get('tide_min_m', 0) for day in tide_forecast_data[:7] if day.get('tide_min_m') is not None]
-            if tide_mins:
-                TideMin = min(tide_mins)
-        
+
+        # Reference day index into the forecast arrays (0=today for 24h, 1=tomorrow for 48h)
+        ref_idx = 0 if horizon == '24h' else 1
+
+        # Sensor-measured daily rainfall for the trailing 7 calendar days
+        today = datetime.now().date()
+        start = today - timedelta(days=7)
+        sensor_daily = {}
+        try:
+            rows = get_rainfall_daily_range(
+                datetime.combine(start, datetime.min.time()),
+                datetime.combine(today, datetime.min.time())
+            )
+            for row in rows:
+                sensor_daily[row['date']] = row.get('total_rainfall_mm', 0) or 0
+        except Exception as e:
+            print(f"Warning: failed to read sensor daily rainfall: {e}")
+            sensor_daily = {}
+
+        def day_rain(offset: int) -> float:
+            """Rainfall for the day at `offset` from today (negative = past day)"""
+            day_str = (today + timedelta(days=offset)).isoformat()
+            if offset < 0:
+                return sensor_daily.get(day_str, 0.0)
+            if offset < len(forecast_data):
+                forecast_mm = forecast_data[offset].get('precipitation_mm', 0) or 0
+                if forecast_mm:
+                    return forecast_mm
+            return sensor_daily.get(day_str, 0.0)
+
+        R1 = day_rain(ref_idx)
+        R3 = day_rain(ref_idx - 2) + day_rain(ref_idx - 1) + day_rain(ref_idx)
+        R7 = sum(day_rain(i) for i in range(ref_idx - 6, ref_idx + 1))
+
+        # Consecutive rainy days ending at the reference day (rainfall > 2mm)
+        rain_days = 0
+        offset = ref_idx
+        while offset >= ref_idx - 10:
+            if day_rain(offset) <= RAIN_DAY_THRESHOLD_MM:
+                break
+            rain_days += 1
+            offset -= 1
+
+        if ref_idx < len(forecast_data):
+            TMAX = forecast_data[ref_idx].get('temperature_max_c')
+            TMIN = forecast_data[ref_idx].get('temperature_min_c')
+        else:
+            TMAX = latest_weather.get('temperature_max_c')
+            TMIN = latest_weather.get('temperature_min_c')
+
+        if ref_idx < len(tide_forecast_data):
+            TideMax = tide_forecast_data[ref_idx].get('tide_max_m')
+            TideMin = tide_forecast_data[ref_idx].get('tide_min_m')
+        else:
+            TideMax = latest_weather.get('tide_max_m')
+            TideMin = latest_weather.get('tide_min_m')
+
+        # Fuzzy FRain = reference-day precipitation; fuzzy Tide = the tide at the
+        # reference day's same clock hour from the stored hourly series
+        tide_target = datetime.now() + (timedelta(hours=24) if horizon == '48h' else timedelta(hours=0))
+        tide_row = get_tide_level_at(tide_target)
+        tide_level_m = float(tide_row.get('tide_level_m')) if tide_row and tide_row.get('tide_level_m') is not None else None
+        if tide_level_m is None:
+            tide_level_m = self.get_current_tide_level() or 0.0
+
         return {
             'R1': R1,
             'R3': R3,
             'R7': R7,
-            'rainy_days': rainy_days,
-            'TMAX': TMAX,
-            'TMIN': TMIN,
-            'TideMax': TideMax,
-            'TideMin': TideMin,
-            'precipitation_mm': latest_weather.get('precipitation_mm', 0),
-            'temperature_max_c': latest_weather.get('temperature_max_c', 0),
-            'temperature_min_c': latest_weather.get('temperature_min_c', 0),
-            'tide_max_m': latest_weather.get('tide_max_m', 0),
-            'tide_min_m': latest_weather.get('tide_min_m', 0)
+            'rain_days': rain_days,
+            'TMAX': TMAX or 0,
+            'TMIN': TMIN or 0,
+            'TideMax': TideMax or 0,
+            'TideMin': TideMin or 0,
+            'precipitation_mm': day_rain(ref_idx),
+            'forecast_rain_mm': day_rain(ref_idx),
+            'tide_level_m': tide_level_m,
+            'temperature_max_c': TMAX or 0,
+            'temperature_min_c': TMIN or 0,
+            'tide_max_m': TideMax or 0,
+            'tide_min_m': TideMin or 0,
+            'horizon': horizon
         }
-    
+
     def get_current_tide_level(self) -> Optional[float]:
-        """Get current tide level from cached data"""
+        """Get the current tide level from the stored hourly tidal data"""
+        row = get_tide_level_at(datetime.now())
+        if row is not None and row.get('tide_level_m') is not None:
+            return float(row['tide_level_m'])
+
+        # Fallback: cached daily max/min estimate
         cached = self.get_cached_weather()
         if cached and 'tide' in cached:
             tide_current = cached['tide'].get('current', {})
-            # Return average of max and min as current estimate
             tide_max = tide_current.get('tide_max_m')
             tide_min = tide_current.get('tide_min_m')
             if tide_max is not None and tide_min is not None:
@@ -394,13 +455,6 @@ class WeatherFetcher:
             elif tide_max is not None:
                 return tide_max
         return None
-    
-    def get_forecast_rain_24h(self) -> float:
-        """Get forecasted precipitation for next 24 hours"""
-        cached = self.get_cached_weather()
-        if cached and 'daily' in cached:
-            return cached['daily'][0].get('precipitation_mm', 0) if cached['daily'] else 0
-        return 0.0
 
 
 def fetch_and_store_weather():
@@ -429,6 +483,6 @@ if __name__ == "__main__":
                   f"Tmax={day['temperature_max_c']}°C, Tmin={day['temperature_min_c']}°C")
         
         # Store in database
-        fetcher.store_weather_in_db()
+        fetcher.store_weather_in_db(data)
     else:
         print("Failed to fetch weather data")

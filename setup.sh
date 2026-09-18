@@ -242,7 +242,7 @@ fi
 # Create cron job for weather data fetching
 print_section "Setting Up Weather Data Cron Job"
 
-CRON_JOB="*/6 * * * * $PROJECT_DIR/venv/bin/python $PROJECT_DIR/src/data/weather_fetcher.py"
+CRON_JOB="0 */6 * * * $PROJECT_DIR/venv/bin/python $PROJECT_DIR/src/data/weather_fetcher.py"
 
 if ! crontab -l 2>/dev/null | grep -q "weather_fetcher.py"; then
     echo -e "${YELLOW}Adding cron job for weather data...${NC}"

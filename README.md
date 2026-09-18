@@ -7,7 +7,8 @@ A **LAN-accessible web dashboard** for real-time river water level monitoring an
 - **Real-time Monitoring**: Water level data from LoRa-connected sensors (RFM95W @915MHz) every minute
 - **SMS Alerts**: Send-only SMS notifications via the A7608e-H module to configured phone numbers when risk is high
 - **Weather & Tide Integration**: 7-day forecast from Open-Meteo (precipitation, max/min temp, tide levels)
-- **AI Prediction**: Random Forest (7 features) + Fuzzy Logic (15 rules) for flood risk classification
+- **AI Prediction**: Random Forest (8 features) + Fuzzy Logic (15 rules) for flood risk classification
+- **Dual-Horizon Prediction**: 24h and 48h flood risk predictions computed and displayed side by side
 - **Fuzzy Logic Risk Levels**: Receding, Alert, Alarm, Critical based on 5 inputs
 - **Web Dashboard**: Responsive, real-time dashboard with charts, fuzzy logic details, and status monitoring
 
@@ -35,7 +36,7 @@ A **LAN-accessible web dashboard** for real-time river water level monitoring an
 |           v                                                  v
 |  +------------------+                              +------------------+ |
 |  |  AI Pipeline     |                              | Web Dashboard    | |
-|  |  RF (7 features) |                              | (FastAPI)        | |
+|  |  RF (8 features) |                              | (FastAPI)        | |
 |  |  + Fuzzy Logic   |                              |                  | |
 |  |  (15 rules)      |                              |                  | |
 |  +--------+---------+                              +--------+---------+ |
@@ -51,16 +52,20 @@ A **LAN-accessible web dashboard** for real-time river water level monitoring an
 
 ## AI Pipeline
 
-### Random Forest Model (7 Features)
+### Random Forest Model (8 Features)
+
+Features are computed per horizon. `ref_day` is **today** for the 24h forecast and **tomorrow** for the 48h forecast. Rainfall blends sensor-measured accumulation (`rainfall_daily` table) with Open-Meteo forecast:
+
 | Feature | Description | Source |
 |---------|-------------|--------|
-| R1 | 1-day precipitation sum | Open-Meteo |
-| R3 | 3-day precipitation sum | Open-Meteo |
-| R7 | 7-day precipitation sum | Open-Meteo |
-| rainy_days | Count of rainy days in 7-day forecast | Open-Meteo |
-| TMAX | Daily maximum temperature | Open-Meteo |
-| TMIN | Daily minimum temperature | Open-Meteo |
+| R1 | 1-day precipitation sum (ref_day) | Sensor daily + Open-Meteo forecast |
+| R3 | 3-day precipitation sum (ref_day-2 .. ref_day) | Sensor daily + Open-Meteo forecast |
+| R7 | 7-day precipitation sum (ref_day-6 .. ref_day) | Sensor daily + Open-Meteo forecast |
+| rain_days | Consecutive rainy days ending on ref_day (`precipitation > RAIN_DAY_THRESHOLD_MM`) | Sensor daily + Open-Meteo forecast |
+| TMAX | Daily maximum temperature (ref_day) | Open-Meteo |
+| TMIN | Daily minimum temperature (ref_day) | Open-Meteo |
 | TideMax | Maximum tide level in 7-day forecast | Open-Meteo Marine |
+| TideMin | Minimum tide level in 7-day forecast | Open-Meteo Marine |
 
 **Output**: Flood Propensity (Low=0, Medium=1, High=2)
 
@@ -103,7 +108,7 @@ river-monitor/
 │   ├── model/
 │   │   ├── __init__.py
 │   │   ├── preprocess.py         # Data preprocessing (RF features)
-│   │   ├── train.py              # Model training (new 7-feature mode)
+│   │   ├── train.py              # Model training (new 8-feature mode)
 │   │   ├── predict.py            # Prediction logic (RF + Fuzzy)
 │   │   └── fuzzy_logic.py        # Fuzzy inference system (15 rules)
 │   └── web/
@@ -213,7 +218,7 @@ river-monitor/
    WEATHER_LONGITUDE = 120.9842
    
    # Adjust after hydrological survey
-   CRITICAL_LEVEL_M = 7.5  # Water level at 100% risk
+   CRITICAL_LEVEL_M = 2.0  # Water level at 100% risk
    ```
 
 ### 3. Train the AI Model
@@ -221,9 +226,10 @@ river-monitor/
 **Note**: Training is resource-intensive. Do this on a PC with more resources, then transfer the model to the Raspberry Pi.
 
 1. **Prepare your training data**
-   - CSV with columns: `R1, R3, R7, rainy_days, TMAX, TMIN, TideMax, target`
+   - CSV with columns: `R1, R3, R7, rain_days, TMAX, TMIN, TideMax, TideMin, target`
    - Target values: `0`=Low, `1`=Medium, `2`=High flood propensity
    - Based on 5-year historical data with known flood events
+   - Generate a starter file with `python create_template.py` (writes `training_template.csv`)
 
 2. **Train the model**
    ```bash
@@ -286,8 +292,9 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
 
 1. **Current Status**
    - Current water level (meters)
-   - Current risk level (color-coded: Receding/Alert/Alarm/Critical)
-   - RF Propensity (Low/Medium/High)
+   - 24h risk level (color-coded: Receding/Alert/Alarm/Critical)
+   - 48h risk level (color-coded: Receding/Alert/Alarm/Critical)
+   - RF Propensity (Low/Medium/High) for both horizons
    - Last update time
    - Data source (LoRa)
 
@@ -305,12 +312,11 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
    - Rainfall 24h total (mm) and tips
 
 5. **Fuzzy Logic Details**
-   - RF Propensity (Low/Medium/High)
-   - Rule Triggered (1-15)
-   - Water Level (mm)
-   - Rate of Rise (mm/day)
-   - Forecast Rain (mm)
-   - Tide Level (m)
+   - RF Propensity (Low/Medium/High) for 24h and 48h
+   - Rule Triggered (1-15) for 24h and 48h
+   - Shared inputs: Water Level (mm), Rate of Rise (mm/day)
+   - 24h inputs: Forecast Rain (mm), Tide Level (m)
+   - 48h inputs: Forecast Rain (mm, tomorrow), Tide Level (m, same time tomorrow)
 
 6. **System Status**
    - LoRa module connectivity
@@ -348,9 +354,10 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
 
 1. **Sensor Data Collection** (every minute)
    - LoRa sensor sends: `Distance=<mm>,Tips=<count>`
-   - Distance converted to water level: `water_level = 7.5m - distance`
+   - Distance converted to water level: `water_level = 2.5m - distance`
    - Rain tips converted to rainfall: `rainfall = tips * 0.2mm`
-   - Data stored in SQLite with source="lora"
+   - Data stored in SQLite `sensor_data` table with source="lora"
+   - Daily rainfall totals aggregated into `rainfall_daily` (threshold: `RAIN_DAY_THRESHOLD_MM`)
 
 2. **Stale-Data Warning** (5 min timeout)
    - If no LoRa data for 5 minutes, the receiver logs a warning
@@ -360,15 +367,16 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
    - Fetched from Open-Meteo API (weather + marine)
    - Cached locally for 6 hours
    - Includes: precipitation, temp max/min, tide max/min
+   - Tide forecasts persisted hourly to `tidal_data` for current-location tide lookups
 
 4. **Prediction Pipeline** (on-demand + auto)
-   - Get latest 1-min water level data
+   - Get latest 1-min water level data (`sensor_data` table)
    - Compute RoR from last 5 minutes
-   - Get cached weather/tide forecast
-   - Run RF model → propensity (Low/Medium/High)
-   - Run Fuzzy Logic (15 rules) → risk level
+   - Get weather/tide features for both horizons (24h ref=today, 48h ref=tomorrow)
+   - Run RF model → propensity (Low/Medium/High) for 24h and 48h
+   - Run Fuzzy Logic (15 rules) → risk level for 24h and 48h
    - Generate 7-day forecast
-   - Store prediction with all metadata
+   - Store one prediction row with both horizons' results (24h columns + `_48h` columns)
 
 5. **Alerting**
    - When prediction is "Alarm" or "Critical", SMS alerts sent
@@ -420,7 +428,8 @@ TIDE_THRESHOLDS = {
 
 ### RF Model Features
 ```python
-RF_FEATURES = ['R1', 'R3', 'R7', 'rainy_days', 'TMAX', 'TMIN', 'TideMax']
+RF_FEATURES = ['R1', 'R3', 'R7', 'rain_days', 'TMAX', 'TMIN', 'TideMax', 'TideMin']
+RAIN_DAY_THRESHOLD_MM = 2.0  # Min precipitation (mm) for a day to count as a "rain day"
 RF_CLASSES = {0: 'Low', 1: 'Medium', 2: 'High'}
 ```
 
@@ -447,7 +456,7 @@ RF_CLASSES = {0: 'Low', 1: 'Medium', 2: 'High'}
 
 ### Model Not Loading
 1. Verify model files exist: `ls -l data/models/`
-2. Check if model was trained with 7 features
+2. Check if model was trained with 8 features (including TideMin)
 3. Re-train the model and transfer to Raspberry Pi
 
 ### Dashboard Not Accessible

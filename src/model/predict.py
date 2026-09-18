@@ -17,9 +17,8 @@ from src.config import (
     RF_CLASSES
 )
 from src.data.database import (
-    get_latest_water_level, get_water_levels_since,
-    get_latest_prediction, insert_prediction,
-    get_rainfall_24h_total
+    get_latest_sensor_data, get_sensor_data_since,
+    get_latest_prediction, insert_prediction
 )
 from src.data.weather_fetcher import WeatherFetcher
 from src.model.preprocess import load_scaler, preprocess_for_prediction_new
@@ -75,22 +74,22 @@ class FloodPredictor:
             print(f"Error loading model: {e}")
             return False
     
-    def get_current_features(self) -> Optional[Dict]:
-        """Get current features for prediction"""
+    def get_current_features(self, horizon: str = "24h") -> Optional[Dict]:
+        """Get current features for prediction for the given horizon ('24h' or '48h')"""
         # Get latest water level
-        latest_water = get_latest_water_level()
+        latest_water = get_latest_sensor_data()
         if not latest_water:
             print("No water level data available")
             return None
-        
-        # Get weather data (includes RF features)
-        weather_data = self.weather_fetcher.get_weather_for_model()
+
+        # Get weather data (includes per-horizon RF features and fuzzy inputs)
+        weather_data = self.weather_fetcher.get_weather_for_model(horizon=horizon)
         if not weather_data:
             print("No weather data available")
             return None
-        
-# Get historical water levels for RoR computation (last 2 hours for hourly resampling)
-        historical_levels = get_water_levels_since(hours=2)
+
+        # Get historical water levels for RoR computation (last 2 hours for hourly resampling)
+        historical_levels = get_sensor_data_since(hours=2)
 
         # Compute Rate of Rise (RoR) from hourly resampled data (mm/hour)
         rate_of_rise_mm_hour = 0.0
@@ -104,36 +103,29 @@ class FloodPredictor:
                 current_mm = hourly.iloc[-1] * 1000
                 prev_mm = hourly.iloc[-2] * 1000
                 rate_of_rise_mm_hour = current_mm - prev_mm
-        
-        # Get current tide level
-        tide_level_m = self.weather_fetcher.get_current_tide_level()
-        if tide_level_m is None:
-            tide_level_m = 0.0
-        
-        # Get forecast rain for next 24 hours
-        forecast_rain_mm = self.weather_fetcher.get_forecast_rain_24h()
-        
-        # Build feature dictionary for RF model
+
+        # Build feature dictionary for RF model (same keys for both horizons)
         rf_features = {
             'R1': weather_data.get('R1', 0),
             'R3': weather_data.get('R3', 0),
             'R7': weather_data.get('R7', 0),
-            'rainy_days': weather_data.get('rainy_days', 0),
+            'rain_days': weather_data.get('rain_days', 0),
             'TMAX': weather_data.get('TMAX', 0),
             'TMIN': weather_data.get('TMIN', 0),
             'TideMax': weather_data.get('TideMax', 0),
             'TideMin': weather_data.get('TideMin', 0),
             'timestamp': datetime.now()
         }
-        
-        # Also include data for fuzzy logic
+
+        # Also include data for fuzzy logic (per-horizon FRain and Tide)
         rf_features.update({
+            'horizon': horizon,
             'water_level_mm': latest_water['water_level_m'] * 1000,
             'rate_of_rise_mm_hour': rate_of_rise_mm_hour,
-            'forecast_rain_mm': forecast_rain_mm,
-            'tide_level_m': tide_level_m
+            'forecast_rain_mm': weather_data.get('forecast_rain_mm', 0),
+            'tide_level_m': weather_data.get('tide_level_m', 0)
         })
-        
+
         return rf_features
     
     def predict_rf_propensity(self, features: Dict) -> Tuple[int, str]:
@@ -189,9 +181,10 @@ class FloodPredictor:
         rate_of_rise_mm_hour = features.get('rate_of_rise_mm_hour', 0)
         daily_change = rate_of_rise_mm_hour * 24 / 1000.0  # Convert to meters/day
         
-        # Generate forecast
+        # Generate forecast for days 1..N (day 1 is the first future day,
+        # so forecast_change_1d = forecast[0] - current_level is meaningful)
         forecast = []
-        for day in range(days):
+        for day in range(1, days + 1):
             predicted_level = current_level + (daily_change * day)
             # Ensure forecast doesn't go negative
             predicted_level = max(0, predicted_level)
@@ -201,56 +194,69 @@ class FloodPredictor:
     
     def make_prediction(self) -> Optional[Dict]:
         """
-        Make a complete prediction (RF propensity + fuzzy risk + forecast)
+        Make a complete prediction for both horizons (24h and 48h)
         
         Returns:
-            Dictionary with prediction results or None if failed
+            Dictionary with 24h/48h prediction results or None if failed
         """
-        # Get current features
-        features = self.get_current_features()
-        if not features:
+        # Get current features for both horizons
+        features_24h = self.get_current_features(horizon="24h")
+        if not features_24h:
             return None
-        
-        # Predict RF propensity
-        rf_propensity_num, rf_propensity_class = self.predict_rf_propensity(features)
-        
-        # Predict fuzzy risk
-        fuzzy_result = self.predict_fuzzy_risk(features, rf_propensity_num)
-        risk_level = fuzzy_result['risk_level']
-        
-        # Generate forecast
-        forecast = self.predict_forecast(features, FORECAST_DAYS)
-        
+        features_48h = self.get_current_features(horizon="48h")
+        if not features_48h:
+            return None
+
+        rf_24h_num, rf_24h_class = self.predict_rf_propensity(features_24h)
+        fuzzy_24h = self.predict_fuzzy_risk(features_24h, rf_24h_num)
+        risk_level_24h = fuzzy_24h['risk_level']
+
+        rf_48h_num, rf_48h_class = self.predict_rf_propensity(features_48h)
+        fuzzy_48h = self.predict_fuzzy_risk(features_48h, rf_48h_num)
+        risk_level_48h = fuzzy_48h['risk_level']
+
+        # Generate forecast (7-day water-level trend based on the 24h horizon)
+        forecast = self.predict_forecast(features_24h, FORECAST_DAYS)
+
         # Calculate forecast change (change in next day)
-        current_level = features.get('water_level_mm', 0) / 1000.0
+        current_level = features_24h.get('water_level_mm', 0) / 1000.0
         if len(forecast) >= 1:
-            forecast_change = forecast[0] - current_level  # Change in 1 day
+            forecast_change = forecast[0] - current_level
         else:
             forecast_change = 0
-        
-# Store prediction in database
+
+        # Store prediction in database (SMS alerting keys off 24h risk_level)
         insert_prediction(
             timestamp=datetime.now(),
             current_level_m=current_level,
-            risk_level=risk_level,
-            rf_propensity=rf_propensity_class,
-            fuzzy_inputs=_to_native(fuzzy_result.get('inputs', {})),
-            rule_triggered=fuzzy_result.get('rule_triggered'),
+            risk_level=risk_level_24h,
+            rf_propensity=rf_24h_class,
+            fuzzy_inputs=_to_native(fuzzy_24h.get('inputs', {})),
+            rule_triggered=fuzzy_24h.get('rule_triggered'),
+            risk_level_48h=risk_level_48h,
+            rf_propensity_48h=rf_48h_class,
+            fuzzy_inputs_48h=_to_native(fuzzy_48h.get('inputs', {})),
+            rule_triggered_48h=fuzzy_48h.get('rule_triggered'),
             forecast_data=forecast,
-            model_version="2.0"
+            model_version="3.0"
         )
 
-        # Return prediction results
+        # Return prediction results for both horizons
         return _to_native({
             'timestamp': datetime.now().isoformat(),
             'current_level_m': current_level,
-            'risk_level': risk_level,
-            'rf_propensity': rf_propensity_class,
-            'rf_propensity_num': rf_propensity_num,
-            'fuzzy_result': fuzzy_result,
+            'risk_level': risk_level_24h,
+            'risk_level_48h': risk_level_48h,
+            'rf_propensity': rf_24h_class,
+            'rf_propensity_num': rf_24h_num,
+            'rf_propensity_48h': rf_48h_class,
+            'rf_propensity_48h_num': rf_48h_num,
+            'fuzzy_result': fuzzy_24h,
+            'fuzzy_result_48h': fuzzy_48h,
             'forecast': forecast,
             'forecast_change_1d': forecast_change,
-            'features': features
+            'features': features_24h,
+            'features_48h': features_48h
         })
     
     def get_latest_prediction(self) -> Optional[Dict]:
@@ -262,6 +268,8 @@ class FloodPredictor:
                 prediction['forecast_data'] = json.loads(prediction['forecast_data'])
             if isinstance(prediction['fuzzy_inputs'], str):
                 prediction['fuzzy_inputs'] = json.loads(prediction['fuzzy_inputs'])
+            if isinstance(prediction.get('fuzzy_inputs_48h'), str):
+                prediction['fuzzy_inputs_48h'] = json.loads(prediction['fuzzy_inputs_48h'])
             return prediction
         return None
 
@@ -279,13 +287,15 @@ def predict_and_alert():
     predictor = FloodPredictor()
     prediction = predictor.make_prediction()
     
-    if prediction and prediction['risk_level'] in ['alarm', 'critical']:
-        # Send SMS alert
-        send_alert_sms(
-            prediction['risk_level'],
-            prediction['current_level_m'],
-            prediction['forecast_change_1d']
-        )
+    if prediction:
+        risk_key = (prediction['risk_level'] or '').strip().lower()
+        if risk_key in ('alarm', 'critical'):
+            # Send SMS alert
+            send_alert_sms(
+                risk_key,
+                prediction['current_level_m'],
+                prediction['forecast_change_1d']
+            )
     
     return prediction
 
