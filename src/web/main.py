@@ -56,6 +56,23 @@ app = FastAPI(title="River Monitor Dashboard")
 # Mount static files
 app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
 
+
+@app.middleware("http")
+async def no_cache_static(request: Request, call_next):
+    """Prevent browsers from serving stale static assets.
+
+    Without an explicit Cache-Control header, browsers apply heuristic
+    caching (RFC 9111) keyed on Last-Modified/ETag. When index.html is a
+    fresh Jinja render but style.css is a heuristically-cached old copy,
+    the page ships with mismatched markup/CSS -- e.g. the database page
+    collapsing into a single narrow grid cell. "no-cache" forces a
+    revalidation round-trip (a 304 when unchanged) instead of stale bytes.
+    """
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 # Setup templates
 templates = Jinja2Templates(directory="src/web/templates")
 
