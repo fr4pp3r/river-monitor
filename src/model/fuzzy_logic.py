@@ -20,7 +20,6 @@ class FuzzyFloodRisk:
     
     def __init__(self):
         self.system = None
-        self.simulation = None
         self._build_system()
     
     def _build_system(self):
@@ -227,9 +226,56 @@ class FuzzyFloodRisk:
             self.risk['Critical']
         ))
         
+        # =========================================================================
+        # GAP-FILL RULES 16-20 (added beyond the 15-rule table)
+        # The 15-rule table left realistic combos uncovered (e.g. High WL +
+        # Negative RoR, or High WL + Moderate RoR with Low/Mid tide). When no
+        # rule fires, skfuzzy 0.5.0 leaves simulation.output empty and
+        # compute_risk() falls back to membership-weighted fuzzy scoring. These
+        # rules close the gaps so every High-WL dominant combo produces real
+        # rule-based fuzzy output.
+        # =========================================================================
+        
+        # Gap-fill Rule 16: High WL, Negative RoR, High RF -> Alarm
+        rules.append(ctrl.Rule(
+            self.wl['High'] & self.ror['Negative'] & 
+            self.rf['High'],
+            self.risk['Alarm']
+        ))
+        
+        # Gap-fill Rule 17: High WL, Negative RoR, Low-Medium RF -> Alert
+        rules.append(ctrl.Rule(
+            self.wl['High'] & self.ror['Negative'] & 
+            (self.rf['Low'] | self.rf['Medium']),
+            self.risk['Alert']
+        ))
+        
+        # Gap-fill Rule 18: High WL, Moderate RoR, Low-Mid Tide, Low RF -> Alert
+        rules.append(ctrl.Rule(
+            self.wl['High'] & self.ror['Moderate'] & 
+            (self.tide['Low'] | self.tide['Mid']) & 
+            self.rf['Low'],
+            self.risk['Alert']
+        ))
+        
+        # Gap-fill Rule 19: High WL, Moderate RoR, Low-Mid Tide, Medium RF -> Alarm
+        rules.append(ctrl.Rule(
+            self.wl['High'] & self.ror['Moderate'] & 
+            (self.tide['Low'] | self.tide['Mid']) & 
+            self.rf['Medium'],
+            self.risk['Alarm']
+        ))
+        
+        # Gap-fill Rule 20: High WL, Moderate RoR, Low-Mid Tide, High RF -> Alarm
+        rules.append(ctrl.Rule(
+            self.wl['High'] & self.ror['Moderate'] & 
+            (self.tide['Low'] | self.tide['Mid']) & 
+            self.rf['High'],
+            self.risk['Alarm']
+        ))
+        
         # Create control system
         self.system = ctrl.ControlSystem(rules)
-        self.simulation = ctrl.ControlSystemSimulation(self.system)
 
     def compute_risk(self, water_level_mm: float, rate_of_rise_mm_hour: float,
                      forecast_rain_mm: float, tide_level_m: float,
@@ -254,20 +300,24 @@ class FuzzyFloodRisk:
         tide = np.clip(tide_level_m, 0, 5)
         rf = np.clip(rf_propensity, 0, 2)
         
-        # Set inputs
-        self.simulation.input['water_level'] = wl
-        self.simulation.input['rate_of_rise'] = ror
-        self.simulation.input['forecast_rain'] = frain
-        self.simulation.input['tide_level'] = tide
-        self.simulation.input['rf_propensity'] = rf
+        # Fresh simulation per call. skfuzzy 0.5.0 caches outputs on a reused
+        # ControlSystemSimulation: only the first rule's consequents are reset
+        # between runs, so a no-rule input for a previously-seen combo returns
+        # the stale prior result instead of raising. A fresh simulation
+        # guarantees no-rule combos raise KeyError and hit the fallback below.
+        simulation = ctrl.ControlSystemSimulation(self.system)
+        simulation.input['water_level'] = wl
+        simulation.input['rate_of_rise'] = ror
+        simulation.input['forecast_rain'] = frain
+        simulation.input['tide_level'] = tide
+        simulation.input['rf_propensity'] = rf
         
         # Compute
         try:
-            self.simulation.compute()
-            risk_crisp = self.simulation.output['flood_risk']
+            simulation.compute()
+            risk_crisp = simulation.output['flood_risk']
         except Exception as e:
             print(f"Fuzzy computation error: {e}")
-            # Fallback: simple threshold-based
             risk_crisp = self._fallback_risk(wl, ror, frain, tide, rf)
         
         # Determine risk level from crisp output
@@ -380,7 +430,15 @@ class FuzzyFloodRisk:
         }
 
         key = (wl_term, ror_term, frain_term, tide_term, rf_term)
-        return rule_map.get(key, 0)
+        rule = rule_map.get(key, 0)
+        if rule == 0:
+            # Gap-fill rules 16-20 (dominant-term matching, same fallback order
+            # as the ctrl.Rule list appended above)
+            if wl_term == 'High' and ror_term == 'Negative':
+                rule = 16 if rf_term == 'High' else 17
+            elif wl_term == 'High' and ror_term == 'Moderate' and tide_term in ('Low', 'Mid'):
+                rule = 18 if rf_term == 'Low' else 19 if rf_term == 'Medium' else 20
+        return rule
     
     def _get_dominant_term(self, value: float, var: ctrl.Antecedent, terms: list) -> str:
         """Get the term with highest membership for a value"""
@@ -395,48 +453,24 @@ class FuzzyFloodRisk:
     
     def _fallback_risk(self, wl: float, ror: float, frain: float, 
                        tide: float, rf: float) -> float:
-        """Fallback risk calculation if fuzzy inference fails"""
-        # Simple weighted scoring
-        score = 0
-        
-        # Water level contribution (0-2)
-        if wl >= 1830:
-            score += 2.5
-        elif wl >= 1220:
-            score += 1.5
-        elif wl >= 610:
-            score += 0.5
-        
-        # Rate of rise contribution (0-1.5)
-        if ror >= 4.0:
-            score += 1.5
-        elif ror >= 0.5:
-            score += 1.0
-        elif ror <= -0.5:
-            score -= 0.5
-        
-        # Forecast rain contribution (0-1.5)
-        if frain >= 30:
-            score += 1.5
-        elif frain >= 15:
-            score += 1.0
-        elif frain >= 5:
-            score += 0.5
-        
-        # Tide contribution (0-1)
-        if tide >= 1.5:
-            score += 1.0
-        elif tide >= 1.0:
-            score += 0.7
-        elif tide >= 0.5:
-            score += 0.3
-        
-        # RF propensity contribution (0-1.5)
-        if rf == 2:
-            score += 1.5
-        elif rf == 1:
-            score += 0.8
-        
+        """Membership-weighted fuzzy crisp output when no rule fires"""
+        # Risk weight per fuzzy term; summed, weighted by the term's
+        # membership degree, so the output interpolates smoothly like
+        # fuzzy inference instead of jumping at hard thresholds. Values
+        # match the old calibrated thresholds at each term's core.
+        term_weights = {
+            'WL':    {'Low': 0.0,    'Medium': 0.5,   'High': 1.5,   'Very High': 2.5},
+            'RoR':   {'Negative': -0.5, 'Near-Zero': 0.0, 'Moderate': 1.0, 'Rapid': 1.5},
+            'FRain': {'None': 0.0,   'Light': 0.5,    'Moderate': 1.0, 'Heavy': 1.5},
+            'Tide':  {'Low': 0.0,    'Mid': 0.3,      'High': 0.7,   'Extreme': 1.0},
+            'RF':    {'Low': 0.0,    'Medium': 0.8,   'High': 1.5},
+        }
+
+        memberships = self._get_memberships(wl, ror, frain, tide, rf)
+        score = sum(memberships.get(f'{var}_{term}', 0.0) * weight
+                    for var, terms in term_weights.items()
+                    for term, weight in terms.items())
+
         # Map to risk universe (0-6)
         return np.clip(score * 1.2, 0, 6)
 

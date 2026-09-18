@@ -7,7 +7,7 @@ A **LAN-accessible web dashboard** for real-time river water level monitoring an
 - **Real-time Monitoring**: Water level data from LoRa-connected sensors (RFM95W @915MHz) every minute
 - **SMS Alerts**: Send-only SMS notifications via the A7608e-H module to configured phone numbers when risk is high
 - **Weather & Tide Integration**: 7-day forecast from Open-Meteo (precipitation, max/min temp, tide levels)
-- **AI Prediction**: Random Forest (8 features) + Fuzzy Logic (15 rules) for flood risk classification
+- **AI Prediction**: Random Forest (8 features) + Fuzzy Logic (20 rules) for flood risk classification
 - **Dual-Horizon Prediction**: 24h and 48h flood risk predictions computed and displayed side by side
 - **Fuzzy Logic Risk Levels**: Receding, Alert, Alarm, Critical based on 5 inputs
 - **Web Dashboard**: Responsive, real-time dashboard with charts, fuzzy logic details, and status monitoring
@@ -38,7 +38,7 @@ A **LAN-accessible web dashboard** for real-time river water level monitoring an
 |  |  AI Pipeline     |                              | Web Dashboard    | |
 |  |  RF (8 features) |                              | (FastAPI)        | |
 |  |  + Fuzzy Logic   |                              |                  | |
-|  |  (15 rules)      |                              |                  | |
+|  |  (20 rules)      |                              |                  | |
 |  +--------+---------+                              +--------+---------+ |
 |           |                                                  |
 |           +--------------------------------------------------+ |
@@ -69,7 +69,7 @@ Features are computed per horizon. `ref_day` is **today** for the 24h forecast a
 
 **Output**: Flood Propensity (Low=0, Medium=1, High=2)
 
-### Fuzzy Logic System (15 Rules)
+### Fuzzy Logic System (20 Rules)
 **Inputs** (5 fuzzy variables):
 | Variable | Terms |
 |----------|-------|
@@ -110,7 +110,7 @@ river-monitor/
 │   │   ├── preprocess.py         # Data preprocessing (RF features)
 │   │   ├── train.py              # Model training (new 8-feature mode)
 │   │   ├── predict.py            # Prediction logic (RF + Fuzzy)
-│   │   └── fuzzy_logic.py        # Fuzzy inference system (15 rules)
+│   │   └── fuzzy_logic.py        # Fuzzy inference system (20 rules)
 │   └── web/
 │       ├── __init__.py
 │       ├── main.py               # FastAPI backend + fuzzy API
@@ -313,7 +313,7 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
 
 5. **Fuzzy Logic Details**
    - RF Propensity (Low/Medium/High) for 24h and 48h
-   - Rule Triggered (1-15) for 24h and 48h
+   - Rule Triggered (1-20) for 24h and 48h
    - Shared inputs: Water Level (mm), Rate of Rise (mm/day)
    - 24h inputs: Forecast Rain (mm), Tide Level (m)
    - 48h inputs: Forecast Rain (mm, tomorrow), Tide Level (m, same time tomorrow)
@@ -374,7 +374,7 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
    - Compute RoR from last 5 minutes
    - Get weather/tide features for both horizons (24h ref=today, 48h ref=tomorrow)
    - Run RF model → propensity (Low/Medium/High) for 24h and 48h
-   - Run Fuzzy Logic (15 rules) → risk level for 24h and 48h
+   - Run Fuzzy Logic (20 rules) → risk level for 24h and 48h
    - Generate 7-day forecast
    - Store one prediction row with both horizons' results (24h columns + `_48h` columns)
 

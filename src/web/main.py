@@ -34,7 +34,7 @@ from src.config import (
 )
 from src.config_manager import get_config_dict, apply_config_dict, reset_to_defaults
 from src.data.database import (
-    get_db_connection,
+    get_db_connection, migrate_database,
     get_latest_sensor_data, get_sensor_data_since,
     get_latest_weather, get_weather_since,
     get_latest_prediction, get_predictions_since,
@@ -692,6 +692,14 @@ def run_dashboard():
     """Run the FastAPI dashboard server"""
     print(f"Starting River Monitor Dashboard on {DASHBOARD_HOST}:{DASHBOARD_PORT}")
     print(f"Access the dashboard at: http://{DASHBOARD_HOST}:{DASHBOARD_PORT}")
+
+    # Run any pending schema migrations (idempotent: only adds missing
+    # tables/columns from older DB versions). Must run before the
+    # background prediction scheduler, which writes risk_level_48h etc.
+    try:
+        migrate_database()
+    except Exception as e:
+        print(f"Warning: Database migration failed at startup: {e}")
 
 # Try to fetch and store fresh weather/tide data so the dashboard has
     # up-to-date readings even before the first sensor packet arrives.
