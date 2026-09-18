@@ -84,7 +84,7 @@ Features are computed per horizon. `ref_day` is **today** for the 24h forecast a
 **Membership Functions**:
 - WL: Low <610mm, Medium 610-1220mm, High 1220-1830mm, Very High >1830mm
 - FRain: None <5mm, Light 5-15mm, Moderate 15-30mm, Heavy >30mm
-- RoR: Negative <-10mm/d, Near-Zero -10 to 10, Moderate 10-100, Rapid >100
+- RoR: Negative <-0.5mm/hr, Near-Zero -0.5 to 0.5, Moderate 0.5-4.0, Rapid >4.0
 - Tide: Low <0.5m, Mid 0.5-1.0m, High 1.0-1.5m, Extreme >1.5m
 
 ## Project Structure
@@ -314,7 +314,7 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
 5. **Fuzzy Logic Details**
    - RF Propensity (Low/Medium/High) for 24h and 48h
    - Rule Triggered (1-20) for 24h and 48h
-   - Shared inputs: Water Level (mm), Rate of Rise (mm/day)
+   - Shared inputs: Water Level (mm), Rate of Rise (mm/hr)
    - 24h inputs: Forecast Rain (mm), Tide Level (m)
    - 48h inputs: Forecast Rain (mm, tomorrow), Tide Level (m, same time tomorrow)
 
@@ -409,12 +409,12 @@ FRAIN_THRESHOLDS = {
     'heavy_min': 30
 }
 
-# Rate of Rise (mm/day)
+# Rate of Rise (mm/hr)
 ROR_THRESHOLDS = {
-    'negative_max': -10,
-    'near_zero_min': -10, 'near_zero_max': 10,
-    'moderate_min': 10, 'moderate_max': 100,
-    'rapid_min': 100
+    'negative_max': -0.5,
+    'near_zero_min': -0.5, 'near_zero_max': 0.5,
+    'moderate_min': 0.5, 'moderate_max': 4.0,
+    'rapid_min': 4.0
 }
 
 # Tide Level (meters)
