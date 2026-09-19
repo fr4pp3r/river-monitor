@@ -76,7 +76,7 @@ def init_database():
                 date TEXT NOT NULL UNIQUE,
                 total_tips INTEGER DEFAULT 0,
                 total_rainfall_mm REAL DEFAULT 0.0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT (datetime('now', '+8 hours'))
             )
         """)
         
@@ -144,8 +144,8 @@ def init_database():
                 receive_alert INTEGER DEFAULT 1,
                 receive_warning INTEGER DEFAULT 1,
                 receive_critical INTEGER DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT (datetime('now', '+8 hours')),
+                updated_at DATETIME DEFAULT (datetime('now', '+8 hours'))
             )
         """)
         
@@ -807,6 +807,34 @@ def migrate_database():
                 print(f"Dropping created_at column from {table}")
                 cursor.execute(f"ALTER TABLE {table} DROP COLUMN created_at")
 
+        # Convert stored created_at/updated_at values to Philippines time (UTC+8) on existing DBs
+        for table, defn, base_cols, time_cols in (
+            ('rainfall_daily',
+             "id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL UNIQUE, total_tips INTEGER DEFAULT 0, "
+             "total_rainfall_mm REAL DEFAULT 0.0, "
+             "created_at DATETIME DEFAULT (datetime('now', '+8 hours'))",
+             ('id', 'date', 'total_tips', 'total_rainfall_mm'),
+             ('created_at',)),
+            ('alert_contacts',
+             "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone_number TEXT NOT NULL UNIQUE, "
+             "is_active INTEGER DEFAULT 1, receive_alert INTEGER DEFAULT 1, receive_warning INTEGER DEFAULT 1, "
+             "receive_critical INTEGER DEFAULT 1, "
+             "created_at DATETIME DEFAULT (datetime('now', '+8 hours')), "
+             "updated_at DATETIME DEFAULT (datetime('now', '+8 hours'))",
+             ('id', 'name', 'phone_number', 'is_active', 'receive_alert', 'receive_warning', 'receive_critical'),
+             ('created_at', 'updated_at')),
+        ):
+            cursor.execute(f"PRAGMA table_info({table})")
+            dflt = {row[1]: row[4] for row in cursor.fetchall()}.get('created_at')
+            if dflt == 'CURRENT_TIMESTAMP':
+                print(f"Converting {table} timestamps to Philippines time")
+                cols = ', '.join(base_cols)
+                conv = ', '.join(f"datetime({c}, '+8 hours') AS {c}" for c in time_cols)
+                cursor.execute(f"CREATE TABLE {table}_new ({defn})")
+                cursor.execute(f"INSERT INTO {table}_new ({cols}, {', '.join(time_cols)}) SELECT {cols}, {conv} FROM {table}")
+                cursor.execute(f"DROP TABLE {table}")
+                cursor.execute(f"ALTER TABLE {table}_new RENAME TO {table}")
+
         # Ensure tidal_data and rainfall_daily exist (for DBs created pre-migration)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS tidal_data (
@@ -821,7 +849,7 @@ def migrate_database():
                 date TEXT NOT NULL UNIQUE,
                 total_tips INTEGER DEFAULT 0,
                 total_rainfall_mm REAL DEFAULT 0.0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT (datetime('now', '+8 hours'))
             )
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tidal_data_timestamp ON tidal_data(timestamp)")
