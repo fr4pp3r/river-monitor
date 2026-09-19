@@ -56,8 +56,7 @@ def init_database():
                 raw_distance_mm INTEGER,
                 rain_tips INTEGER DEFAULT 0,
                 rainfall_mm REAL,
-                source TEXT NOT NULL CHECK (source IN ('lora', 'sms')),
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                source TEXT NOT NULL CHECK (source IN ('lora', 'sms'))
             )
         """)
 
@@ -800,11 +799,18 @@ def migrate_database():
                 cursor.execute("ALTER TABLE water_levels RENAME TO sensor_data")
             else:
                 # init_database already created an empty sensor_data; copy rows across
-                cursor.execute("INSERT INTO sensor_data (timestamp, water_level_m, raw_distance_m, raw_distance_mm, rain_tips, rainfall_mm, source, created_at) SELECT timestamp, water_level_m, raw_distance_m, raw_distance_mm, rain_tips, rainfall_mm, source, created_at FROM water_levels")
+                cursor.execute("INSERT INTO sensor_data (timestamp, water_level_m, raw_distance_m, raw_distance_mm, rain_tips, rainfall_mm, source) SELECT timestamp, water_level_m, raw_distance_m, raw_distance_mm, rain_tips, rainfall_mm, source FROM water_levels")
                 print("Copied water_levels data into sensor_data")
             cursor.execute("DROP TABLE IF EXISTS water_levels")
             cursor.execute("DROP INDEX IF EXISTS idx_water_levels_timestamp")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_data_timestamp ON sensor_data(timestamp)")
+
+        # Drop redundant created_at column from sensor_data (timestamp is authoritative)
+        cursor.execute("PRAGMA table_info(sensor_data)")
+        sensor_columns = [row[1] for row in cursor.fetchall()]
+        if 'created_at' in sensor_columns:
+            print("Dropping created_at column from sensor_data")
+            cursor.execute("ALTER TABLE sensor_data DROP COLUMN created_at")
 
         # Ensure tidal_data and rainfall_daily exist (for DBs created pre-migration)
         cursor.execute("""
