@@ -65,8 +65,7 @@ def init_database():
             CREATE TABLE IF NOT EXISTS tidal_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME NOT NULL,
-                tide_level_m REAL NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                tide_level_m REAL NOT NULL
             )
         """)
 
@@ -97,8 +96,7 @@ def init_database():
                 wind_speed_ms REAL,
                 wind_direction_deg REAL,
                 forecast_data TEXT,  -- JSON string of forecast
-                tide_forecast_data TEXT,  -- JSON string of tide forecast
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                tide_forecast_data TEXT  -- JSON string of tide forecast
             )
         """)
         
@@ -119,8 +117,7 @@ def init_database():
                 used_fallback INTEGER DEFAULT 0,  -- 1 if fallback scoring used (no fuzzy rule matched)
                 used_fallback_48h INTEGER DEFAULT 0,
                 forecast_data TEXT NOT NULL,  -- JSON array of 7 daily predictions
-                model_version TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                model_version TEXT
             )
         """)
         
@@ -133,8 +130,7 @@ def init_database():
                 water_level_m REAL NOT NULL,
                 message TEXT NOT NULL,
                 sent_to TEXT,  -- Comma-separated phone numbers
-                status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed')),
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed'))
             )
         """)
         
@@ -160,8 +156,7 @@ def init_database():
                 timestamp DATETIME NOT NULL,
                 component TEXT NOT NULL,
                 status TEXT NOT NULL CHECK (status IN ('ok', 'warning', 'error')),
-                message TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                message TEXT
             )
         """)
         
@@ -185,7 +180,6 @@ def init_database():
                 year INTEGER NOT NULL,
                 total_tips INTEGER DEFAULT 0,
                 total_rainfall_mm REAL DEFAULT 0.0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(hour, day, month, year)
             )
         """)
@@ -805,20 +799,20 @@ def migrate_database():
             cursor.execute("DROP INDEX IF EXISTS idx_water_levels_timestamp")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_data_timestamp ON sensor_data(timestamp)")
 
-        # Drop redundant created_at column from sensor_data (timestamp is authoritative)
-        cursor.execute("PRAGMA table_info(sensor_data)")
-        sensor_columns = [row[1] for row in cursor.fetchall()]
-        if 'created_at' in sensor_columns:
-            print("Dropping created_at column from sensor_data")
-            cursor.execute("ALTER TABLE sensor_data DROP COLUMN created_at")
+        # Drop redundant created_at column where timestamp is authoritative
+        for table in ('sensor_data', 'tidal_data', 'weather_data', 'predictions', 'alerts', 'system_status', 'rainfall_hourly'):
+            cursor.execute(f"PRAGMA table_info({table})")
+            columns = [row[1] for row in cursor.fetchall()]
+            if 'created_at' in columns:
+                print(f"Dropping created_at column from {table}")
+                cursor.execute(f"ALTER TABLE {table} DROP COLUMN created_at")
 
         # Ensure tidal_data and rainfall_daily exist (for DBs created pre-migration)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS tidal_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME NOT NULL,
-                tide_level_m REAL NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                tide_level_m REAL NOT NULL
             )
         """)
         cursor.execute("""
