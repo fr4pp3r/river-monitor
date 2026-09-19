@@ -30,7 +30,7 @@ LORA_SPREADING_FACTOR = 7
 LORA_CODING_RATE = 5
 
 # SMS Module (A7608e-H) - UART Configuration
-SMS_UART_PORT = "/dev/ttyS2"  # Default UART port on Raspberry Pi
+SMS_UART_PORT = "/dev/ttyUSB2"  # Default UART port on Raspberry Pi
 SMS_BAUD_RATE = 115200        # Baud rate for A7608e-H
 SMS_TIMEOUT = 5               # Timeout in seconds for SMS operations
 
