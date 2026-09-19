@@ -742,6 +742,41 @@ def upsert_rainfall_daily(date: datetime, total_tips: int, total_rainfall_mm: fl
         return cursor.lastrowid
 
 
+def rebuild_rainfall_daily(days: int = 8) -> Dict:
+    """Recompute daily rainfall totals from stored sensor readings.
+
+    Rebuilds today plus the previous (days - 1) calendar days so the
+    forecasting window (R1/R3/R7 sensor-rainfall lookup) always has fresh,
+    gap-free daily aggregates even if the live receiver missed updates.
+    """
+    today = datetime.now().date()
+    rebuilt = []
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        for offset in range(days):
+            day = today - timedelta(days=offset)
+            start = datetime.combine(day, datetime.min.time())
+            end = start + timedelta(days=1)
+            cursor.execute("""
+                SELECT COALESCE(SUM(rain_tips), 0) as tips,
+                       COALESCE(SUM(rainfall_mm), 0) as rain
+                FROM sensor_data
+                WHERE timestamp >= ? AND timestamp < ?
+            """, (start.isoformat(), end.isoformat()))
+            row = cursor.fetchone()
+            tips = int(row['tips'] or 0)
+            rain = round(float(row['rain'] or 0.0), 3)
+            cursor.execute("""
+                INSERT INTO rainfall_daily (date, total_tips, total_rainfall_mm)
+                VALUES (?, ?, ?)
+                ON CONFLICT(date) DO UPDATE SET
+                    total_tips = excluded.total_tips,
+                    total_rainfall_mm = excluded.total_rainfall_mm
+            """, (day.isoformat(), tips, rain))
+            rebuilt.append({'date': day.isoformat(), 'total_tips': tips, 'total_rainfall_mm': rain})
+    return {'days_rebuilt': len(rebuilt), 'window_days': days, 'daily': rebuilt}
+
+
 def get_rainfall_daily_range(start: datetime, end: datetime) -> List[Dict]:
     """Get daily rainfall aggregates between two calendar days (inclusive)"""
     start_str = start.strftime('%Y-%m-%d')

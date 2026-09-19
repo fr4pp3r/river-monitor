@@ -236,6 +236,10 @@
                             <svg class="icon" style="width:16px;height:16px;"><use href="#i-phone"/></svg>
                             Test SMS Alert
                         </button>
+                        <button onclick="refreshRainfall()" class="btn btn--secondary" id="rainfall-refresh-btn">
+                            <svg class="icon" style="width:16px;height:16px;"><use href="#i-cloud-rain"/></svg>
+                            Update Rainfall Totals
+                        </button>
                     </div>
                 </div>
             </section>
@@ -1690,6 +1694,26 @@
             } catch (error) {
                 console.error('Error testing alert:', error);
                 showToast('Test Alert Failed', 'Network error while sending test alert.', 'danger');
+            }
+        }
+
+        async function refreshRainfall() {
+            const btn = $('rainfall-refresh-btn');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+            try {
+                const response = await fetch('/api/refresh-rainfall', { method: 'POST' });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showToast('Rainfall Updated', `Recomputed daily totals for the last ${result.window_days} days.`, 'success');
+                    refreshAll();
+                } else {
+                    showToast('Update Failed', result.message || 'Could not rebuild rainfall totals.', 'danger');
+                }
+            } catch (error) {
+                console.error('Error refreshing rainfall:', error);
+                showToast('Update Failed', 'Network error while rebuilding rainfall totals.', 'danger');
+            } finally {
+                if (btn) { btn.disabled = false; btn.style.opacity = ''; }
             }
         }
 

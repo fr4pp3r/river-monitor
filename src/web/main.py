@@ -40,6 +40,7 @@ from src.data.database import (
     get_latest_prediction, get_predictions_since,
     get_recent_alerts, get_system_status, get_database_stats,
     get_rainfall_since, get_rainfall_stats,
+    rebuild_rainfall_daily,
     get_all_alert_contacts, get_alert_contact,
     insert_alert_contact, update_alert_contact, delete_alert_contact,
     get_active_alert_phone_numbers,
@@ -461,6 +462,16 @@ async def refresh_prediction() -> JSONResponse:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
 
+@app.post("/api/refresh-rainfall")
+async def refresh_rainfall() -> JSONResponse:
+    """Recompute daily rainfall totals from stored sensor readings"""
+    try:
+        result = rebuild_rainfall_daily()
+        return JSONResponse(content={"status": "success", **result})
+    except Exception as e:
+        return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
+
+
 @app.post("/api/test-alert")
 async def test_alert() -> JSONResponse:
     """Test SMS alert system"""
@@ -644,6 +655,15 @@ async def restart_server() -> JSONResponse:
 # MAIN
 # ============================================================================
 
+def refresh_weather_tide_cache() -> bool:
+    """Fetch fresh weather + tide data from Open-Meteo and store it (DB + file cache)."""
+    fetcher = WeatherFetcher()
+    ok = fetcher.store_weather_in_db()
+    update_system_status('weather', 'ok' if ok else 'warning',
+                         'Weather data refreshed' if ok else 'Weather refresh returned no data')
+    return ok
+
+
 def _background_scheduler() -> None:
     """Periodically refresh weather, run predictions (which auto-alerts),
     and record component status. Runs as a daemon thread so a failure in any
@@ -657,11 +677,8 @@ def _background_scheduler() -> None:
 
             if now - last_weather_refresh >= WEATHER_REFRESH_INTERVAL_SECONDS:
                 try:
-                    fetcher = WeatherFetcher()
-                    if fetcher.store_weather_in_db():
-                        update_system_status('weather', 'ok', 'Weather data refreshed')
-                    else:
-                        update_system_status('weather', 'warning', 'Weather refresh returned no data')
+                    if not refresh_weather_tide_cache():
+                        print("Warning: scheduled weather refresh returned no data")
                 except Exception as e:
                     update_system_status('weather', 'error', str(e))
                 last_weather_refresh = now
@@ -710,8 +727,7 @@ def run_dashboard():
 # Try to fetch and store fresh weather/tide data so the dashboard has
     # up-to-date readings even before the first sensor packet arrives.
     try:
-        fetcher = WeatherFetcher()
-        if fetcher.store_weather_in_db():
+        if refresh_weather_tide_cache():
             print("Weather and tide data refreshed at startup")
         else:
             print("Warning: Could not refresh weather data at startup (using cached/last known)")
