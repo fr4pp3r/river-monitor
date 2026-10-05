@@ -33,6 +33,9 @@ joblib==1.3.2
 
 # Fuzzy Logic
 scikit-fuzzy>=0.5.0
+# Explicit: skfuzzy imports `packaging` at runtime but omits it from its own
+# dependency metadata, so the service crash-loops without this line.
+packaging>=23.0
 
 # Database
 # sqlite3 is included in Python standard library
