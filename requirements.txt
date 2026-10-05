@@ -36,6 +36,9 @@ scikit-fuzzy>=0.5.0
 # Explicit: skfuzzy imports `packaging` at runtime but omits it from its own
 # dependency metadata, so the service crash-loops without this line.
 packaging>=23.0
+# Explicit: skfuzzy.image imports matplotlib but does not reliably pull it in,
+# and it needs libfreetype6-dev/libpng-dev at build time (see setup.sh).
+matplotlib>=3.8
 
 # Database
 # sqlite3 is included in Python standard library

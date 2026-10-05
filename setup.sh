@@ -93,10 +93,15 @@ PACKAGES=(
     "python3-pip"
     "python3-venv"
     "python3-dev"
+    "build-essential"
+    "pkg-config"
     "git"
     "spidev"
     "libatlas-base-dev"
     "libjpeg-dev"
+    "libpng-dev"
+    "libfreetype6-dev"
+    "zlib1g-dev"
     "libopenblas-dev"
     "liblapack-dev"
 )
@@ -186,7 +191,7 @@ python -m pip install --upgrade pip
 # Install requirements
 if [ -f "$PROJECT_DIR/requirements.txt" ]; then
     echo -e "${YELLOW}Installing Python packages...${NC}"
-    python -m pip install -r "$PROJECT_DIR/requirements.txt"
+    python -m pip install --no-cache-dir -r "$PROJECT_DIR/requirements.txt"
 else
     echo -e "${RED}requirements.txt not found!${NC}"
     exit 1
@@ -211,14 +216,17 @@ if [ ! -f "$SERVICE_FILE" ]; then
 [Unit]
 Description=River Monitor System
 After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Type=simple
 User=$USERNAME
 WorkingDirectory=$PROJECT_DIR
 Environment="PATH=$PROJECT_DIR/venv/bin:$PATH"
+Environment=PYTHONUNBUFFERED=1
 ExecStart=$PROJECT_DIR/venv/bin/python $PROJECT_DIR/src/web/main.py
-Restart=always
+Restart=on-failure
 RestartSec=10
 
 [Install]
