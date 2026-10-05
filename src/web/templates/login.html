@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | River Water Level Monitor</title>
+    <meta name="description" content="Sign in to the river monitoring dashboard">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/static/style.css?v=20261003a">
+</head>
+<body class="login-body">
+    <main class="login-card">
+        <h1 class="login-title">River Monitor</h1>
+        <p class="login-subtitle">Sign in to the dashboard</p>
+        <form id="login-form" class="login-form">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" class="form-input" id="username" name="username" autocomplete="username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" class="form-input" id="password" name="password" autocomplete="current-password" required>
+            </div>
+            <p class="login-error" id="login-error" role="alert" style="display:none"></p>
+            <button type="submit" class="btn btn--primary login-submit" id="login-submit">Sign In</button>
+        </form>
+    </main>
+    <script>
+        async function checkSession() {
+            try {
+                const resp = await fetch('/api/auth/me');
+                if (!resp.ok) return;
+                const me = await resp.json();
+                if (me.authenticated || me.auth_enabled === false) {
+                    window.location = '/';
+                }
+            } catch (e) {
+                console.warn('session check failed', e);
+            }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const errEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-submit');
+            errEl.style.display = 'none';
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (resp.ok) {
+                    window.location = '/';
+                    return;
+                }
+                errEl.textContent = data.error || 'Sign in failed';
+                errEl.style.display = '';
+            } catch (e) {
+                errEl.textContent = 'Unable to reach the server';
+                errEl.style.display = '';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        checkSession();
+    </script>
+</body>
+</html>

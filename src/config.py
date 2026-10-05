@@ -83,6 +83,10 @@ WEATHER_FORECAST_DAYS = 7
 # Cache settings
 WEATHER_CACHE_EXPIRY = 21600  # 6 hours in seconds
 
+# Forecast older than this is treated as expired so readers refetch instead of
+# consuming a stale window; 2x the refresh cadence so one missed tick is tolerated.
+WEATHER_STALE_AFTER = 43200  # 12 hours in seconds
+
 # ============================================================================
 # SMS ALERT CONFIGURATION
 # ============================================================================

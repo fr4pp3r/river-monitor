@@ -17,13 +17,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from src.config import (
-    WEATHER_API_URL, MARINE_API_URL,
-    WEATHER_LATITUDE, WEATHER_LONGITUDE,
-    WEATHER_DAILY_PARAMS, WEATHER_HOURLY_PARAMS, MARINE_HOURLY_PARAMS,
-    WEATHER_TIMEZONE, WEATHER_FORECAST_DAYS,
-    WEATHER_CACHE_EXPIRY, RAIN_DAY_THRESHOLD_MM
-)
+from src import config as cfg
 from src.data.database import (
     insert_weather_data, get_latest_weather,
     insert_tidal_data, clear_tidal_data_since, get_tide_level_at,
@@ -41,16 +35,16 @@ class WeatherFetcher:
     def fetch_weather_data(self) -> Optional[Dict]:
         """Fetch weather forecast from Open-Meteo API"""
         params = {
-            'latitude': WEATHER_LATITUDE,
-            'longitude': WEATHER_LONGITUDE,
-            'daily': WEATHER_DAILY_PARAMS,
-            'hourly': WEATHER_HOURLY_PARAMS,
-            'timezone': WEATHER_TIMEZONE,
-            'forecast_days': WEATHER_FORECAST_DAYS
+            'latitude': cfg.WEATHER_LATITUDE,
+            'longitude': cfg.WEATHER_LONGITUDE,
+            'daily': cfg.WEATHER_DAILY_PARAMS,
+            'hourly': cfg.WEATHER_HOURLY_PARAMS,
+            'timezone': cfg.WEATHER_TIMEZONE,
+            'forecast_days': cfg.WEATHER_FORECAST_DAYS
         }
         
         try:
-            response = requests.get(WEATHER_API_URL, params=params, timeout=10)
+            response = requests.get(cfg.WEATHER_API_URL, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -64,15 +58,15 @@ class WeatherFetcher:
     def fetch_tide_data(self) -> Optional[Dict]:
         """Fetch tide forecast from Open-Meteo Marine API (hourly sea level, derive daily max/min)"""
         params = {
-            'latitude': WEATHER_LATITUDE,
-            'longitude': WEATHER_LONGITUDE,
-            'hourly': MARINE_HOURLY_PARAMS,
-            'timezone': WEATHER_TIMEZONE,
-            'forecast_days': WEATHER_FORECAST_DAYS
+            'latitude': cfg.WEATHER_LATITUDE,
+            'longitude': cfg.WEATHER_LONGITUDE,
+            'hourly': cfg.MARINE_HOURLY_PARAMS,
+            'timezone': cfg.WEATHER_TIMEZONE,
+            'forecast_days': cfg.WEATHER_FORECAST_DAYS
         }
         
         try:
-            response = requests.get(MARINE_API_URL, params=params, timeout=10)
+            response = requests.get(cfg.MARINE_API_URL, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -264,7 +258,7 @@ class WeatherFetcher:
             
             # Check if cache is still valid
             cache_time = datetime.fromisoformat(cache_data['timestamp'])
-            if (datetime.now() - cache_time).total_seconds() < WEATHER_CACHE_EXPIRY:
+            if (datetime.now() - cache_time).total_seconds() < cfg.WEATHER_CACHE_EXPIRY:
                 return cache_data['data']
             else:
                 return None
@@ -343,8 +337,9 @@ class WeatherFetcher:
         forecast (today/tomorrow): R1 = reference-day total, R3 = 3-day total
         ending at reference day, R7 = 7-day total ending at reference day.
         """
-        # Get latest weather from DB
-        latest_weather = get_latest_weather()
+        # Get latest weather from DB, rejecting an expired forecast so the
+        # branch below refetches rather than predicting from a stale window
+        latest_weather = get_latest_weather(max_age_seconds=cfg.WEATHER_STALE_AFTER)
         if not latest_weather:
             # Try to fetch fresh data
             if not self.store_weather_in_db():
@@ -392,7 +387,7 @@ class WeatherFetcher:
         rain_days = 0
         offset = ref_idx
         while offset >= ref_idx - 10:
-            if day_rain(offset) <= RAIN_DAY_THRESHOLD_MM:
+            if day_rain(offset) <= cfg.RAIN_DAY_THRESHOLD_MM:
                 break
             rain_days += 1
             offset -= 1

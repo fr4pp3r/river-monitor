@@ -332,6 +332,7 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
 
 - **Refresh Prediction**: Click the "Refresh Prediction" button to generate a new prediction
 - **Test SMS Alert**: Click the "Test SMS Alert" button to send a test SMS
+- **Refetch Forecast**: Click the "Refetch Forecast" button on the Current Weather card (admin) to immediately pull a fresh 7-day weather and tidal forecast from Open-Meteo, bypassing the 6-hour cache
 
 ### API Endpoints
 
@@ -348,7 +349,20 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
 | `/api/rainfall?hours=N` | GET | Rainfall data (last N hours) |
 | `/api/stats` | GET | Database statistics |
 | `/api/refresh-prediction` | POST | Trigger new prediction |
+| `/api/refresh-weather` | POST | Refetch weather + tide forecast (admin) |
 | `/api/test-alert` | POST | Send test SMS alert |
+| `/api/auth/login` | POST | Sign in (JSON `{username, password}`) |
+| `/api/auth/logout` | POST | Sign out |
+| `/api/auth/me` | GET | Current session user and role |
+| `/api/sensor-health?window_hours=N` | GET | Sensor freshness, throughput and gaps |
+| `/api/alerts?risk_level=&acknowledged=&start=&end=` | GET | Filtered alerts |
+| `/api/alerts/stats` | GET | Acknowledged/outstanding alert counts |
+| `/api/alerts/{id}/acknowledge` | POST | Acknowledge an alert (admin) |
+| `/api/users` | GET/POST | List/create users (admin) |
+| `/api/users/{id}` | PUT/DELETE | Update/delete user (admin) |
+| `/api/audit?limit=N` | GET | Recent audit entries (admin) |
+| `/healthz` | GET | Liveness probe |
+| `/readyz` | GET | Readiness probe (DB, model, weather) |
 
 ## Data Flow
 
@@ -387,6 +401,16 @@ Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
    - No separate check needed
 
 ## Configuration
+
+### Environment Variables (`.env`)
+
+Runtime settings are loaded from `.env` (see `.env.example`) via `src/settings.py`. Copy the example and edit:
+
+```bash
+cp .env.example .env
+```
+
+Key variables include `SECRET_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `AUTH_ENABLED`, `DASHBOARD_HOST/PORT`, `WEATHER_LATITUDE/LONGITUDE`, hardware ports/pins, and alert thresholds. Logs are written to `logs/river-monitor-YYYY-MM-DD.log`.
 
 ### Fuzzy Logic Thresholds
 
@@ -488,12 +512,14 @@ pip install -r requirements.txt --upgrade
 ## Security Considerations
 
 1. **LAN Access Only**: Dashboard only accessible on local network
-2. **No Authentication**: For simplicity, no authentication implemented
-3. **SMS Costs**: Be aware of SMS costs when sending alerts
+2. **Session Authentication**: Cookie-based sessions with PBKDF2-HMAC-SHA256 password hashes; two roles (`viewer` read-only, `admin` may change settings, contacts, alerts and users)
+3. **First-run credentials**: A default `admin`/`admin` account is created when the user table is empty. Set `ADMIN_PASSWORD` and a random `SECRET_KEY` in `.env` before deployment.
+4. **Audit Trail**: Mutating actions are recorded in the `audit_log` table and viewable from the Admin page.
+5. **SMS Costs**: Be aware of SMS costs when sending alerts
 
 ## Future Enhancements
 
-- [ ] Add user authentication to the dashboard
+- [x] Add user authentication to the dashboard
 - [ ] Implement HTTPS for secure connections
 - [ ] Add more sophisticated time series forecasting (LSTM, ARIMA)
 - [ ] Implement edge computing for faster predictions

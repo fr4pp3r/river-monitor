@@ -12,11 +12,13 @@ import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
+from starlette.middleware.sessions import SessionMiddleware
 import uvicorn
+from loguru import logger
 
 # Ensure the project root is on the module search path so that
 # "from src.config import ..." styles of absolute imports work
@@ -32,19 +34,28 @@ from src.config import (
     RISK_THRESHOLDS, RISK_LEVELS,
     LORA_ENABLED, SMS_ENABLED, DATABASE_PATH
 )
-from src.config_manager import get_config_dict, apply_config_dict, reset_to_defaults
+from src.settings import settings
+from src.logging_config import setup_logging
+from src.config_manager import get_config_dict, apply_config_dict, reset_to_defaults, validate_config_dict
 from src.data.database import (
     get_db_connection, migrate_database,
     get_latest_sensor_data, get_sensor_data_since,
     get_latest_weather, get_weather_since,
     get_latest_prediction, get_predictions_since,
-    get_recent_alerts, get_system_status, get_database_stats,
+    get_recent_alerts, get_alerts_filtered, get_alert, acknowledge_alert, get_alert_ack_stats,
+    get_system_status, get_database_stats, get_sensor_health,
     get_rainfall_since, get_rainfall_stats,
     rebuild_rainfall_daily,
     get_all_alert_contacts, get_alert_contact,
     insert_alert_contact, update_alert_contact, delete_alert_contact,
     get_active_alert_phone_numbers,
-    update_system_status
+    update_system_status,
+    count_users, insert_user, get_user, get_user_by_username, list_users, update_user, delete_user,
+    log_audit, get_audit_log,
+)
+from src.web.auth import (
+    hash_password, authenticate_user, ensure_default_admin, login_user, logout_user,
+    session_user, is_admin, require_admin, is_public_path,
 )
 from src.data.sms_handler import test_alert_sms
 from src.data.lora_receiver import start_lora_receiver_async
@@ -57,6 +68,13 @@ WEATHER_REFRESH_INTERVAL_SECONDS = 21600
 
 
 # Initialize FastAPI app
+setup_logging()
+try:
+    ensure_default_admin()
+except Exception as e:
+    logger.warning(f"Could not ensure default admin account: {e}")
+if settings.auth_enabled and settings.secret_key == "change-me-in-production-river-monitor":
+    logger.warning("SECRET_KEY is the insecure default; set SECRET_KEY in .env before deployment")
 app = FastAPI(title="River Monitor Dashboard")
 
 # Mount static files
@@ -79,6 +97,34 @@ async def no_cache_static(request: Request, call_next):
         response.headers["Cache-Control"] = "no-cache"
     return response
 
+@app.middleware("http")
+async def auth_guard(request: Request, call_next):
+    path = request.url.path
+    if not settings.auth_enabled or is_public_path(path):
+        return await call_next(request)
+
+    user = session_user(request)
+    if not user:
+        if path.startswith("/api/"):
+            return JSONResponse(content={"error": "Authentication required"}, status_code=401)
+        return RedirectResponse("/login")
+
+    if request.method in ("POST", "PUT", "DELETE", "PATCH") and user.get("role") != "admin":
+        return JSONResponse(content={"error": "Administrator role required"}, status_code=403)
+
+    return await call_next(request)
+
+
+# Added last so it is the outermost middleware: it must populate
+# request.session before auth_guard reads it.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    max_age=settings.session_max_age_seconds,
+    same_site="lax",
+    https_only=False,
+)
+
 # Setup templates
 templates = Jinja2Templates(directory="src/web/templates")
 
@@ -96,6 +142,100 @@ async def dashboard(request: Request):
     })
 
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    if settings.auth_enabled and session_user(request):
+        return RedirectResponse("/")
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request) -> JSONResponse:
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse(content={"error": "Invalid JSON body"}, status_code=400)
+
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    user = authenticate_user(username, password)
+    if not user:
+        log_audit("login_failed", actor=username,
+                  ip_address=request.client.host if request.client else None)
+        return JSONResponse(content={"error": "Invalid credentials"}, status_code=401)
+
+    login_user(request, user)
+    return JSONResponse(content={"status": "success", "username": user["username"], "role": user["role"]})
+
+
+@app.post("/api/auth/logout")
+async def auth_logout(request: Request) -> JSONResponse:
+    logout_user(request)
+    return JSONResponse(content={"status": "success"})
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request) -> JSONResponse:
+    user = session_user(request)
+    return JSONResponse(content={
+        "auth_enabled": settings.auth_enabled,
+        "authenticated": bool(user),
+        "username": user.get("username") if user else None,
+        "role": user.get("role") if user else None,
+    })
+
+
+@app.get("/healthz")
+async def healthz() -> JSONResponse:
+    """Liveness probe: the process is up and able to serve requests."""
+    return JSONResponse(content={"status": "ok"})
+
+
+@app.get("/readyz")
+async def readyz() -> JSONResponse:
+    """Readiness probe: database, model artifacts and weather data are usable."""
+    checks = {}
+
+    try:
+        conn = get_db_connection()
+        conn.execute("SELECT 1").fetchone()
+        conn.close()
+        checks["database"] = {"ok": True}
+    except Exception as e:
+        checks["database"] = {"ok": False, "error": str(e)}
+
+    model_path = os.path.join(_PROJECT_ROOT, "data/models/rf_model.pkl")
+    scaler_path = os.path.join(_PROJECT_ROOT, "data/models/scaler.pkl")
+    checks["model"] = {
+        "ok": os.path.exists(model_path),
+        "model_file": os.path.exists(model_path),
+        "scaler_file": os.path.exists(scaler_path),
+    }
+
+    try:
+        age_seconds = weather_age(get_latest_weather())
+        checks["weather"] = {
+            "ok": age_seconds is not None and age_seconds <= config_module.WEATHER_STALE_AFTER,
+            "age_seconds": round(age_seconds, 1) if age_seconds is not None else None,
+        }
+    except Exception as e:
+        checks["weather"] = {"ok": False, "error": str(e)}
+
+    ready = all(check.get("ok") for check in checks.values())
+    return JSONResponse(content={"status": "ready" if ready else "degraded", "checks": checks},
+                        status_code=200 if ready else 503)
+
+
+@app.get("/api/sensor-health")
+async def sensor_health(window_hours: int = 24) -> JSONResponse:
+    try:
+        expected = max(1, int(3600 / max(1, config_module.WATER_LEVEL_INTERVAL)))
+        return JSONResponse(content=get_sensor_health(window_hours=window_hours,
+                                                     expected_interval_seconds=expected))
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
 @app.get("/api/status")
 async def get_status() -> JSONResponse:
     """Get system status"""
@@ -107,6 +247,10 @@ async def get_status() -> JSONResponse:
         
         # Get system component status
         system_status = get_system_status()
+        
+        weather_age_seconds = weather_age(latest_weather)
+        weather_stale = latest_weather is None or weather_age_seconds is None \
+            or weather_age_seconds > config_module.WEATHER_STALE_AFTER
         
         # Build status response
         status = {
@@ -123,9 +267,11 @@ async def get_status() -> JSONResponse:
                 "message": "Module disabled" if not SMS_ENABLED else "Alert sending enabled"
             },
             "weather": {
-                "status": "ok" if latest_weather else "warning",
+                "status": "warning" if weather_stale else "ok",
                 "last_update": latest_weather['timestamp'] if latest_weather else None,
-                "message": "Data available" if latest_weather else "No weather data"
+                "age_seconds": round(weather_age_seconds, 1) if weather_age_seconds is not None else None,
+                "stale": weather_stale,
+                "message": weather_status_message(latest_weather, weather_age_seconds, weather_stale)
             },
             "model": {
                 "status": "ok" if latest_prediction else "warning",
@@ -163,6 +309,12 @@ async def get_weather(hours: int = 48) -> JSONResponse:
         if not weather_data:
             latest = get_latest_weather()
             if latest:
+                # Tag the fallback so the UI can flag that it is not a
+                # recent reading rather than presenting it as current
+                age_seconds = weather_age(latest)
+                latest['age_seconds'] = round(age_seconds, 1) if age_seconds is not None else None
+                latest['stale'] = (age_seconds is None
+                                   or age_seconds > config_module.WEATHER_STALE_AFTER)
                 weather_data = [latest]
         
         return JSONResponse(content=[dict(w) for w in weather_data])
@@ -189,7 +341,7 @@ async def get_prediction() -> JSONResponse:
                 predictor = FloodPredictor()
                 fresh_prediction = predictor.make_prediction()
             except Exception as pred_err:
-                print(f"Fresh prediction failed: {pred_err}")
+                logger.warning(f"Fresh prediction failed: {pred_err}")
 
             if fresh_prediction:
                 return JSONResponse(content={
@@ -324,11 +476,60 @@ async def get_forecast(days: int = 7) -> JSONResponse:
 
 
 @app.get("/api/alerts")
-async def get_alerts(limit: int = 50) -> JSONResponse:
-    """Get recent alerts"""
+async def get_alerts(limit: int = 50, risk_level: Optional[str] = None,
+                     status: Optional[str] = None, acknowledged: Optional[bool] = None,
+                     start: Optional[str] = None, end: Optional[str] = None) -> JSONResponse:
+    """Get alerts with optional risk-level, status, acknowledgement and date filters."""
     try:
-        alerts = get_recent_alerts(limit=limit)
+        start_dt = datetime.fromisoformat(start) if start else None
+        end_dt = datetime.fromisoformat(end) if end else None
+    except ValueError:
+        return JSONResponse(content={"error": "Invalid start/end date (expected ISO 8601)"}, status_code=400)
+
+    try:
+        alerts = get_alerts_filtered(
+            limit=limit, risk_level=risk_level, status=status,
+            acknowledged=acknowledged, start=start_dt, end=end_dt,
+        )
         return JSONResponse(content=[dict(a) for a in alerts])
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/alerts/stats")
+async def alert_stats() -> JSONResponse:
+    try:
+        return JSONResponse(content=get_alert_ack_stats())
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/alerts/{alert_id}")
+async def get_alert_by_id(alert_id: int) -> JSONResponse:
+    try:
+        alert = get_alert(alert_id)
+        if not alert:
+            raise HTTPException(status_code=404, detail="Alert not found")
+        return JSONResponse(content=alert)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.post("/api/alerts/{alert_id}/acknowledge")
+async def acknowledge_alert_endpoint(alert_id: int, request: Request) -> JSONResponse:
+    try:
+        user = session_user(request) or {"username": "anonymous"}
+        ok = acknowledge_alert(alert_id, actor=user.get("username", "anonymous"))
+        if not ok:
+            raise HTTPException(status_code=404, detail="Alert not found")
+        log_audit("alert_acknowledge", actor=user.get("username"), role=user.get("role"),
+                  target=str(alert_id), ip_address=request.client.host if request.client else None)
+        return JSONResponse(content={"status": "success", "alert_id": alert_id,
+                                     "acknowledged_by": user.get("username")})
+    except HTTPException:
+        raise
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -444,11 +645,15 @@ async def download_database() -> FileResponse:
 # ============================================================================
 
 @app.post("/api/refresh-prediction")
-async def refresh_prediction() -> JSONResponse:
+async def refresh_prediction(request: Request) -> JSONResponse:
     """Manually trigger a new prediction"""
     try:
         from src.model.predict import predict_and_alert
         prediction = predict_and_alert()
+
+        user = session_user(request) or {}
+        log_audit("refresh_prediction", actor=user.get("username"), role=user.get("role"),
+                  ip_address=request.client.host if request.client else None)
 
         if prediction:
             return JSONResponse(content={
@@ -463,17 +668,55 @@ async def refresh_prediction() -> JSONResponse:
 
 
 @app.post("/api/refresh-rainfall")
-async def refresh_rainfall() -> JSONResponse:
+async def refresh_rainfall(request: Request) -> JSONResponse:
     """Recompute daily rainfall totals from stored sensor readings"""
     try:
         result = rebuild_rainfall_daily()
+        user = session_user(request) or {}
+        log_audit("refresh_rainfall", actor=user.get("username"), role=user.get("role"),
+                  ip_address=request.client.host if request.client else None)
         return JSONResponse(content={"status": "success", **result})
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
 
+@app.post("/api/refresh-weather")
+async def refresh_weather(request: Request) -> JSONResponse:
+    """Refetch the weather + tidal forecast from Open-Meteo, bypassing the cache"""
+    try:
+        stored = refresh_weather_tide_cache()
+        user = session_user(request) or {}
+        log_audit("refresh_weather", actor=user.get("username"), role=user.get("role"),
+                  ip_address=request.client.host if request.client else None)
+
+        if not stored:
+            return JSONResponse(
+                content={"status": "error",
+                         "message": "Open-Meteo returned no forecast data (network or upstream failure)"},
+                status_code=502)
+
+        dates: list = []
+        latest = get_latest_weather()
+        if latest and latest.get("forecast_data"):
+            try:
+                parsed = json.loads(latest["forecast_data"])
+            except (json.JSONDecodeError, TypeError):
+                parsed = None
+            if isinstance(parsed, list):
+                dates = [d.get("date") for d in parsed if isinstance(d, dict) and d.get("date")]
+
+        return JSONResponse(content={
+            "status": "success",
+            "forecast_start": dates[0] if dates else None,
+            "forecast_end": dates[-1] if dates else None,
+            "forecast_days": len(dates),
+        })
+    except Exception as e:
+        return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
+
+
 @app.post("/api/test-alert")
-async def test_alert() -> JSONResponse:
+async def test_alert(request: Request) -> JSONResponse:
     """Test SMS alert system"""
     if not SMS_ENABLED:
         return JSONResponse(content={"status": "error", "message": "SMS module is disabled in config"}, status_code=400)
@@ -481,8 +724,11 @@ async def test_alert() -> JSONResponse:
     try:
         from src.data.sms_handler import test_alert_sms
         
-        # Send a test alert
         success = test_alert_sms()
+        user = session_user(request) or {}
+        log_audit("test_alert", actor=user.get("username"), role=user.get("role"),
+                  details="sent" if success else "failed",
+                  ip_address=request.client.host if request.client else None)
         
         if success:
             return JSONResponse(content={"status": "success", "message": "Test alert sent"})
@@ -528,7 +774,9 @@ async def create_contact(request: Request) -> JSONResponse:
             receive_warning=receive_warning,
             receive_critical=receive_critical
         )
-        
+        user = session_user(request) or {}
+        log_audit("contact_create", actor=user.get("username"), role=user.get("role"),
+                  target=name, ip_address=request.client.host if request.client else None)
         return JSONResponse(content={"status": "success", "contact_id": contact_id})
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
@@ -547,6 +795,10 @@ async def update_contact(contact_id: int, request: Request) -> JSONResponse:
         success = update_alert_contact(contact_id, **updates)
         
         if success:
+            user = session_user(request) or {}
+            log_audit("contact_update", actor=user.get("username"), role=user.get("role"),
+                      target=str(contact_id), details=",".join(updates.keys()),
+                      ip_address=request.client.host if request.client else None)
             return JSONResponse(content={"status": "success"})
         else:
             return JSONResponse(content={"error": "Contact not found"}, status_code=404)
@@ -555,12 +807,15 @@ async def update_contact(contact_id: int, request: Request) -> JSONResponse:
 
 
 @app.delete("/api/contacts/{contact_id}")
-async def delete_contact(contact_id: int) -> JSONResponse:
+async def delete_contact(contact_id: int, request: Request) -> JSONResponse:
     """Delete an alert contact"""
     try:
         success = delete_alert_contact(contact_id)
         
         if success:
+            user = session_user(request) or {}
+            log_audit("contact_delete", actor=user.get("username"), role=user.get("role"),
+                      target=str(contact_id), ip_address=request.client.host if request.client else None)
             return JSONResponse(content={"status": "success"})
         else:
             return JSONResponse(content={"error": "Contact not found"}, status_code=404)
@@ -607,21 +862,114 @@ async def get_config() -> JSONResponse:
 async def update_config(request: Request) -> JSONResponse:
     try:
         data = await request.json()
+        user = session_user(request) or {}
         ok, err = apply_config_dict(data)
         if ok:
+            log_audit("config_update", actor=user.get("username"), role=user.get("role"),
+                      target=",".join(sorted(data.keys())),
+                      ip_address=request.client.host if request.client else None)
             return JSONResponse(content={"status": "success"})
         return JSONResponse(content={"error": err}, status_code=400)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
-@app.get("/api/config/reset")
-async def reset_config() -> JSONResponse:
+@app.post("/api/config/reset")
+async def reset_config(request: Request) -> JSONResponse:
     try:
+        user = session_user(request) or {}
         ok, err = reset_to_defaults()
         if ok:
+            log_audit("config_reset", actor=user.get("username"), role=user.get("role"),
+                      target="all", ip_address=request.client.host if request.client else None)
             return JSONResponse(content={"status": "success"})
         return JSONResponse(content={"error": err}, status_code=500)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+# ============================================================================
+# USER MANAGEMENT API (admin only)
+# ============================================================================
+
+@app.get("/api/users")
+async def users_list(_: dict = Depends(require_admin)) -> JSONResponse:
+    try:
+        return JSONResponse(content=list_users())
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.post("/api/users")
+async def users_create(request: Request, user: dict = Depends(require_admin)) -> JSONResponse:
+    try:
+        data = await request.json()
+        username = (data.get("username") or "").strip()
+        password = data.get("password") or ""
+        role = data.get("role", "viewer")
+        if not username or not password:
+            return JSONResponse(content={"error": "username and password are required"}, status_code=400)
+        if role not in ("viewer", "admin"):
+            return JSONResponse(content={"error": "role must be 'viewer' or 'admin'"}, status_code=400)
+        if get_user_by_username(username):
+            return JSONResponse(content={"error": "username already exists"}, status_code=409)
+
+        user_id = insert_user(username, hash_password(password), role=role)
+        log_audit("user_create", actor=user.get("username"), role=user.get("role"),
+                  target=username, ip_address=request.client.host if request.client else None)
+        return JSONResponse(content={"status": "success", "user_id": user_id})
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.put("/api/users/{user_id}")
+async def users_update(user_id: int, request: Request, user: dict = Depends(require_admin)) -> JSONResponse:
+    try:
+        data = await request.json()
+        updates = {}
+        if "role" in data:
+            if data["role"] not in ("viewer", "admin"):
+                return JSONResponse(content={"error": "role must be 'viewer' or 'admin'"}, status_code=400)
+            updates["role"] = data["role"]
+        if "is_active" in data:
+            updates["is_active"] = 1 if data["is_active"] else 0
+        if "password" in data and data["password"]:
+            updates["password_hash"] = hash_password(data["password"])
+        if not updates:
+            return JSONResponse(content={"error": "No valid fields to update"}, status_code=400)
+
+        if not update_user(user_id, **updates):
+            raise HTTPException(status_code=404, detail="User not found")
+        log_audit("user_update", actor=user.get("username"), role=user.get("role"),
+                  target=str(user_id), details=",".join(updates.keys()),
+                  ip_address=request.client.host if request.client else None)
+        return JSONResponse(content={"status": "success"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.delete("/api/users/{user_id}")
+async def users_delete(user_id: int, request: Request, user: dict = Depends(require_admin)) -> JSONResponse:
+    try:
+        if user.get("user_id") == user_id:
+            return JSONResponse(content={"error": "Cannot delete your own account"}, status_code=400)
+        if not delete_user(user_id):
+            raise HTTPException(status_code=404, detail="User not found")
+        log_audit("user_delete", actor=user.get("username"), role=user.get("role"),
+                  target=str(user_id), ip_address=request.client.host if request.client else None)
+        return JSONResponse(content={"status": "success"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/audit")
+async def audit_log_list(limit: int = 100, _: dict = Depends(require_admin)) -> JSONResponse:
+    try:
+        return JSONResponse(content=get_audit_log(limit=limit))
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -637,13 +985,16 @@ def _restart_dashboard() -> None:
     try:
         os.execv(sys.executable, [sys.executable] + sys.argv)
     except Exception as e:
-        print(f"Restart failed, exiting for supervisor: {e}")
+        logger.error(f"Restart failed, exiting for supervisor: {e}")
         os._exit(0)
 
 
 @app.post("/api/restart")
-async def restart_server() -> JSONResponse:
+async def restart_server(request: Request) -> JSONResponse:
     try:
+        user = session_user(request) or {}
+        log_audit("restart", actor=user.get("username"), role=user.get("role"),
+                  ip_address=request.client.host if request.client else None)
         t = threading.Thread(target=_restart_dashboard, name="dashboard-restart", daemon=True)
         t.start()
         return JSONResponse(content={"status": "restarting"})
@@ -654,6 +1005,27 @@ async def restart_server() -> JSONResponse:
 # ============================================================================
 # MAIN
 # ============================================================================
+
+def weather_age(weather: Optional[Dict]) -> Optional[float]:
+    """Age in seconds of a weather record, or None if absent/unparseable."""
+    if not weather:
+        return None
+    try:
+        return (datetime.now() - datetime.fromisoformat(weather['timestamp'])).total_seconds()
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def weather_status_message(weather: Optional[Dict], age_seconds: Optional[float], stale: bool) -> str:
+    """Operator-facing description of the stored forecast's freshness."""
+    if not weather:
+        return "No weather data"
+    if age_seconds is None:
+        return "Unreadable weather timestamp"
+    if stale:
+        return f"Stale forecast ({age_seconds / 3600:.1f}h old)"
+    return "Data available"
+
 
 def refresh_weather_tide_cache() -> bool:
     """Fetch fresh weather + tide data from Open-Meteo and store it (DB + file cache)."""
@@ -667,9 +1039,14 @@ def refresh_weather_tide_cache() -> bool:
 def _background_scheduler() -> None:
     """Periodically refresh weather, run predictions (which auto-alerts),
     and record component status. Runs as a daemon thread so a failure in any
-    action never terminates the dashboard."""
-    last_weather_refresh = time.monotonic()
-    last_prediction = time.monotonic()
+    action never terminates the dashboard.
+
+    Both timers start already elapsed so the first pass refreshes immediately
+    rather than waiting a full interval; otherwise a process restarted more
+    often than the interval never refreshes at all.
+    """
+    last_weather_refresh = time.monotonic() - WEATHER_REFRESH_INTERVAL_SECONDS
+    last_prediction = time.monotonic() - PREDICTION_INTERVAL_SECONDS
 
     while True:
         try:
@@ -678,7 +1055,7 @@ def _background_scheduler() -> None:
             if now - last_weather_refresh >= WEATHER_REFRESH_INTERVAL_SECONDS:
                 try:
                     if not refresh_weather_tide_cache():
-                        print("Warning: scheduled weather refresh returned no data")
+                        logger.warning("Scheduled weather refresh returned no data")
                 except Exception as e:
                     update_system_status('weather', 'error', str(e))
                 last_weather_refresh = now
@@ -706,15 +1083,15 @@ def _background_scheduler() -> None:
             except Exception as e:
                 update_system_status('lora', 'error', str(e))
         except Exception as e:
-            print(f"Background scheduler error: {e}")
+            logger.error(f"Background scheduler error: {e}")
 
         time.sleep(60)
 
 
 def run_dashboard():
     """Run the FastAPI dashboard server"""
-    print(f"Starting River Monitor Dashboard on {DASHBOARD_HOST}:{DASHBOARD_PORT}")
-    print(f"Access the dashboard at: http://{DASHBOARD_HOST}:{DASHBOARD_PORT}")
+    logger.info(f"Starting River Monitor Dashboard on {DASHBOARD_HOST}:{DASHBOARD_PORT}")
+    logger.info(f"Access the dashboard at: http://{DASHBOARD_HOST}:{DASHBOARD_PORT}")
 
     # Run any pending schema migrations (idempotent: only adds missing
     # tables/columns from older DB versions). Must run before the
@@ -722,17 +1099,17 @@ def run_dashboard():
     try:
         migrate_database()
     except Exception as e:
-        print(f"Warning: Database migration failed at startup: {e}")
+        logger.warning(f"Database migration failed at startup: {e}")
 
-# Try to fetch and store fresh weather/tide data so the dashboard has
+    # Try to fetch and store fresh weather/tide data so the dashboard has
     # up-to-date readings even before the first sensor packet arrives.
     try:
         if refresh_weather_tide_cache():
-            print("Weather and tide data refreshed at startup")
+            logger.info("Weather and tide data refreshed at startup")
         else:
-            print("Warning: Could not refresh weather data at startup (using cached/last known)")
+            logger.warning("Could not refresh weather data at startup (using cached/last known)")
     except Exception as e:
-        print(f"Warning: Weather refresh at startup failed: {e}")
+        logger.warning(f"Weather refresh at startup failed: {e}")
 
     # Start the LoRa receiver loop in a background thread so sensor packets
     # are ingested and stored while the web dashboard keeps running.

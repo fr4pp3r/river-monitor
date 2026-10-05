@@ -7,7 +7,7 @@
     <meta name="description" content="Real-time river water level monitoring and flood risk prediction dashboard">
     <link rel="icon" href="data:,">
     <!-- ?v= forces a refetch for browsers that heuristically cached the old stylesheet -->
-    <link rel="stylesheet" href="/static/style.css?v=20260918b">
+    <link rel="stylesheet" href="/static/style.css?v=20261003c">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
@@ -125,8 +125,15 @@
     <div class="container">
         <!-- ==================== HEADER ==================== -->
         <header class="header">
-            <h1>River Water Level Monitor</h1>
-            <p class="subtitle">Real-time Flood Risk Prediction System</p>
+            <div class="header__titles">
+                <h1>River Water Level Monitor</h1>
+                <p class="subtitle">Real-time Flood Risk Prediction System</p>
+            </div>
+            <div class="header__auth" id="auth-user-area" style="display:none">
+                <span class="auth-user" id="auth-username"></span>
+                <span class="auth-role" id="auth-role"></span>
+                <button type="button" class="btn btn--secondary btn--sm" onclick="logout()">Logout</button>
+            </div>
         </header>
 
         <nav class="page-nav" aria-label="Main navigation">
@@ -141,6 +148,10 @@
             <button class="page-nav__btn" data-page="database" onclick="switchPage('database')">
                 <svg class="icon" style="width:18px;height:18px;"><use href="#i-database"/></svg>
                 Database
+            </button>
+            <button class="page-nav__btn" data-page="admin" id="nav-admin" style="display:none" onclick="switchPage('admin')">
+                <svg class="icon" style="width:18px;height:18px;"><use href="#i-users"/></svg>
+                Admin
             </button>
         </nav>
 
@@ -331,8 +342,12 @@
                 <header class="card__header">
                     <div>
                         <h2 class="card__title" id="weather-title">Current Weather &amp; Rainfall</h2>
-                        <p class="card__subtitle">Open-Meteo + rain gauge</p>
+                        <p class="card__subtitle">Open-Meteo + rain gauge<span id="weather-stale-note" hidden></span></p>
                     </div>
+                    <button type="button" onclick="refreshWeather()" class="btn btn--secondary btn--sm admin-only" id="weather-refresh-btn" style="display:none">
+                        <svg class="icon" style="width:14px;height:14px;"><use href="#i-refresh"/></svg>
+                        Refetch Forecast
+                    </button>
                 </header>
                 <div class="card__content">
                     <div class="weather-grid">
@@ -474,16 +489,61 @@
                 </div>
             </section>
 
+            <!-- ========== Sensor Health ========== -->
+            <section class="card card--span-6" aria-labelledby="sensor-health-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="sensor-health-title">Sensor Health</h2>
+                        <p class="card__subtitle">Data freshness and link reliability</p>
+                    </div>
+                    <span class="health-badge health-badge--unknown" id="health-badge">Unknown</span>
+                </header>
+                <div class="card__content">
+                    <div class="health-grid" id="health-grid">
+                        <p class="text-muted">Loading sensor health…</p>
+                    </div>
+                </div>
+            </section>
+
             <!-- ========== Recent Alerts ========== -->
             <section class="card alerts-card card--span-6" aria-labelledby="alerts-title">
                 <header class="card__header">
                     <div>
-                        <h2 class="card__title" id="alerts-title">Recent Alerts</h2>
-                        <p class="card__subtitle">Latest flood risk notifications</p>
+                        <h2 class="card__title" id="alerts-title">Alerts</h2>
+                        <p class="card__subtitle" id="alerts-stats">Latest flood risk notifications</p>
                     </div>
                     <svg class="icon" style="width:18px;height:18px;color:var(--color-text-muted);"><use href="#i-bell"/></svg>
                 </header>
                 <div class="card__content">
+                    <div class="alert-filters">
+                        <label class="alert-filter">
+                            <span>Risk</span>
+                            <select class="settings-input" id="alert-filter-risk" onchange="updateAlerts()">
+                                <option value="">All</option>
+                                <option value="receding">Receding</option>
+                                <option value="alert">Alert</option>
+                                <option value="alarm">Alarm</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </label>
+                        <label class="alert-filter">
+                            <span>Status</span>
+                            <select class="settings-input" id="alert-filter-ack" onchange="updateAlerts()">
+                                <option value="">All</option>
+                                <option value="false">Outstanding</option>
+                                <option value="true">Acknowledged</option>
+                            </select>
+                        </label>
+                        <label class="alert-filter">
+                            <span>From</span>
+                            <input type="date" class="settings-input" id="alert-filter-start" onchange="updateAlerts()">
+                        </label>
+                        <label class="alert-filter">
+                            <span>To</span>
+                            <input type="date" class="settings-input" id="alert-filter-end" onchange="updateAlerts()">
+                        </label>
+                        <button type="button" class="btn btn--secondary btn--sm" onclick="updateAlerts()">Refresh</button>
+                    </div>
                     <div class="alerts-list" id="alerts-list" aria-live="polite">
                         <p class="text-muted">Loading alerts…</p>
                     </div>
@@ -824,10 +884,13 @@
             </section>
 
             <div class="settings-actions">
-                <button onclick="resetSettings()" class="btn btn--danger">Reset to Defaults</button>
-                <button onclick="restartServer()" class="btn btn--secondary">Restart Server</button>
-                <button onclick="saveSettings()" class="btn btn--primary">Save Settings</button>
+                <button onclick="resetSettings()" id="settings-reset-btn" class="btn btn--danger admin-only" style="display:none">Reset to Defaults</button>
+                <button onclick="restartServer()" id="settings-restart-btn" class="btn btn--secondary admin-only" style="display:none">Restart Server</button>
+                <button onclick="saveSettings()" id="settings-save-btn" class="btn btn--primary admin-only" style="display:none">Save Settings</button>
             </div>
+            <p class="settings-readonly-note admin-only-reverse" id="settings-readonly-note" style="display:none">
+                You are signed in as a viewer. Settings are read-only.
+            </p>
         </div><!-- /page-settings -->
 
         <!-- ==================== DATABASE ==================== -->
@@ -858,6 +921,62 @@
                 </div>
             </section>
         </div><!-- /page-database -->
+
+        <!-- ==================== ADMIN PAGE ==================== -->
+        <div id="page-admin" style="display:none">
+            <section class="card settings-card" aria-labelledby="users-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="users-title">Users</h2>
+                        <p class="card__subtitle">Manage dashboard accounts and roles</p>
+                    </div>
+                    <button onclick="loadUsers()" class="btn btn--secondary">Refresh</button>
+                </header>
+                <div class="card__content">
+                    <div class="user-create">
+                        <input type="text" class="settings-input" id="user-new-username" placeholder="Username" autocomplete="off">
+                        <input type="password" class="settings-input" id="user-new-password" placeholder="Password" autocomplete="new-password">
+                        <select class="settings-input" id="user-new-role">
+                            <option value="viewer">Viewer</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <button type="button" class="btn btn--primary" onclick="createUser()">Add User</button>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr><th>Username</th><th>Role</th><th>Active</th><th>Last Login</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody id="users-tbody">
+                                <tr><td colspan="5" class="text-muted">Loading users…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card settings-card" aria-labelledby="audit-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="audit-title">Audit Log</h2>
+                        <p class="card__subtitle">Most recent 100 recorded actions</p>
+                    </div>
+                    <button onclick="loadAudit()" class="btn btn--secondary">Refresh</button>
+                </header>
+                <div class="card__content">
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr><th>Time</th><th>Actor</th><th>Role</th><th>Action</th><th>Target</th><th>Details</th><th>IP</th></tr>
+                            </thead>
+                            <tbody id="audit-tbody">
+                                <tr><td colspan="7" class="text-muted">Loading audit log…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div><!-- /page-admin -->
 
         </main>
 
@@ -925,6 +1044,9 @@
         // =====================================================================
         let waterLevelChart = null;
         let forecastChart = null;
+        let currentUser = { authenticated: false, auth_enabled: true, username: null, role: null };
+        let _usersById = {};
+        function isAdmin() { return currentUser.role === 'admin' || currentUser.auth_enabled === false; }
 
         // Risk metadata: colors + CSS classes, keyed by lowercase name
         const RISK_META = {
@@ -952,6 +1074,23 @@
         // UTILITIES
         // =====================================================================
         function $(id) { return document.getElementById(id); }
+
+        async function apiFetch(url, options = {}) {
+            const opts = Object.assign({}, options);
+            if (opts.body && !opts.headers) opts.headers = { 'Content-Type': 'application/json' };
+            const resp = await fetch(url, opts);
+            if (resp.status === 401 && currentUser.auth_enabled) {
+                window.location = '/login';
+                throw new Error('Authentication required');
+            }
+            const text = await resp.text();
+            let data = null;
+            try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+            if (!resp.ok) {
+                throw new Error((data && data.error) || (data && data.detail) || ('HTTP ' + resp.status));
+            }
+            return data;
+        }
 
         function applyRiskThresholds(cfg) {
             const critical = cfg.critical_level_m;
@@ -1266,6 +1405,17 @@
                     setValue('current-pressure', (latest.pressure_hpa || 0).toFixed(1));
                     setValue('current-temp', (latest.temperature_c || 0).toFixed(1));
                     setValue('current-humidity', (latest.humidity_percent || 0).toFixed(0));
+
+                    const staleNote = document.getElementById('weather-stale-note');
+                    if (latest.stale) {
+                        const hours = latest.age_seconds != null ? (latest.age_seconds / 3600).toFixed(1) : '?';
+                        staleNote.textContent = ` — stale, last fetch ${hours}h ago`;
+                        staleNote.className = 'system-status system-status--warning';
+                        staleNote.hidden = false;
+                    } else if (!staleNote.hidden) {
+                        staleNote.textContent = '';
+                        staleNote.hidden = true;
+                    }
                 } else {
                     setValue('current-precip', '—');
                     setValue('current-pressure', '—');
@@ -1324,19 +1474,40 @@
         // ALERTS
         // =====================================================================
         async function updateAlerts() {
+            const list = $('alerts-list');
             try {
-                const response = await fetch('/api/alerts?limit=10');
-                const alerts = await response.json();
-                const list = $('alerts-list');
+                const params = new URLSearchParams({ limit: '50' });
+                const risk = $('alert-filter-risk').value;
+                const ack = $('alert-filter-ack').value;
+                const start = $('alert-filter-start').value;
+                const end = $('alert-filter-end').value;
+                if (risk) params.set('risk_level', risk);
+                if (ack) params.set('acknowledged', ack);
+                if (start) params.set('start', start);
+                if (end) params.set('end', end + 'T23:59:59');
+
+                const [alerts, stats] = await Promise.all([
+                    apiFetch('/api/alerts?' + params.toString()),
+                    apiFetch('/api/alerts/stats').catch(() => null)
+                ]);
+
+                if (stats) {
+                    $('alerts-stats').textContent =
+                        `${stats.outstanding} outstanding · ${stats.acknowledged} acknowledged · ${stats.total} total`;
+                }
 
                 if (!alerts.length) {
-                    list.innerHTML = '<div class="alert-empty">No recent alerts</div>';
+                    list.innerHTML = '<div class="alert-empty">No alerts match these filters</div>';
                     return;
                 }
 
                 list.innerHTML = alerts.map(alert => {
                     const meta = riskMeta(alert.risk_level);
                     const cls = `alert-risk alert-risk--${String(alert.risk_level || '').toLowerCase()}`;
+                    const acked = Number(alert.acknowledged) === 1;
+                    const ackLine = acked
+                        ? `<span class="alert-ack">Acknowledged by ${escapeHtml(alert.acknowledged_by || 'unknown')}</span>`
+                        : (isAdmin() ? `<button type="button" class="btn btn--secondary btn--sm" onclick="acknowledgeAlert(${alert.id})">Acknowledge</button>` : '');
                     return `
                         <div class="alert-item" style="border-left-color: ${meta.color}">
                             <div class="alert-header">
@@ -1347,11 +1518,24 @@
                             <div class="alert-meta">
                                 <span>Water: ${Number(alert.water_level_m).toFixed(2)} m</span>
                                 <span>Status: ${escapeHtml(alert.status)}</span>
+                                ${acked ? '<span class="alert-acked-tag">Acknowledged</span>' : '<span class="alert-outstanding-tag">Outstanding</span>'}
                             </div>
+                            <div class="alert-actions">${ackLine}</div>
                         </div>`;
                 }).join('');
             } catch (error) {
                 console.error('Error updating alerts:', error);
+                list.innerHTML = '<div class="alert-empty">Failed to load alerts</div>';
+            }
+        }
+
+        async function acknowledgeAlert(id) {
+            try {
+                await apiFetch('/api/alerts/' + id + '/acknowledge', { method: 'POST' });
+                showToast('Alert acknowledged', '', 'success');
+                updateAlerts();
+            } catch (e) {
+                showToast('Error', e.message, 'error');
             }
         }
 
@@ -1717,6 +1901,29 @@
             }
         }
 
+        async function refreshWeather() {
+            const btn = $('weather-refresh-btn');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+            try {
+                const response = await fetch('/api/refresh-weather', { method: 'POST' });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const window = result.forecast_start
+                        ? ` ${result.forecast_start} to ${result.forecast_end} (${result.forecast_days} days).`
+                        : ' Forecast window stored.';
+                    showToast('Forecast Refetched', `Weather and tide data updated from Open-Meteo.${window}`, 'success');
+                    refreshAll();
+                } else {
+                    showToast('Refetch Failed', result.message || result.error || 'Could not refetch weather and tide data.', 'danger');
+                }
+            } catch (error) {
+                console.error('Error refetching forecast:', error);
+                showToast('Refetch Failed', 'Network error while refetching weather and tide data.', 'danger');
+            } finally {
+                if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+            }
+        }
+
         // =====================================================================
         // CONTACTS
         // =====================================================================
@@ -1880,17 +2087,199 @@
         });
 
         // =====================================================================
+        // AUTH
+        // =====================================================================
+        async function initAuth() {
+            try {
+                currentUser = await apiFetch('/api/auth/me');
+            } catch (e) {
+                currentUser = { authenticated: false, auth_enabled: true, username: null, role: null };
+            }
+            applyAuthUi();
+        }
+
+        function applyAuthUi() {
+            const area = $('auth-user-area');
+            if (currentUser.authenticated) {
+                area.style.display = '';
+                $('auth-username').textContent = currentUser.username || '';
+                $('auth-role').textContent = currentUser.role || '';
+                $('auth-role').className = 'auth-role auth-role--' + (currentUser.role || 'viewer');
+            } else {
+                area.style.display = 'none';
+            }
+            const admin = isAdmin();
+            $('nav-admin').style.display = admin ? '' : 'none';
+            document.querySelectorAll('.admin-only').forEach(el => { el.style.display = admin ? '' : 'none'; });
+            const note = $('settings-readonly-note');
+            if (note) note.style.display = admin ? 'none' : '';
+        }
+
+        async function logout() {
+            try { await apiFetch('/api/auth/logout', { method: 'POST' }); } catch (e) { console.warn('logout failed', e); }
+            window.location = '/login';
+        }
+
+        // =====================================================================
+        // SENSOR HEALTH
+        // =====================================================================
+        async function updateSensorHealth() {
+            const grid = $('health-grid');
+            const badge = $('health-badge');
+            try {
+                const h = await apiFetch('/api/sensor-health?window_hours=24');
+                const state = h.state || 'unknown';
+                const labels = { online: 'Online', stale: 'Stale', offline: 'Offline', unknown: 'No Data' };
+                badge.textContent = labels[state] || 'Unknown';
+                badge.className = 'health-badge health-badge--' + state;
+                const lastSeen = h.last_seen ? timeAgo(h.last_seen) : 'never';
+                const loss = Number(h.loss_percent_last_hour || 0);
+                const lossClass = loss >= 50 ? 'health-value--danger' : (loss >= 20 ? 'health-value--warn' : 'health-value--ok');
+                grid.innerHTML = `
+                    <div class="health-item"><span class="health-label">Last reading</span><span class="health-value">${escapeHtml(lastSeen)}</span></div>
+                    <div class="health-item"><span class="health-label">Readings / hour</span><span class="health-value ${lossClass}">${h.readings_last_hour} / ${h.expected_last_hour}</span></div>
+                    <div class="health-item"><span class="health-label">Packet loss</span><span class="health-value ${lossClass}">${loss}%</span></div>
+                    <div class="health-item"><span class="health-label">Largest gap</span><span class="health-value">${h.max_gap_minutes} min</span></div>
+                    <div class="health-item"><span class="health-label">Water level</span><span class="health-value">${h.latest_water_level_m == null ? '&mdash;' : Number(h.latest_water_level_m).toFixed(2) + ' m'}</span></div>
+                    <div class="health-item"><span class="health-label">Rainfall</span><span class="health-value">${h.latest_rainfall_mm == null ? '&mdash;' : Number(h.latest_rainfall_mm).toFixed(1) + ' mm'}</span></div>
+                    <div class="health-item"><span class="health-label">Source</span><span class="health-value">${escapeHtml(h.source || '—')}</span></div>
+                    <div class="health-item"><span class="health-label">Window</span><span class="health-value">${h.window_hours} h</span></div>`;
+            } catch (e) {
+                badge.textContent = 'No Data';
+                badge.className = 'health-badge health-badge--unknown';
+                grid.innerHTML = '<p class="text-muted">Sensor health unavailable</p>';
+            }
+        }
+
+        // =====================================================================
+        // ADMIN
+        // =====================================================================
+        async function loadAdmin() {
+            if (!isAdmin()) return;
+            await Promise.all([loadUsers(), loadAudit()]);
+        }
+
+        async function loadUsers() {
+            const tbody = $('users-tbody');
+            try {
+                const users = await apiFetch('/api/users');
+                _usersById = {};
+                users.forEach(u => { _usersById[u.id] = u; });
+                if (!users.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No users</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = users.map(u => {
+                    const self = currentUser.username === u.username;
+                    return `
+                    <tr>
+                        <td>${escapeHtml(u.username)}${self ? ' <span class="admin-self">you</span>' : ''}</td>
+                        <td>
+                            <select class="settings-input" onchange="changeUserRole(${u.id}, this.value)" ${self ? 'disabled' : ''}>
+                                <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+                                <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            </select>
+                        </td>
+                        <td><input type="checkbox" ${u.is_active ? 'checked' : ''} onchange="toggleUserActive(${u.id}, this.checked)" ${self ? 'disabled' : ''}></td>
+                        <td>${u.last_login ? timeAgo(u.last_login) : '—'}</td>
+                        <td class="admin-actions">
+                            <button type="button" class="btn btn--secondary btn--sm" onclick="resetUserPassword(${u.id})">Reset Password</button>
+                            <button type="button" class="btn btn--danger btn--sm" onclick="deleteUser(${u.id})" ${self ? 'disabled' : ''}>Delete</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-muted">${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        async function createUser() {
+            const username = $('user-new-username').value.trim();
+            const password = $('user-new-password').value;
+            const role = $('user-new-role').value;
+            if (!username || !password) { showToast('Error', 'Username and password are required', 'error'); return; }
+            try {
+                await apiFetch('/api/users', { method: 'POST', body: JSON.stringify({ username, password, role }) });
+                $('user-new-username').value = '';
+                $('user-new-password').value = '';
+                showToast('User created', username, 'success');
+                loadUsers();
+            } catch (e) { showToast('Error', e.message, 'error'); }
+        }
+
+        async function changeUserRole(id, role) {
+            try {
+                await apiFetch('/api/users/' + id, { method: 'PUT', body: JSON.stringify({ role }) });
+                showToast('Role updated', '', 'success');
+                loadUsers();
+            } catch (e) { showToast('Error', e.message, 'error'); }
+        }
+
+        async function toggleUserActive(id, active) {
+            try {
+                await apiFetch('/api/users/' + id, { method: 'PUT', body: JSON.stringify({ is_active: active }) });
+                showToast('User updated', '', 'success');
+                loadUsers();
+            } catch (e) { showToast('Error', e.message, 'error'); }
+        }
+
+        async function resetUserPassword(id) {
+            const u = _usersById[id];
+            const pw = prompt('New password for ' + (u ? u.username : 'user') + ':');
+            if (!pw) return;
+            try {
+                await apiFetch('/api/users/' + id, { method: 'PUT', body: JSON.stringify({ password: pw }) });
+                showToast('Password reset', '', 'success');
+            } catch (e) { showToast('Error', e.message, 'error'); }
+        }
+
+        async function deleteUser(id) {
+            const u = _usersById[id];
+            if (!confirm('Delete user ' + (u ? u.username : id) + '?')) return;
+            try {
+                await apiFetch('/api/users/' + id, { method: 'DELETE' });
+                showToast('User deleted', '', 'success');
+                loadUsers();
+            } catch (e) { showToast('Error', e.message, 'error'); }
+        }
+
+        async function loadAudit() {
+            const tbody = $('audit-tbody');
+            try {
+                const rows = await apiFetch('/api/audit?limit=100');
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-muted">No audit entries</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(r => `
+                    <tr>
+                        <td>${formatTimestamp(r.timestamp)}</td>
+                        <td>${escapeHtml(r.actor || '—')}</td>
+                        <td>${escapeHtml(r.role || '—')}</td>
+                        <td>${escapeHtml(r.action)}</td>
+                        <td>${escapeHtml(r.target || '—')}</td>
+                        <td>${escapeHtml(r.details || '—')}</td>
+                        <td>${escapeHtml(r.ip_address || '—')}</td>
+                    </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-muted">${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        // =====================================================================
         // PAGE NAVIGATION
         // =====================================================================
         function switchPage(page) {
             document.getElementById('page-dashboard').style.display = page === 'dashboard' ? '' : 'none';
             document.getElementById('page-settings').style.display = page === 'settings' ? '' : 'none';
             document.getElementById('page-database').style.display = page === 'database' ? '' : 'none';
+            document.getElementById('page-admin').style.display = page === 'admin' ? '' : 'none';
             document.querySelectorAll('.page-nav__btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.page === page);
             });
             if (page === 'database') loadDatabase();
             if (page === 'settings') loadSettings();
+            if (page === 'admin') loadAdmin();
         }
 
         // =====================================================================
@@ -2111,16 +2500,11 @@
         async function resetSettings() {
             if (!confirm('Reset all settings to defaults? This cannot be undone.')) return;
             try {
-                const resp = await fetch('/api/config/reset');
-                const result = await resp.json();
-                if (resp.ok) {
-                    showToast('Settings Reset', 'All settings restored to defaults.', 'success');
-                    loadSettings();
-                } else {
-                    showToast('Error', result.error || 'Failed to reset settings', 'error');
-                }
+                await apiFetch('/api/config/reset', { method: 'POST' });
+                showToast('Settings Reset', 'All settings restored to defaults.', 'success');
+                loadSettings();
             } catch (e) {
-                showToast('Error', 'Failed to reset settings', 'error');
+                showToast('Error', e.message || 'Failed to reset settings', 'error');
             }
         }
 
@@ -2145,6 +2529,7 @@
                 updateWeatherData(),
                 updateSystemStatus(),
                 updateAlerts(),
+                updateSensorHealth(),
                 updateFuzzyDetails(),
                 updateContacts(),
                 updateWaterLevelChart(),
@@ -2161,6 +2546,7 @@
         // =====================================================================
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme();
+            await initAuth();
             await loadRiskThresholds();
             refreshAll();
         });

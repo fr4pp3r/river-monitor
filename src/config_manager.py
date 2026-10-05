@@ -178,22 +178,38 @@ def get_config_dict():
     return data
 
 
-def apply_config_dict(data):
-    """
-    Apply a dict of config values to module globals and persist to JSON.
+_SEQUENCE_RULES = {
+    "wl_thresholds": ("low_max", "medium_min", "medium_max", "high_min", "high_max", "very_high_min"),
+    "frain_thresholds": ("none_max", "light_min", "light_max", "moderate_min", "moderate_max", "heavy_min"),
+    "ror_thresholds": ("negative_max", "near_zero_min", "near_zero_max", "moderate_min", "moderate_max", "rapid_min"),
+    "tide_thresholds": ("low_max", "mid_min", "mid_max", "high_min", "high_max", "extreme_min"),
+    "risk_thresholds": ("normal", "alert", "alarm", "critical"),
+}
 
-    Returns (True, None) on success or (False, error_message) on failure.
+
+def _merged_thresholds(cfg, json_key, attr_name, incoming):
+    current = getattr(cfg, attr_name, None)
+    merged = dict(current) if isinstance(current, dict) else {}
+    if isinstance(incoming, dict):
+        merged.update(incoming)
+    return merged
+
+
+def validate_config_dict(data):
+    """
+    Validate a partial config update against the current config.
+
+    Returns (True, None) when the resulting configuration is coherent, or
+    (False, message) when a threshold ordering or range would be inverted.
     """
     import src.config as cfg
 
-    # --- Validate ---
     for json_key, expected in _TYPE_MAP.items():
         if json_key in data:
             val = data[json_key]
             if val is not None and not isinstance(val, expected):
                 return False, f"{json_key}: expected {expected}, got {type(val).__name__}"
 
-    # Range checks
     port = data.get("dashboard_port")
     if port is not None and (not isinstance(port, int) or port < 1 or port > 65535):
         return False, "dashboard_port must be between 1 and 65535"
@@ -205,6 +221,51 @@ def apply_config_dict(data):
     lon = data.get("weather_longitude")
     if lon is not None and (lon < -180 or lon > 180):
         return False, "weather_longitude must be between -180 and 180"
+
+    critical = data.get("critical_level_m")
+    if critical is not None and critical <= 0:
+        return False, "critical_level_m must be greater than 0"
+
+    for json_key, attr_name in _NESTED_SCHEMA.items():
+        if json_key not in data or not isinstance(data[json_key], dict):
+            continue
+        merged = _merged_thresholds(cfg, json_key, attr_name, data[json_key])
+        rule = _SEQUENCE_RULES.get(json_key)
+        if not rule:
+            continue
+        values = []
+        for key in rule:
+            if key not in merged:
+                continue
+            try:
+                values.append((key, float(merged[key])))
+            except (TypeError, ValueError):
+                return False, f"{json_key}.{key} must be numeric"
+        for (k1, v1), (k2, v2) in zip(values, values[1:]):
+            if v1 > v2:
+                return False, f"{json_key}: {k1} ({v1}) must not exceed {k2} ({v2})"
+
+    levels = data.get("sms_alert_risk_levels")
+    if levels is not None:
+        allowed = {"receding", "alert", "alarm", "critical"}
+        invalid = [x for x in levels if str(x).strip().lower() not in allowed]
+        if invalid:
+            return False, f"sms_alert_risk_levels contains invalid values: {invalid}"
+
+    return True, None
+
+
+def apply_config_dict(data):
+    """
+    Apply a dict of config values to module globals and persist to JSON.
+
+    Returns (True, None) on success or (False, error_message) on failure.
+    """
+    import src.config as cfg
+
+    ok, err = validate_config_dict(data)
+    if not ok:
+        return False, err
 
     # --- Apply ---
     with _lock:

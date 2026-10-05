@@ -130,7 +130,38 @@ def init_database():
                 water_level_m REAL NOT NULL,
                 message TEXT NOT NULL,
                 sent_to TEXT,  -- Comma-separated phone numbers
-                status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed'))
+                status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed')),
+                acknowledged INTEGER DEFAULT 0,
+                acknowledged_by TEXT,
+                acknowledged_at DATETIME
+            )
+        """)
+
+        # Users table (dashboard authentication + roles)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('viewer', 'admin')),
+                is_active INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT (datetime('now', '+8 hours')),
+                updated_at DATETIME DEFAULT (datetime('now', '+8 hours')),
+                last_login DATETIME
+            )
+        """)
+
+        # Audit log table (who did what, when)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME NOT NULL,
+                actor TEXT,
+                role TEXT,
+                action TEXT NOT NULL,
+                target TEXT,
+                details TEXT,
+                ip_address TEXT
             )
         """)
         
@@ -291,8 +322,12 @@ def insert_weather_data(timestamp: datetime, data: Dict) -> int:
         return cursor.lastrowid
 
 
-def get_latest_weather() -> Optional[Dict]:
-    """Get the most recent weather data"""
+def get_latest_weather(max_age_seconds: Optional[float] = None) -> Optional[Dict]:
+    """Get the most recent weather data.
+
+    Pass max_age_seconds to treat rows older than that as absent, so a caller
+    never silently consumes an expired forecast.
+    """
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -301,7 +336,18 @@ def get_latest_weather() -> Optional[Dict]:
             LIMIT 1
         """)
         row = cursor.fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+
+        record = dict(row)
+        if max_age_seconds is None:
+            return record
+
+        try:
+            age_seconds = (datetime.now() - datetime.fromisoformat(record['timestamp'])).total_seconds()
+        except (KeyError, TypeError, ValueError):
+            return None
+        return record if age_seconds <= max_age_seconds else None
 
 
 def get_weather_since(hours: int = 48) -> List[Dict]:
@@ -419,6 +465,282 @@ def get_recent_alerts(limit: int = 50) -> List[Dict]:
             LIMIT ?
         """, (limit,))
         return [dict(row) for row in cursor.fetchall()]
+
+
+def get_alerts_filtered(limit: int = 50, risk_level: Optional[str] = None,
+                        status: Optional[str] = None, acknowledged: Optional[bool] = None,
+                        start: Optional[datetime] = None, end: Optional[datetime] = None) -> List[Dict]:
+    """Get alerts with optional filters for risk level, send status, ack state and date range."""
+    clauses = []
+    params: List = []
+
+    if risk_level:
+        clauses.append("LOWER(risk_level) = ?")
+        params.append(risk_level.strip().lower())
+    if status:
+        clauses.append("status = ?")
+        params.append(status.strip().lower())
+    if acknowledged is not None:
+        clauses.append("COALESCE(acknowledged, 0) = ?")
+        params.append(1 if acknowledged else 0)
+    if start is not None:
+        clauses.append("timestamp >= ?")
+        params.append(start.isoformat())
+    if end is not None:
+        clauses.append("timestamp <= ?")
+        params.append(end.isoformat())
+
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    params.append(max(1, min(limit, 500)))
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT * FROM alerts
+            {where}
+            ORDER BY timestamp DESC
+            LIMIT ?
+        """, params)
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_alert(alert_id: int) -> Optional[Dict]:
+    """Get a single alert by ID"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM alerts WHERE id = ?", (alert_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def acknowledge_alert(alert_id: int, actor: str) -> bool:
+    """Mark an alert acknowledged by the given operator."""
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE alerts
+            SET acknowledged = 1, acknowledged_by = ?, acknowledged_at = ?
+            WHERE id = ?
+        """, (actor, datetime.now().isoformat(), alert_id))
+        return cursor.rowcount > 0
+
+
+def get_alert_ack_stats() -> Dict:
+    """Counts of acknowledged vs outstanding alerts"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN COALESCE(acknowledged, 0) = 1 THEN 1 ELSE 0 END) AS acknowledged,
+                SUM(CASE WHEN COALESCE(acknowledged, 0) = 0 THEN 1 ELSE 0 END) AS outstanding
+            FROM alerts
+        """)
+        row = cursor.fetchone()
+        stats = dict(row) if row else {}
+        stats['total'] = stats.get('total') or 0
+        stats['acknowledged'] = stats.get('acknowledged') or 0
+        stats['outstanding'] = stats.get('outstanding') or 0
+        return stats
+
+
+# ============================================================================
+# USER OPERATIONS (dashboard authentication)
+# ============================================================================
+
+def count_users() -> int:
+    """Number of dashboard users"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users")
+        return cursor.fetchone()[0]
+
+
+def insert_user(username: str, password_hash: str, role: str = "viewer") -> int:
+    """Insert a new dashboard user"""
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO users (username, password_hash, role, is_active)
+            VALUES (?, ?, ?, 1)
+        """, (username, password_hash, role))
+        return cursor.lastrowid
+
+
+def get_user_by_username(username: str) -> Optional[Dict]:
+    """Get a user by username (includes password_hash for auth checks)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def get_user(user_id: int) -> Optional[Dict]:
+    """Get a user by ID (password_hash removed for safe exposure)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        user = dict(row)
+        user.pop('password_hash', None)
+        return user
+
+
+def list_users() -> List[Dict]:
+    """List all dashboard users without password hashes"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, username, role, is_active, created_at, updated_at, last_login
+            FROM users ORDER BY username
+        """)
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def update_user(user_id: int, **kwargs) -> bool:
+    """Update a user's role, active flag or password hash"""
+    allowed_fields = ['username', 'role', 'is_active', 'password_hash', 'last_login']
+    updates = {k: v for k, v in kwargs.items() if k in allowed_fields}
+    if not updates:
+        return False
+    updates['updated_at'] = datetime.now().isoformat()
+
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        set_clause = ', '.join([f"{k} = ?" for k in updates.keys()])
+        values = list(updates.values()) + [user_id]
+        cursor.execute(f"UPDATE users SET {set_clause} WHERE id = ?", values)
+        return cursor.rowcount > 0
+
+
+def delete_user(user_id: int) -> bool:
+    """Delete a dashboard user"""
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        return cursor.rowcount > 0
+
+
+# ============================================================================
+# AUDIT LOG OPERATIONS
+# ============================================================================
+
+def log_audit(action: str, actor: Optional[str] = None, role: Optional[str] = None,
+              target: Optional[str] = None, details: Optional[str] = None,
+              ip_address: Optional[str] = None) -> int:
+    """Record a user/system action for accountability"""
+    with db_transaction() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO audit_log (timestamp, actor, role, action, target, details, ip_address)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (datetime.now().isoformat(), actor, role, action, target, details, ip_address))
+        return cursor.lastrowid
+
+
+def get_audit_log(limit: int = 100) -> List[Dict]:
+    """Get the most recent audit log entries"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?
+        """, (max(1, min(limit, 500)),))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+# ============================================================================
+# SENSOR HEALTH
+# ============================================================================
+
+def get_sensor_health(window_hours: int = 24, expected_interval_seconds: int = 60) -> Dict:
+    """Summarise sensor link health: freshness, throughput and gaps.
+
+    Computes how old the newest reading is, how many readings arrived in the
+    last hour versus how many were expected at the configured cadence, and the
+    largest gap between consecutive readings over the window. This lets the
+    dashboard distinguish "no data yet" from "sensor dropped out mid-storm".
+    """
+    now = datetime.now()
+    since = now - timedelta(hours=window_hours)
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT timestamp, water_level_m, rainfall_mm, source
+            FROM sensor_data
+            WHERE timestamp >= ?
+            ORDER BY timestamp ASC
+        """, (since.isoformat(),))
+        rows = cursor.fetchall()
+
+    readings = [dict(r) for r in rows]
+    latest = readings[-1] if readings else None
+
+    age_seconds = None
+    if latest:
+        try:
+            age_seconds = max(0.0, (now - datetime.fromisoformat(latest['timestamp'])).total_seconds())
+        except (ValueError, TypeError):
+            age_seconds = None
+
+    cutoff_hour = now - timedelta(hours=1)
+    last_hour = [
+        r for r in readings
+        if _parse_ts(r['timestamp']) is not None and _parse_ts(r['timestamp']) >= cutoff_hour
+    ]
+
+    expected_last_hour = max(1, int(3600 / expected_interval_seconds)) if expected_interval_seconds else 60
+    received_last_hour = len(last_hour)
+    loss_percent = round(max(0.0, 1.0 - (received_last_hour / expected_last_hour)) * 100.0, 1)
+
+    max_gap_seconds = 0.0
+    prev = None
+    for r in readings:
+        ts = _parse_ts(r['timestamp'])
+        if ts is None:
+            continue
+        if prev is not None:
+            max_gap_seconds = max(max_gap_seconds, (ts - prev).total_seconds())
+        prev = ts
+
+    if age_seconds is None:
+        state = "unknown"
+    elif age_seconds <= expected_interval_seconds * 3:
+        state = "online"
+    elif age_seconds <= expected_interval_seconds * 10:
+        state = "stale"
+    else:
+        state = "offline"
+
+    return {
+        "state": state,
+        "last_seen": latest['timestamp'] if latest else None,
+        "age_seconds": round(age_seconds, 1) if age_seconds is not None else None,
+        "source": latest.get('source') if latest else None,
+        "latest_water_level_m": latest.get('water_level_m') if latest else None,
+        "latest_rainfall_mm": latest.get('rainfall_mm') if latest else None,
+        "window_hours": window_hours,
+        "readings_in_window": len(readings),
+        "readings_last_hour": received_last_hour,
+        "expected_last_hour": expected_last_hour,
+        "loss_percent_last_hour": loss_percent,
+        "max_gap_seconds": round(max_gap_seconds, 1),
+        "max_gap_minutes": round(max_gap_seconds / 60.0, 1),
+        "expected_interval_seconds": expected_interval_seconds,
+    }
+
+
+def _parse_ts(value) -> Optional[datetime]:
+    """Parse a stored ISO timestamp, returning None when malformed"""
+    if value is None:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
 
 
 # ============================================================================
@@ -907,6 +1229,45 @@ def migrate_database():
                 print(f"Adding column {col} to weather_data")
                 cursor.execute(f"ALTER TABLE weather_data ADD COLUMN {col} {col_type}")
         
+        # Check and add acknowledgement columns to alerts (pre-ack databases)
+        cursor.execute("PRAGMA table_info(alerts)")
+        alert_columns = [row[1] for row in cursor.fetchall()]
+        new_alert_columns = {
+            'acknowledged': 'INTEGER DEFAULT 0',
+            'acknowledged_by': 'TEXT',
+            'acknowledged_at': 'DATETIME'
+        }
+        for col, col_type in new_alert_columns.items():
+            if col not in alert_columns:
+                print(f"Adding column {col} to alerts")
+                cursor.execute(f"ALTER TABLE alerts ADD COLUMN {col} {col_type}")
+
+        # Ensure users and audit_log exist (for DBs created pre-auth)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('viewer', 'admin')),
+                is_active INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT (datetime('now', '+8 hours')),
+                updated_at DATETIME DEFAULT (datetime('now', '+8 hours')),
+                last_login DATETIME
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME NOT NULL,
+                actor TEXT,
+                role TEXT,
+                action TEXT NOT NULL,
+                target TEXT,
+                details TEXT,
+                ip_address TEXT
+            )
+        """)
+
         # Check and add columns to predictions
         cursor.execute("PRAGMA table_info(predictions)")
         pred_columns = [row[1] for row in cursor.fetchall()]
