@@ -477,10 +477,16 @@
                         <h2 class="card__title" id="contacts-title">Alert Contacts</h2>
                         <p class="card__subtitle">Who receives SMS flood alerts</p>
                     </div>
-                    <button onclick="showAddContactModal()" class="btn btn--primary btn--sm">
-                        <svg class="icon" style="width:14px;height:14px;"><use href="#i-users"/></svg>
-                        Add Contact
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="testAlertFromContacts(this)" class="btn btn--secondary btn--sm" id="contacts-test-btn">
+                            <svg class="icon" style="width:14px;height:14px;"><use href="#i-phone"/></svg>
+                            Send Test Message
+                        </button>
+                        <button onclick="showAddContactModal()" class="btn btn--primary btn--sm">
+                            <svg class="icon" style="width:14px;height:14px;"><use href="#i-users"/></svg>
+                            Add Contact
+                        </button>
+                    </div>
                 </header>
                 <div class="card__content">
                     <div class="contacts-list" id="contacts-list" aria-live="polite">
@@ -1878,6 +1884,24 @@
             } catch (error) {
                 console.error('Error testing alert:', error);
                 showToast('Test Alert Failed', 'Network error while sending test alert.', 'danger');
+            }
+        }
+
+        async function testAlertFromContacts(btn) {
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+            try {
+                const response = await fetch('/api/test-alert', { method: 'POST' });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showToast('Test Message Sent', 'Test SMS dispatched to the listed active contacts.', 'success');
+                } else {
+                    showToast('Test Message Failed', result.message || result.error || 'Could not send test message.', 'danger');
+                }
+            } catch (error) {
+                console.error('Error sending test message:', error);
+                showToast('Test Message Failed', 'Network error while sending test message.', 'danger');
+            } finally {
+                if (btn) { btn.disabled = false; btn.style.opacity = ''; }
             }
         }
 
