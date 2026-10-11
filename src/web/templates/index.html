@@ -7,7 +7,7 @@
     <meta name="description" content="Real-time river water level monitoring and flood risk prediction dashboard">
     <link rel="icon" href="data:,">
     <!-- ?v= forces a refetch for browsers that heuristically cached the old stylesheet -->
-    <link rel="stylesheet" href="/static/style.css?v=20261003c">
+    <link rel="stylesheet" href="/static/style.css?v=20261011b">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
@@ -148,6 +148,10 @@
             <button class="page-nav__btn" data-page="database" onclick="switchPage('database')">
                 <svg class="icon" style="width:18px;height:18px;"><use href="#i-database"/></svg>
                 Database
+            </button>
+            <button class="page-nav__btn" data-page="fuzzy-rules" onclick="switchPage('fuzzy-rules')">
+                <svg class="icon" style="width:18px;height:18px;"><use href="#i-lightning"/></svg>
+                Fuzzy Rules
             </button>
             <button class="page-nav__btn" data-page="admin" id="nav-admin" style="display:none" onclick="switchPage('admin')">
                 <svg class="icon" style="width:18px;height:18px;"><use href="#i-users"/></svg>
@@ -984,6 +988,79 @@
             </section>
         </div><!-- /page-admin -->
 
+        <!-- ==================== FUZZY RULES PAGE ==================== -->
+        <div id="page-fuzzy-rules" style="display:none">
+            <section class="card card--span-full" aria-labelledby="fuzzy-rules-title">
+                <header class="card__header">
+                    <div>
+                        <h2 class="card__title" id="fuzzy-rules-title">Fuzzy Inference Rules</h2>
+                        <p class="card__subtitle">Complete rule base (20 rules: 15 original + 5 gap-fill) with membership function references</p>
+                    </div>
+                </header>
+                <div class="card__content">
+                    <!-- Input Variables Reference -->
+                    <div class="fuzzy-ref-section" id="fuzzy-input-ref">
+                        <h3 class="fuzzy-ref__title">Input Variables & Membership Functions</h3>
+                        <div class="fuzzy-ref-grid" id="input-vars-grid"></div>
+                    </div>
+
+                    <!-- Output Variable Reference -->
+                    <div class="fuzzy-ref-section" id="fuzzy-output-ref">
+                        <h3 class="fuzzy-ref__title">Output Variable: Flood Risk Level</h3>
+                        <div class="fuzzy-ref-grid" id="output-vars-grid"></div>
+                    </div>
+
+                    <!-- Rules Table -->
+                    <div class="fuzzy-rules-table-wrapper" id="fuzzy-rules-table-wrapper">
+                        <div class="fuzzy-rules-toolbar">
+                            <div class="fuzzy-rules-filter">
+                                <label class="fuzzy-filter-label">
+                                    <span>Filter by Risk Level:</span>
+                                    <select class="settings-input" id="fuzzy-filter-risk" onchange="filterFuzzyRules()">
+                                        <option value="">All Risk Levels</option>
+                                        <option value="receding">Receding</option>
+                                        <option value="alert">Alert</option>
+                                        <option value="alarm">Alarm</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                </label>
+                                <label class="fuzzy-filter-label">
+                                    <span>Rule Type:</span>
+                                    <select class="settings-input" id="fuzzy-filter-type" onchange="filterFuzzyRules()">
+                                        <option value="">All Types</option>
+                                        <option value="original">Original (1-15)</option>
+                                        <option value="gapfill">Gap-Fill (16-20)</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <button class="btn btn--secondary btn--sm" onclick="toggleAllRules(true)">
+                                <svg class="icon" style="width:14px;height:14px;"><use href="#i-refresh"/></svg>
+                                Expand All
+                            </button>
+                            <button class="btn btn--secondary btn--sm" onclick="toggleAllRules(false)">
+                                <svg class="icon" style="width:14px;height:14px;"><use href="#i-x"/></svg>
+                                Collapse All
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="fuzzy-rules-table" id="fuzzy-rules-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sticky-col" scope="col">Rule #</th>
+                                        <th scope="col">Conditions (Summary)</th>
+                                        <th scope="col">Output Risk</th>
+                                        <th scope="col">Type</th>
+                                        <th scope="col"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fuzzy-rules-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div><!-- /page-fuzzy-rules -->
+
         </main>
 
         <!-- ==================== FOOTER ==================== -->
@@ -1010,11 +1087,11 @@
                     <input type="hidden" id="contact-id" name="id">
                     <div class="form-group">
                         <label class="form-label" for="contact-name">Name</label>
-                        <input type="text" class="form-input" id="contact-name" name="name" placeholder="e.g. Barangay Captain" required>
+                        <input type="text" class="form-input" id="contact-name" name="name" placeholder="e.g. Barangay Captain" required autocomplete="name">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="contact-phone">Phone Number</label>
-                        <input type="tel" class="form-input" id="contact-phone" name="phone_number" placeholder="+639XXXXXXXXX" required>
+                        <input type="tel" class="form-input" id="contact-phone" name="phone_number" placeholder="+639XXXXXXXXX" required autocomplete="tel">
                     </div>
                     <div class="form-group">
                         <span class="form-label">Receive Alerts For:</span>
@@ -2298,12 +2375,14 @@
             document.getElementById('page-settings').style.display = page === 'settings' ? '' : 'none';
             document.getElementById('page-database').style.display = page === 'database' ? '' : 'none';
             document.getElementById('page-admin').style.display = page === 'admin' ? '' : 'none';
+            document.getElementById('page-fuzzy-rules').style.display = page === 'fuzzy-rules' ? '' : 'none';
             document.querySelectorAll('.page-nav__btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.page === page);
             });
             if (page === 'database') loadDatabase();
             if (page === 'settings') loadSettings();
             if (page === 'admin') loadAdmin();
+            if (page === 'fuzzy-rules') loadFuzzyRulesPage();
         }
 
         // =====================================================================
@@ -2542,6 +2621,495 @@
             } catch (e) {
                 showToast('Error', 'Failed to restart server: ' + e.message, 'error');
             }
+        }
+
+        // =====================================================================
+        // FUZZY RULES PAGE
+        // =====================================================================
+        // Fuzzy rule definitions matching fuzzy_logic.py
+        const FUZZY_RULES = [
+            {
+                num: 1,
+                conditions: {
+                    'Water Level': 'Low',
+                    'Rate of Rise': 'Negative',
+                    'Forecast Rain': 'None or Light',
+                    'Tide Level': 'Low or Mid',
+                    'RF Propensity': 'Low'
+                },
+                output: 'Receding',
+                type: 'original',
+                notes: 'Safe baseline: low water, falling, no rain, normal tide, low propensity'
+            },
+            {
+                num: 2,
+                conditions: {
+                    'Water Level': 'Low',
+                    'Rate of Rise': 'Near-Zero',
+                    'Forecast Rain': 'None or Light',
+                    'Tide Level': 'Low or Mid',
+                    'RF Propensity': 'Low'
+                },
+                output: 'Receding',
+                type: 'original',
+                notes: 'Stable low water with no rain forecast and low propensity'
+            },
+            {
+                num: 3,
+                conditions: {
+                    'Water Level': 'Low or Medium',
+                    'Rate of Rise': 'Near-Zero',
+                    'Forecast Rain': 'Light',
+                    'Tide Level': 'Low or Mid',
+                    'RF Propensity': 'Low'
+                },
+                output: 'Receding',
+                type: 'original',
+                notes: 'Stable water level with light rain only, low tide and propensity'
+            },
+            {
+                num: 4,
+                conditions: {
+                    'Water Level': 'Low or Medium',
+                    'Rate of Rise': 'Moderate',
+                    'Forecast Rain': 'Light or Moderate',
+                    'Tide Level': 'Low or Mid',
+                    'RF Propensity': 'Low'
+                },
+                output: 'Alert',
+                type: 'original',
+                notes: 'Rising water with light-moderate rain, but low tide and propensity keep it at Alert'
+            },
+            {
+                num: 5,
+                conditions: {
+                    'Water Level': 'Medium',
+                    'Rate of Rise': 'Moderate',
+                    'Forecast Rain': 'Moderate',
+                    'Tide Level': 'Mid',
+                    'RF Propensity': 'Low'
+                },
+                output: 'Alert',
+                type: 'original',
+                notes: 'Medium water rising moderately with moderate rain at mid tide'
+            },
+            {
+                num: 6,
+                conditions: {
+                    'Water Level': 'Medium',
+                    'Rate of Rise': 'Moderate',
+                    'Forecast Rain': 'Moderate or Heavy',
+                    'Tide Level': 'Mid or High',
+                    'RF Propensity': 'Medium'
+                },
+                output: 'Alarm',
+                type: 'original',
+                notes: 'Medium water, rising, significant rain, elevated tide, medium propensity'
+            },
+            {
+                num: 7,
+                conditions: {
+                    'Water Level': 'Medium or High',
+                    'Rate of Rise': 'Rapid',
+                    'Forecast Rain': 'Moderate or Heavy',
+                    'Tide Level': 'Mid or High',
+                    'RF Propensity': 'Medium'
+                },
+                output: 'Alarm',
+                type: 'original',
+                notes: 'Rapid rise with significant rain and elevated tide pushes to Alarm'
+            },
+            {
+                num: 8,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Rapid',
+                    'Forecast Rain': 'Heavy',
+                    'Tide Level': 'High or Extreme',
+                    'RF Propensity': 'High'
+                },
+                output: 'Critical',
+                type: 'original',
+                notes: 'All factors at dangerous levels: high water rising rapidly with heavy rain and extreme tide'
+            },
+            {
+                num: 9,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Near-Zero',
+                    'Forecast Rain': 'None or Light',
+                    'Tide Level': 'Mid',
+                    'RF Propensity': 'Low'
+                },
+                output: 'Alert',
+                type: 'original',
+                notes: 'High water but stable, no rain, mid tide, low propensity — only Alert'
+            },
+            {
+                num: 10,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Near-Zero',
+                    'Forecast Rain': 'Moderate or Heavy',
+                    'Tide Level': 'Mid or High',
+                    'RF Propensity': 'Medium'
+                },
+                output: 'Alarm',
+                type: 'original',
+                notes: 'High stable water but significant rain forecast and elevated tide raise risk to Alarm'
+            },
+            {
+                num: 11,
+                conditions: {
+                    'Water Level': 'Very High'
+                },
+                output: 'Critical',
+                type: 'original',
+                notes: 'Safety override: Very High water level alone triggers Critical regardless of other inputs'
+            },
+            {
+                num: 12,
+                conditions: {
+                    'Water Level': 'Low or Medium',
+                    'Rate of Rise': 'Negative',
+                    'Forecast Rain': 'Moderate or Heavy',
+                    'Tide Level': 'Mid or High',
+                    'RF Propensity': 'High'
+                },
+                output: 'Alert',
+                type: 'original',
+                notes: 'Water falling but heavy rain forecast with high tide and high propensity warrants Alert'
+            },
+            {
+                num: 13,
+                conditions: {
+                    'Water Level': 'Medium',
+                    'Rate of Rise': 'Negative',
+                    'Forecast Rain': 'Heavy',
+                    'Tide Level': 'High',
+                    'RF Propensity': 'High'
+                },
+                output: 'Alarm',
+                type: 'original',
+                notes: 'Falling water but heavy rain, high tide, and high propensity escalate to Alarm'
+            },
+            {
+                num: 14,
+                conditions: {
+                    'Water Level': 'Medium or High',
+                    'Rate of Rise': 'Moderate',
+                    'Forecast Rain': 'Moderate',
+                    'Tide Level': 'High',
+                    'RF Propensity': 'High'
+                },
+                output: 'Alarm',
+                type: 'original',
+                notes: 'Moderate rise with moderate rain at high tide and high propensity'
+            },
+            {
+                num: 15,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Moderate',
+                    'Forecast Rain': 'Moderate or Heavy',
+                    'Tide Level': 'High',
+                    'RF Propensity': 'High'
+                },
+                output: 'Critical',
+                type: 'original',
+                notes: 'High water rising moderately with significant rain at high tide and high propensity'
+            },
+            // Gap-fill rules 16-20
+            {
+                num: 16,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Negative',
+                    'RF Propensity': 'High'
+                },
+                output: 'Alarm',
+                type: 'gapfill',
+                notes: 'Gap-fill: High water falling but high propensity — rain/tide unspecified, defaults to Alarm'
+            },
+            {
+                num: 17,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Negative',
+                    'RF Propensity': 'Low or Medium'
+                },
+                output: 'Alert',
+                type: 'gapfill',
+                notes: 'Gap-fill: High water falling with low/medium propensity — Alert level'
+            },
+            {
+                num: 18,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Moderate',
+                    'Tide Level': 'Low or Mid',
+                    'RF Propensity': 'Low'
+                },
+                output: 'Alert',
+                type: 'gapfill',
+                notes: 'Gap-fill: High water rising moderately but low/mid tide and low propensity — Alert'
+            },
+            {
+                num: 19,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Moderate',
+                    'Tide Level': 'Low or Mid',
+                    'RF Propensity': 'Medium'
+                },
+                output: 'Alarm',
+                type: 'gapfill',
+                notes: 'Gap-fill: High water rising moderately with low/mid tide and medium propensity — Alarm'
+            },
+            {
+                num: 20,
+                conditions: {
+                    'Water Level': 'High',
+                    'Rate of Rise': 'Moderate',
+                    'Tide Level': 'Low or Mid',
+                    'RF Propensity': 'High'
+                },
+                output: 'Alarm',
+                type: 'gapfill',
+                notes: 'Gap-fill: High water rising moderately with low/mid tide but high propensity — Alarm'
+            }
+        ];
+
+        // Membership function thresholds from config
+        const MF_THRESHOLDS = {
+            'Water Level (mm)': {
+                terms: ['Low', 'Medium', 'High', 'Very High'],
+                ranges: [
+                    '0 – 610',
+                    '610 – 1220',
+                    '1220 – 1830',
+                    '1830 – 3000+'
+                ],
+                details: [
+                    'trapmf(0, 0, 300, 611)',
+                    'trimf(609, 915, 1221)',
+                    'trimf(1219, 1525, 1831)',
+                    'trapmf(1829, 2000, 3000, 3000)'
+                ]
+            },
+            'Rate of Rise (mm/hr)': {
+                terms: ['Negative', 'Near-Zero', 'Moderate', 'Rapid'],
+                ranges: [
+                    '-100 – -0.5',
+                    '-0.5 – 0.5',
+                    '0.5 – 4.0',
+                    '4.0 – 100+'
+                ],
+                details: [
+                    'trapmf(-100, -100, -10, 0.5)',
+                    'trimf(-1.5, 0, 1.5)',
+                    'trimf(-0.5, 2.25, 5)',
+                    'trapmf(3, 20, 100, 100)'
+                ]
+            },
+            'Forecast Rain (mm/day)': {
+                terms: ['None', 'Light', 'Moderate', 'Heavy'],
+                ranges: [
+                    '0 – 5',
+                    '5 – 15',
+                    '15 – 30',
+                    '30 – 100+'
+                ],
+                details: [
+                    'trapmf(0, 0, 0, 6)',
+                    'trimf(4, 10, 16)',
+                    'trimf(14, 22.5, 31)',
+                    'trapmf(29, 40, 100, 100)'
+                ]
+            },
+            'Tide Level (m)': {
+                terms: ['Low', 'Mid', 'High', 'Extreme'],
+                ranges: [
+                    '0 – 0.5',
+                    '0.5 – 1.0',
+                    '1.0 – 1.5',
+                    '1.5 – 5.0+'
+                ],
+                details: [
+                    'trapmf(0, 0, 0.25, 0.51)',
+                    'trimf(0.49, 0.75, 1.01)',
+                    'trimf(0.99, 1.25, 1.51)',
+                    'trapmf(1.49, 3.5, 5.0, 5.0)'
+                ]
+            },
+            'RF Propensity': {
+                terms: ['Low', 'Medium', 'High'],
+                ranges: [
+                    '0 – 0.5',
+                    '0.5 – 1.5',
+                    '1.5 – 2.0'
+                ],
+                details: [
+                    'trimf(0, 0, 0.51) → Crisp: 0',
+                    'trimf(0.49, 1, 1.51) → Crisp: 1',
+                    'trimf(1.49, 2, 2) → Crisp: 2'
+                ]
+            }
+        };
+
+        const OUTPUT_THRESHOLDS = {
+            terms: ['Receding', 'Alert', 'Alarm', 'Critical'],
+            ranges: [
+                '0.0 – 1.5',
+                '1.5 – 3.0',
+                '3.0 – 4.5',
+                '4.5 – 6.0'
+            ],
+            details: [
+                'trimf(0, 0, 1)',
+                'trimf(1, 2, 3)',
+                'trimf(3, 4, 5)',
+                'trimf(5, 6, 6)'
+            ]
+        };
+
+        function loadFuzzyRulesPage() {
+            renderInputReference();
+            renderOutputReference();
+            renderRulesTable();
+        }
+
+        function renderInputReference() {
+            const grid = $('input-vars-grid');
+            if (!grid) return;
+            grid.innerHTML = Object.entries(MF_THRESHOLDS).map(([name, data]) => `
+                <div class="fuzzy-ref-card">
+                    <div class="fuzzy-ref-card__name">${escapeHtml(name)}</div>
+                    <div class="fuzzy-ref-card__terms">
+                        ${data.terms.map((term, i) => `
+                            <div class="fuzzy-ref-card__term">
+                                <span class="fuzzy-ref-card__term-label">${escapeHtml(term)}</span>
+                                <span class="fuzzy-ref-card__term-range">${escapeHtml(data.ranges[i])}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <details style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted);">
+                        <summary style="cursor:pointer;">Show MF definitions</summary>
+                        <pre style="margin-top:var(--space-1);font-family:var(--font-mono);white-space:pre-wrap;">${data.details.join('\n')}</pre>
+                    </details>
+                </div>
+            `).join('');
+        }
+
+        function renderOutputReference() {
+            const grid = $('output-vars-grid');
+            if (!grid) return;
+            grid.innerHTML = OUTPUT_THRESHOLDS.terms.map((term, i) => `
+                <div class="fuzzy-ref-card fuzzy-ref-card--${term.toLowerCase()}">
+                    <div class="fuzzy-ref-card__name">${escapeHtml(term)}</div>
+                    <div class="fuzzy-ref-card__terms">
+                        <div class="fuzzy-ref-card__term">
+                            <span class="fuzzy-ref-card__term-label">Crisp Range</span>
+                            <span class="fuzzy-ref-card__term-range">${escapeHtml(OUTPUT_THRESHOLDS.ranges[i])}</span>
+                        </div>
+                        <div class="fuzzy-ref-card__term">
+                            <span class="fuzzy-ref-card__term-label">MF Definition</span>
+                            <span class="fuzzy-ref-card__term-range">${escapeHtml(OUTPUT_THRESHOLDS.details[i])}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRulesTable() {
+            const tbody = $('fuzzy-rules-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = FUZZY_RULES.map(rule => `
+                <tr class="fuzzy-rule-row" data-rule="${rule.num}" data-risk="${rule.output.toLowerCase()}" data-type="${rule.type}" onclick="toggleRuleDetail(${rule.num})">
+                    <td class="sticky-col">
+                        <span class="fuzzy-rule-num">${rule.num}</span>
+                    </td>
+                    <td>
+                        <div class="fuzzy-rule-summary">
+                            ${Object.entries(rule.conditions).map(([varName, term]) => `
+                                <span class="term">${escapeHtml(varName)}: ${escapeHtml(term)}</span>
+                            `).join(' ')}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="fuzzy-rule-output fuzzy-rule-output--${rule.output.toLowerCase()}">${escapeHtml(rule.output)}</span>
+                    </td>
+                    <td>
+                        <span class="fuzzy-rule-type fuzzy-rule-type--${rule.type}">${rule.type === 'original' ? 'Original' : 'Gap-Fill'}</span>
+                    </td>
+                    <td style="width:40px;text-align:center;">
+                        <button class="fuzzy-rule-expand" onclick="event.stopPropagation(); toggleRuleDetail(${rule.num})" aria-label="Toggle rule details">
+                            <svg class="icon" style="width:16px;height:16px;"><use href="#i-x"/></svg>
+                        </button>
+                    </td>
+                </tr>
+                <tr class="fuzzy-rule-detail">
+                    <td colspan="5">
+                        <div class="fuzzy-rule-detail-content">
+                            <div class="fuzzy-rule-detail-section">
+                                <div class="fuzzy-rule-detail-label">Full Conditions</div>
+                                <div class="fuzzy-rule-detail-conditions">
+                                    ${Object.entries(rule.conditions).map(([varName, term]) => `
+                                        <div class="fuzzy-rule-condition">
+                                            <span class="fuzzy-rule-condition__var">${escapeHtml(varName)}</span>
+                                            <span class="fuzzy-rule-condition__terms">${escapeHtml(term)}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="fuzzy-rule-detail-section">
+                                <div class="fuzzy-rule-detail-label">Output Risk Level</div>
+                                <span class="fuzzy-rule-output fuzzy-rule-output--${rule.output.toLowerCase()}">${escapeHtml(rule.output)}</span>
+                            </div>
+                            <div class="fuzzy-rule-detail-section">
+                                <div class="fuzzy-rule-detail-label">Rule Type</div>
+                                <span class="fuzzy-rule-type fuzzy-rule-type--${rule.type}">${rule.type === 'original' ? 'Original (from 15-rule table)' : 'Gap-Fill (added for coverage)'}</span>
+                            </div>
+                            <div class="fuzzy-rule-detail-section">
+                                <div class="fuzzy-rule-detail-label">Notes</div>
+                                <div class="fuzzy-rule-detail-notes"><strong>Purpose:</strong> ${escapeHtml(rule.notes)}</div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleRuleDetail(ruleNum) {
+            const row = document.querySelector(`.fuzzy-rule-row[data-rule="${ruleNum}"]`);
+            if (row) {
+                row.classList.toggle('expanded');
+            }
+        }
+
+        function toggleAllRules(expand) {
+            document.querySelectorAll('.fuzzy-rule-row').forEach(row => {
+                row.classList.toggle('expanded', expand);
+            });
+        }
+
+        function filterFuzzyRules() {
+            const riskFilter = $('fuzzy-filter-risk').value;
+            const typeFilter = $('fuzzy-filter-type').value;
+            
+            document.querySelectorAll('.fuzzy-rule-row').forEach(row => {
+                const risk = row.dataset.risk;
+                const type = row.dataset.type;
+                const matchRisk = !riskFilter || risk === riskFilter;
+                const matchType = !typeFilter || type === typeFilter;
+                row.style.display = (matchRisk && matchType) ? '' : 'none';
+                
+                // Also hide/show the detail row
+                const detailRow = row.nextElementSibling;
+                if (detailRow && detailRow.classList.contains('fuzzy-rule-detail')) {
+                    detailRow.style.display = (matchRisk && matchType) ? '' : 'none';
+                }
+            });
         }
 
         // =====================================================================

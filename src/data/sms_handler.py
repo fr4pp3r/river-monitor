@@ -123,10 +123,15 @@ class SMSHandler:
                     if expected_response and expected_response in line:
                         return True
                     if "ERROR" in line:
+                        print(f"AT command returned error: {command!r} -> {response.strip()!r}")
                         return False
                 time.sleep(0.1)
             
-            return expected_response is None or expected_response in response
+            if expected_response is None or expected_response in response:
+                return True
+            print(f"AT command timed out waiting for {expected_response!r}: "
+                  f"{command!r} -> {response.strip()!r}")
+            return False
             
         except Exception as e:
             print(f"Error sending AT command: {e}")
