@@ -373,7 +373,9 @@ body {
 /* Page wrappers span the full grid; pages carry their own layout */
 #page-dashboard,
 #page-settings,
-#page-database {
+#page-database,
+#page-fuzzy-rules,
+#page-admin {
   grid-column: 1 / -1;
 }
 
@@ -403,6 +405,12 @@ body {
 }
 
 #page-database {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-page-gap);
+}
+
+#page-fuzzy-rules {
   display: flex;
   flex-direction: column;
   gap: var(--space-page-gap);
