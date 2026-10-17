@@ -22,8 +22,14 @@ from src.config import DATABASE_PATH
 
 def get_db_connection():
     """Get a database connection with row factory for dict-like access"""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=5.0)
     conn.row_factory = sqlite3.Row
+    # WAL lets web readers run concurrently with the data collector's writes
+    # instead of serializing on a rollback journal; busy_timeout avoids
+    # "database is locked" errors under that concurrency.
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
 
@@ -199,6 +205,7 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_predictions_timestamp ON predictions(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_system_status_timestamp ON system_status(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp)")
         
         # Rainfall aggregation table (for hourly/daily totals)
         cursor.execute("""
@@ -214,6 +221,7 @@ def init_database():
                 UNIQUE(hour, day, month, year)
             )
         """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_rainfall_hourly_timestamp ON rainfall_hourly(timestamp)")
 
 
 # ============================================================================
@@ -247,8 +255,16 @@ def get_latest_sensor_data() -> Optional[Dict]:
         return dict(row) if row else None
 
 
-def get_sensor_data_since(hours: int = 24) -> List[Dict]:
-    """Get sensor data readings from the last N hours"""
+def get_sensor_data_since(hours: int = 24, max_points: int = 0) -> List[Dict]:
+    """Get sensor data readings from the last N hours.
+
+    When ``max_points > 0`` and more rows are available, the result is
+    downsampled to at most ``max_points`` rows by keeping the LAST reading in
+    each of ``max_points`` equal-sized index buckets. This always includes the
+    most recent reading, preserves ordering, and cuts payload/render cost for
+    wide windows (e.g. 24h at 1-min resolution = ~1440 rows -> 288 points).
+    With ``max_points <= 0`` the raw rows are returned unchanged.
+    """
     since = datetime.now() - timedelta(hours=hours)
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -257,7 +273,15 @@ def get_sensor_data_since(hours: int = 24) -> List[Dict]:
             WHERE timestamp >= ?
             ORDER BY timestamp ASC
         """, (since.isoformat(),))
-        return [dict(row) for row in cursor.fetchall()]
+        rows = [dict(row) for row in cursor.fetchall()]
+
+    if max_points > 0 and len(rows) > max_points:
+        total = len(rows)
+        # The final bucket's last index is total - 1, so the newest reading is
+        # always retained.
+        return [rows[((i + 1) * total) // max_points - 1] for i in range(max_points)]
+
+    return rows
 
 
 def get_sensor_data_range(start: datetime, end: datetime) -> List[Dict]:

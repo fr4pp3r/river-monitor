@@ -8,9 +8,11 @@
     <link rel="icon" href="data:,">
     <!-- ?v= forces a refetch for browsers that heuristically cached the old stylesheet -->
     <link rel="stylesheet" href="/static/style.css?v=20261011d">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
+    <!-- Chart libraries are served locally (no CDN round-trip, works offline on
+         the LAN) and deferred so they never block first paint on mobile. -->
+    <script src="/static/vendor/chart.umd.min.js" defer></script>
+    <script src="/static/vendor/luxon.min.js" defer></script>
+    <script src="/static/vendor/chartjs-adapter-luxon.min.js" defer></script>
 
     <!-- Inline SVG icon sprite -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -1127,6 +1129,7 @@
         // =====================================================================
         let waterLevelChart = null;
         let forecastChart = null;
+        let lastPrediction = null;
         let currentUser = { authenticated: false, auth_enabled: true, username: null, role: null };
         let _usersById = {};
         function isAdmin() { return currentUser.role === 'admin' || currentUser.auth_enabled === false; }
@@ -1318,6 +1321,7 @@
             try {
                 const response = await fetch('/api/prediction');
                 const prediction = await response.json();
+                if (prediction && !prediction.error) lastPrediction = prediction;
 
                 const liveText = $('live-text');
                 const liveDot = document.querySelector('.live-dot');
@@ -1334,31 +1338,26 @@
                     const riskBadge48h = $('current-risk-level-48h');
                     riskBadge48h.className = 'risk-badge risk-badge--normal';
 
+                    let fbData = [];
                     try {
-                        const fallbackRes = await fetch('/api/water-levels?hours=1');
-                        const fallbackData = await fallbackRes.json();
-
-                        if (fallbackData.length > 0) {
-                            const latest = fallbackData[fallbackData.length - 1];
-                            const wl = latest.water_level_m;
-                            setValue('current-water-level', wl != null ? wl.toFixed(2) : '—');
-                            updateRiskGauge(wl);
-                            setValue('last-updated', timeAgo(latest.timestamp));
-                            setValue('last-updated-exact', formatTimestamp(latest.timestamp));
-                            setValue('data-source', (latest.source || '—').toUpperCase());
-                            setValue('data-source-detail', latest.source === 'lora' ? 'LoRa radio link' : latest.source);
-                            if (liveText) liveText.textContent = 'Live';
-                            if (liveDot) liveDot.classList.add('live-dot--active');
-                        } else {
-                            setValue('current-water-level', 'No data');
-                            setValue('last-updated', 'Waiting for sensor data');
-                            setValue('data-source', '—');
-                            updateRiskGauge(0);
-                            if (liveText) liveText.textContent = 'Waiting for sensor data';
-                            if (liveDot) liveDot.classList.remove('live-dot--active');
-                        }
+                        const fbRes = await fetch('/api/water-levels?hours=3');
+                        fbData = await fbRes.json();
                     } catch (fbErr) {
                         console.error('Fallback water level fetch failed:', fbErr);
+                    }
+
+                    if (fbData.length > 0) {
+                        const latest = fbData[fbData.length - 1];
+                        const wl = latest.water_level_m;
+                        setValue('current-water-level', wl != null ? wl.toFixed(2) : '—');
+                        updateRiskGauge(wl);
+                        setValue('last-updated', timeAgo(latest.timestamp));
+                        setValue('last-updated-exact', formatTimestamp(latest.timestamp));
+                        setValue('data-source', (latest.source || '—').toUpperCase());
+                        setValue('data-source-detail', latest.source === 'lora' ? 'LoRa radio link' : latest.source);
+                        if (liveText) liveText.textContent = 'Live';
+                        if (liveDot) liveDot.classList.add('live-dot--active');
+                    } else {
                         setValue('current-water-level', 'No data');
                         setValue('last-updated', 'Waiting for sensor data');
                         setValue('data-source', '—');
@@ -1367,27 +1366,20 @@
                         if (liveDot) liveDot.classList.remove('live-dot--active');
                     }
 
-                    // Trend: still attempt from last 3 hours
-                    try {
-                        const trendResponse = await fetch('/api/water-levels?hours=3');
-                        const trendData = await trendResponse.json();
-                        if (trendData.length >= 2) {
-                            const first = trendData[0].water_level_m;
-                            const last = trendData[trendData.length - 1].water_level_m;
-                            const diff = last - first;
-                            const diffMm = (last - first) * 1000;
-                            const trend = diffMm > 1 ? 'Rising' : (diffMm < -1 ? 'Falling' : 'Steady');
-                            setValue('current-trend', trend);
-                            const el = $('current-trend');
-                            el.style.color = diffMm > 1 ? '#cf222e' : (diffMm < -1 ? '#0969da' : '#57606a');
-                            setValue('trend-detail', `Δ ${diff >= 0 ? '+' : ''}${diff.toFixed(4)} m over 3h`);
-                        } else {
-                            setValue('current-trend', '—');
-                            setValue('trend-detail', 'Insufficient readings');
-                        }
-                    } catch (trendErr) {
+                    // Trend: reuse the same 3h fetch
+                    if (fbData.length >= 2) {
+                        const first = fbData[0].water_level_m;
+                        const last = fbData[fbData.length - 1].water_level_m;
+                        const diff = last - first;
+                        const diffMm = (last - first) * 1000;
+                        const trend = diffMm > 1 ? 'Rising' : (diffMm < -1 ? 'Falling' : 'Steady');
+                        setValue('current-trend', trend);
+                        const el = $('current-trend');
+                        el.style.color = diffMm > 1 ? '#cf222e' : (diffMm < -1 ? '#0969da' : '#57606a');
+                        setValue('trend-detail', `Δ ${diff >= 0 ? '+' : ''}${diff.toFixed(4)} m over 3h`);
+                    } else {
                         setValue('current-trend', '—');
-                        setValue('trend-detail', 'No readings yet');
+                        setValue('trend-detail', 'Insufficient readings');
                     }
                     return;
                 }
@@ -1428,7 +1420,7 @@
                 if (liveDot) liveDot.classList.add('live-dot--active');
 
                 // Data source + real-time water level (from most recent sensor reading)
-                const waterResponse = await fetch('/api/water-levels?hours=1');
+                const waterResponse = await fetch('/api/water-levels?hours=3');
                 const waterData = await waterResponse.json();
                 if (waterData.length > 0) {
                     const latestWater = waterData[waterData.length - 1];
@@ -1456,12 +1448,10 @@
                     setValue('current-rainfall', '—');
                 }
 
-                // Trend: compare first vs last reading in the last 3 hours
-                const trendResponse = await fetch('/api/water-levels?hours=3');
-                const trendData = await trendResponse.json();
-                if (trendData.length >= 2) {
-                    const first = trendData[0].water_level_m;
-                    const last = trendData[trendData.length - 1].water_level_m;
+                // Trend: compare first vs last reading in the last 3 hours (reuse fetch above)
+                if (waterData.length >= 2) {
+                    const first = waterData[0].water_level_m;
+                    const last = waterData[waterData.length - 1].water_level_m;
                     const diff = last - first;
                     const trend = diff > 0.01 ? 'Rising' : (diff < -0.01 ? 'Falling' : 'Steady');
                     setValue('current-trend', trend);
@@ -1722,7 +1712,7 @@
         // =====================================================================
         async function updateWaterLevelChart() {
             try {
-                const response = await fetch('/api/water-levels?hours=24');
+                const response = await fetch('/api/water-levels?hours=24&max_points=288');
                 const waterLevels = await response.json();
                 const emptyEl = $('water-chart-empty');
 
@@ -1737,8 +1727,24 @@
                 const levels = waterLevels.map(wl => wl.water_level_m);
                 const sources = waterLevels.map(wl => wl.source);
 
+                const pointColors = sources.map(s =>
+                    s === 'lora' ? '#16a34a' : '#f59e0b');
+                const yMax = Math.max(CRITICAL_LEVEL_M + 1, ...levels);
                 const ctx = $('waterLevelChart').getContext('2d');
-                if (waterLevelChart) waterLevelChart.destroy();
+
+                if (waterLevelChart) {
+                    // Update in place: destroying and rebuilding a multi-hundred
+                    // point chart on every refresh is very expensive on mobile.
+                    const ds = waterLevelChart.data.datasets[0];
+                    waterLevelChart.data.labels = timestamps;
+                    ds.data = levels;
+                    ds.pointBackgroundColor = pointColors;
+                    ds.pointBorderColor = pointColors;
+                    waterLevelChart._sources = sources;
+                    waterLevelChart.options.scales.y.max = yMax;
+                    waterLevelChart.update('none');
+                    return;
+                }
 
                 const gradient = ctx.createLinearGradient(0, 0, 0, 300);
                 gradient.addColorStop(0, 'rgba(0, 119, 182, 0.25)');
@@ -1757,12 +1763,10 @@
                             borderWidth: 2,
                             fill: true,
                             tension: 0.3,
-                            pointRadius: 2.5,
+                            pointRadius: 0,
                             pointHoverRadius: 5,
-                            pointBackgroundColor: sources.map(s =>
-                                s === 'lora' ? '#16a34a' : '#f59e0b'),
-                            pointBorderColor: sources.map(s =>
-                                s === 'lora' ? '#16a34a' : '#f59e0b')
+                            pointBackgroundColor: pointColors,
+                            pointBorderColor: pointColors
                         }]
                     },
                     options: {
@@ -1778,7 +1782,7 @@
                             },
                             y: {
                                 min: 0,
-                                max: Math.max(CRITICAL_LEVEL_M + 1, ...levels),
+                                max: yMax,
                                 grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() || 'rgba(0,0,0,0.06)' },
                                 ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a' },
                                 title: { display: true, text: 'Water Level (m)' }
@@ -1806,7 +1810,7 @@
                                 displayColors: false,
                                 callbacks: {
                                     label: function(context) {
-                                        const src = (sources[context.dataIndex] || '').toUpperCase();
+                                        const src = ((context.chart._sources || [])[context.dataIndex] || '').toUpperCase();
                                         return `Water Level: ${context.parsed.y.toFixed(2)} m  (${src})`;
                                     }
                                 }
@@ -1814,6 +1818,7 @@
                         }
                     }
                 });
+                waterLevelChart._sources = sources;
             } catch (error) {
                 console.error('Error updating water level chart:', error);
             }
@@ -1834,15 +1839,27 @@
                 }
                 if (emptyEl) emptyEl.hidden = true;
 
-                const currentResponse = await fetch('/api/prediction');
-                const current = await currentResponse.json();
-                const currentLevel = current.current_level_m || 0;
+                // Reuse the prediction already fetched by updateCurrentStatus
+                // instead of issuing a second /api/prediction request.
+                const currentLevel = (lastPrediction && lastPrediction.current_level_m) || 0;
 
                 const timestamps = forecast.map(f => f.timestamp);
                 const levels = forecast.map(f => f.water_level_m);
+                const yMax = Math.max(CRITICAL_LEVEL_M + 1, ...levels, currentLevel);
 
                 const ctx = $('forecastChart').getContext('2d');
-                if (forecastChart) forecastChart.destroy();
+
+                if (forecastChart) {
+                    // Update in place instead of destroy + rebuild.
+                    const ds0 = forecastChart.data.datasets[0];
+                    const ds1 = forecastChart.data.datasets[1];
+                    forecastChart.data.labels = timestamps;
+                    ds0.data = levels;
+                    ds1.data = Array(forecast.length).fill(currentLevel);
+                    forecastChart.options.scales.y.max = yMax;
+                    forecastChart.update('none');
+                    return;
+                }
 
                 forecastChart = new Chart(ctx, {
                     type: 'line',
@@ -1883,7 +1900,7 @@
                             },
                             y: {
                                 min: 0,
-                                max: Math.max(CRITICAL_LEVEL_M + 1, ...levels, currentLevel),
+                                max: yMax,
                                 grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() || 'rgba(0,0,0,0.06)' },
                                 ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#57606a' },
                                 title: { display: true, text: 'Water Level (m)' }
@@ -1938,6 +1955,7 @@
                 if (result.status === 'success') {
                     showToast('Prediction Refreshed', 'Flood risk prediction recomputed from latest data.', 'success');
                     refreshAll();
+                    refreshSlow();
                 } else {
                     showToast('Refresh Failed', result.message || 'Could not refresh prediction.', 'danger');
                 }
@@ -3118,20 +3136,29 @@
         async function refreshAll() {
             await Promise.all([
                 updateCurrentStatus(),
-                updateWeatherData(),
                 updateSystemStatus(),
-                updateAlerts(),
-                updateSensorHealth(),
-                updateFuzzyDetails(),
-                updateContacts(),
                 updateWaterLevelChart(),
                 updateForecastChart()
             ]);
             $('last-refresh').textContent = `Last refresh: ${new Date().toLocaleString()}`;
         }
 
+        // Slower-changing panels: fetched on load and every ~5 minutes rather
+        // than on every 30s tick, so mobile doesn't repeatedly re-download
+        // weather, rainfall, alerts, sensor-health, contacts and fuzzy data.
+        async function refreshSlow() {
+            await Promise.all([
+                updateWeatherData(),
+                updateAlerts(),
+                updateSensorHealth(),
+                updateFuzzyDetails(),
+                updateContacts()
+            ]);
+        }
+
         const autoRefreshSeconds = {{ auto_refresh_seconds }};
         setInterval(refreshAll, autoRefreshSeconds * 1000);
+        setInterval(refreshSlow, autoRefreshSeconds * 10 * 1000);
 
         // =====================================================================
         // INIT
@@ -3141,6 +3168,7 @@
             await initAuth();
             await loadRiskThresholds();
             refreshAll();
+            refreshSlow();
         });
     </script>
 </body>

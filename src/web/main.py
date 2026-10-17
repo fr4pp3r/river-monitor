@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 import uvicorn
 from loguru import logger
 
@@ -124,6 +125,10 @@ app.add_middleware(
     same_site="lax",
     https_only=False,
 )
+
+# Compress responses (dashboard HTML, CSS, and JSON API payloads) so mobile
+# browsers transfer far fewer bytes. Added last => outermost middleware.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 # Setup templates
 templates = Jinja2Templates(directory="src/web/templates")
@@ -289,10 +294,14 @@ async def get_status() -> JSONResponse:
 
 
 @app.get("/api/water-levels")
-async def get_water_levels(hours: int = 24) -> JSONResponse:
-    """Get water level readings for the last N hours"""
+async def get_water_levels(hours: int = 24, max_points: int = 0) -> JSONResponse:
+    """Get water level readings for the last N hours.
+
+    Pass ``max_points`` (e.g. 288) to receive a downsampled series for charts
+    instead of the full per-minute rows.
+    """
     try:
-        water_levels = get_sensor_data_since(hours=hours)
+        water_levels = get_sensor_data_since(hours=hours, max_points=max_points)
         return JSONResponse(content=[dict(wl) for wl in water_levels])
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
