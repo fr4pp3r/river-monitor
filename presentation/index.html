@@ -569,6 +569,118 @@
         <div class="place reveal" data-step="2">Questions &amp; discussion</div>
       </div>
     </section>
+
+    <!-- 15 · Standard Operating Procedure -->
+    <section class="slide" id="s15" aria-label="Slide 15 of 18 · Standard Operating Procedure" data-notes="SOP: offline-first operation, SMS only at Alarm/Critical, BDRRMC retains alert authority, maintenance duties.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">15 · Standard operating procedure</span><h2 class="slide-title">Standard operating procedure</h2><div class="slide-deck">Operation &amp; maintenance</div></header>
+        <div class="wrap" style="gap: 16px;">
+          <div class="col" style="flex:1;">
+            <div class="card reveal" data-step="0" style="border-left-color:var(--teal);">
+              <h3 style="color:var(--teal);">Operation</h3>
+              <ul class="bullets" style="margin:0;">
+                <li>LoRa sensor node sends water level + rainfall to the Pi 5 (about every 5 s)</li>
+                <li>Pi 5 runs receiver, weather/tide fetcher (6 h cache), SQLite, AI pipeline, dashboard, SMS handler</li>
+                <li>Classification and dashboard run fully offline — internet only refreshes cached forecasts</li>
+                <li>SMS alerts trigger only at Alarm / Critical; BDRRMC confirms before public release</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col" style="flex:1;">
+            <div class="card reveal" data-step="1" style="border-left-color:var(--amber);">
+              <h3 style="color:var(--amber);">Maintenance</h3>
+              <ul class="bullets" style="margin:0;">
+                <li>Secure sensor, wiring, and enclosure; inspect for dangling wires causing false readings</li>
+                <li>Flag invalid readings (zero/negative distance, sudden jumps); retain raw values for audit</li>
+                <li>Validate rain-gauge tips against a known volume of water</li>
+                <li>Monitor battery voltage and solar charging; reposition or enlarge panel if needed</li>
+                <li>Sync and document Raspberry Pi timestamps (installation, startup, shutdown, retrieval)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="callout off reveal" data-step="2"><b>Authority:</b> FLAIRE advises; the BDRRMC makes the alert call and supplements MDRRMO advisories, manual observation, and local knowledge.</div>
+      </div>
+    </section>
+
+    <!-- 16 · Summary of Findings -->
+    <section class="slide" id="s16" aria-label="Slide 16 of 18 · Summary of Findings" data-notes="Key findings: manual current practices, 94.26% rule-agreement caveat, 21.5h deployment at Receding, n=2 acceptability.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">16 · Summary of findings</span><h2 class="slide-title">Summary of findings</h2><div class="slide-deck">Chapter 5, evidence-based</div></header>
+        <ul class="bullets">
+          <li class="reveal" data-step="0">Current monitoring is manual: rain gauge, visual observation, tide calendar, plus MDRRMO advisories for the whole municipality</li>
+          <li class="reveal" data-step="0">MDRRMO alerts may not reflect barangay-specific conditions — localized monitoring is needed</li>
+          <li class="reveal" data-step="1">RF model: 94.26% accuracy on held-out test set — but labels are rule-derived, so this is agreement with the scoring rule, not independent flood-prediction validation</li>
+          <li class="reveal" data-step="1">Four documented flood events (2020–2025): two High (heavy rainfall) and two Medium (moderate rainfall); model matched the rule on all four</li>
+          <li class="reveal" data-step="2">Field deployment: 13,568 records over about 21.5 h; battery depletion; river stayed at Receding — higher risk classes unvalidated</li>
+          <li class="reveal" data-step="2">Acceptability: two BDRRMC focal persons; 5.00 on five dimensions, 4.75 usability — preliminary, not generalizable</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 17 · Conclusions -->
+    <section class="slide" id="s17" aria-label="Slide 17 of 18 · Conclusions" data-notes="Feasibility established; predictive skill not yet demonstrated; BDRRMC keeps decision authority.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">17 · Conclusions</span><h2 class="slide-title">Conclusions</h2><div class="slide-deck">What the study establishes</div></header>
+        <ul class="bullets">
+          <li class="reveal" data-step="0">Current practices are manual and municipality-wide — barangay-level, localized monitoring is needed</li>
+          <li class="reveal" data-step="0">FLAIRE addresses this via its offline-first design: LoRa sensing, local storage, cached forecasts, LAN dashboard, SMS alerts</li>
+          <li class="reveal" data-step="1">RF reproduced its rule-derived labels (94.26%) — consistency with the predefined scoring rule, not independent flood-prediction performance</li>
+          <li class="reveal" data-step="1">Evaluation used a random split, not chronological; no forecast lead time was measured — 24–48 h decision window is not established</li>
+          <li class="reveal" data-step="2">The prototype captures documented flood events only partially — independent labels and water-level/tide-aware features are required</li>
+          <li class="reveal" data-step="2">Deployment ran about 21.5 h; sensor and power issues must be resolved before sustained operation</li>
+          <li class="reveal" data-step="3">ML assists flood-risk assessment only partially — feasibility established, predictive value is future work</li>
+          <li class="reveal" data-step="3">FLAIRE is a decision-support tool, not an autonomous warning system — the BDRRMC makes the call</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 18 · Recommendations -->
+    <section class="slide" id="s18" aria-label="Slide 18 of 18 · Recommendations" data-notes="Concrete Chapter 5 recommendations: system, model, and deployment improvement.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">18 · Recommendations</span><h2 class="slide-title">Recommendations</h2><div class="slide-deck">Chapter 5, actionable</div></header>
+        <div class="wrap" style="gap: 14px;">
+          <div class="col" style="flex:1; min-width:250px;">
+            <div class="card reveal" data-step="0" style="border-left-color:var(--teal);">
+              <h3 style="color:var(--teal);">System improvement</h3>
+              <ul class="bullets" style="margin:0; font-size:1.02rem;">
+                <li>Secure sensor, wiring, enclosure; inspect during installation/maintenance</li>
+                <li>Flag invalid readings (zero/negative, sudden jumps); retain raw values for audit</li>
+                <li>Validate rain-gauge tips against a known water volume</li>
+                <li>Add SMS store-and-forward with retry and delivery confirmation</li>
+                <li>Improve power reliability: panel placement, battery capacity, voltage/charging monitoring</li>
+                <li>Sync and document Raspberry Pi timestamps</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col" style="flex:1; min-width:250px;">
+            <div class="card reveal" data-step="1" style="border-left-color:var(--amber);">
+              <h3 style="color:var(--amber);">Model improvement</h3>
+              <ul class="bullets" style="margin:0; font-size:1.02rem;">
+                <li>Use independent flood-event labels (BDRRMC/MDRRMO records, expert-validated impacts)</li>
+                <li>Use chronological validation (e.g., train 2020–2023, test 2024)</li>
+                <li>Evaluate forecast lead time empirically before claiming a 24–48 h window</li>
+                <li>Evaluate the fuzzy-logic classifier against documented flood conditions</li>
+                <li>Compare FLAIRE with a defined threshold-based baseline</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col" style="flex:1; min-width:250px;">
+            <div class="card reveal" data-step="2" style="border-left-color:var(--red);">
+              <h3 style="color:var(--red);">Future deployment</h3>
+              <ul class="bullets" style="margin:0; font-size:1.02rem;">
+                <li>Repeat a longer, fully powered deployment after power/sensor fixes</li>
+                <li>Use multiple sensor nodes with node IDs per transmitted record</li>
+                <li>Log RF outputs, fuzzy classifications, alerts, SMS status, dashboard use, errors</li>
+                <li>Expand acceptability testing beyond two focal persons</li>
+                <li>Retain BDRRMC confirmation before public alerts — decision-support, not autonomous</li>
+                <li>Exercise and validate Alert, Alarm, Critical classes in actual flood conditions</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <footer id="footer">
@@ -576,7 +688,7 @@
     <div class="footer-row">
       <div id="hints">[&larr; &rarr;] navigate &middot; [space] advance &middot; [S] speaker notes &middot; [F] fullscreen</div>
       <div id="dots"></div>
-      <div id="counters">1 / 14</div>
+      <div id="counters">1 / 18</div>
     </div>
   </footer>
 </div>
