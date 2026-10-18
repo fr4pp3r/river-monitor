@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLAIRE — Thesis Oral Defense</title>
+<style>
+  * { box-sizing: border-box; }
+  html { font-size: 16px; }
+  body {
+    margin: 0; background: #0a1b20; color: #d8e4e9;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.5; height: 100vh; overflow: hidden;
+  }
+  :root{
+    --bg:#0c2228; --surface:#14323a; --surface-2:#1c454f; --border:#32636e;
+    --ink:#e8f2f5; --muted:#9fc0c8; --dim:#6e939c;
+    --teal:#3ec7b3; --teal-dark:#2e948a;
+    --amber:#f4b942; --orange:#e67e3b; --red:#c95252;
+  }
+  /* 16:9 letterbox — deck keeps 16:9 on any projector/window */
+  #viewport{
+    position: relative; margin: 0 auto;
+    width: 100vw; height: 56.25vw;
+    max-width: 177.78vh; max-height: 100vh;
+    background: var(--bg); overflow: hidden;
+    box-shadow: 0 0 80px rgba(0,0,0,.55);
+  }
+  #viewport::before{
+    content:""; position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    opacity: 0.5; pointer-events: none; z-index: 1;
+  }
+  #viewport::after{
+    content:""; position: absolute; inset: 0;
+    background: radial-gradient(circle at 12% 12%, rgba(62,199,179,.07), transparent 45%),
+                radial-gradient(circle at 92% 88%, rgba(244,185,66,.05), transparent 40%);
+    pointer-events: none; z-index: 2;
+  }
+  .stage{ position: absolute; inset: 0; z-index: 3; }
+  .slide{
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    padding: 42px 60px 90px 60px; overflow: hidden;
+    opacity: 0; transform: scale(0.97); pointer-events: none;
+    transition: opacity 0.75s ease, transform 0.75s ease;
+    display: flex; flex-direction: column;
+    background: var(--bg);
+  }
+  .slide.current{ opacity: 1; transform: scale(1); pointer-events: auto; z-index: 10; }
+  .slide.past{ transform: scale(1.04); z-index: 5; }
+  .slide.future{ z-index: auto; }
+  .slide-inner{ flex: 1; display: flex; flex-direction: column; position: relative; z-index: 4; }
+  
+  .kicker{ font-size: 0.8rem; letter-spacing: 0.28rem; text-transform: uppercase; color: #6fb0b8; font-weight: 800; margin: 0 0 6px 0; }
+  h2.slide-title{ font-family: Georgia, "Times New Roman", serif; font-size: 2.05rem; margin: 0 0 3px 0; color: var(--ink); line-height: 1.12; font-weight: 700; letter-spacing: -0.01rem; }
+  .slide-deck{ color: var(--muted); font-size: 0.85rem; margin: 0 0 12px 0; font-weight: 700; letter-spacing: 0.04rem; text-transform: uppercase; }
+  
+  .wrap{ display: flex; flex: 1; gap: 30px; padding-top: 10px; }
+  .col{ flex: 1; }
+  
+  /* reveal steps */
+  .reveal{ opacity: 0; transform: translateY(14px); transition: opacity 0.55s ease, transform 0.55s ease; }
+  .reveal.shown{ opacity: 1; transform: none; }
+  
+  @media (prefers-reduced-motion: reduce){
+    .slide, .reveal, .bar-fill{ transition: none !important; animation: none !important; }
+    .slide.current{ opacity: 1; transform: scale(1); }
+    .reveal.shown{ opacity: 1; transform: none; }
+  }
+  
+  /* bullets */
+  ul.bullets{ list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+  ul.bullets li{ position: relative; padding-left: 24px; font-size: 1.15rem; color: var(--ink); line-height: 1.55; }
+  ul.bullets li::before{ content:""; position: absolute; left: 0; top: 0.52rem; width: 10px; height: 10px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 3px rgba(62,199,179,.25); }
+  
+  /* cards */
+  .card{ background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 18px 22px; margin: 0 0 13px 0; }
+  .card h3{ margin: 0 0 9px 0; font-size: 0.95rem; letter-spacing: 0.14rem; text-transform: uppercase; font-weight: 800; font-family: ui-sans-serif,system-ui,sans-serif; }
+  
+  /* chips — consistent risk level color code */
+  .chip{ display: inline-block; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12rem; text-transform: uppercase; padding: 0.32rem 0.95rem; border-radius: 4px; border: 1px solid; color: var(--ink); margin: 0 6px 8px 0; font-family: ui-sans-serif,system-ui,sans-serif; }
+  .chip.r{ border-color: var(--teal); color: #a7eedf; background: rgba(62,199,179,.13); }
+  .chip.a{ border-color: var(--amber); color: #fcdca2; background: rgba(244,185,66,.13); }
+  .chip.al{ border-color: var(--orange); color: #f2b48a; background: rgba(230,126,59,.13); }
+  .chip.c{ border-color: var(--red); color: #e8a3a3; background: rgba(201,82,82,.13); }
+  
+  /* stat cards */
+  .stats{ display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0 2px 0; }
+  .stat{ flex: 1 1 150px; background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--teal); border-radius: 9px; padding: 16px 18px; }
+  .stat.big{ border-top-color: var(--amber); }
+  .stat .num{ font-family: Georgia, serif; font-size: 2.1rem; font-weight: 700; color: var(--ink); line-height: 1.1; }
+  .stat .lab{ font-size: 0.78rem; letter-spacing: 0.16rem; text-transform: uppercase; color: var(--muted); margin-top: 6px; font-weight: 800; }
+  
+  /* callouts */
+  .callout{ border-radius: 9px; padding: 18px 22px; margin-top: 10px; font-size: 1.05rem; line-height: 1.55; }
+  .callout.off{ border: 1px solid var(--amber); background: rgba(244,185,66,.09); color: var(--ink); }
+  .callout.warn{ border: 1px solid var(--red); background: rgba(201,82,82,.10); color: var(--ink); }
+  .callout.ok{ border: 1px solid var(--teal); background: rgba(62,199,179,.09); color: var(--ink); }
+  .callout b{ color: var(--teal); }
+  .callout.warn b{ color: var(--red); }
+  .callout.off b{ color: var(--amber); }
+  
+  /* architecture flow */
+  .flow{ display: flex; gap: 12px; align-items: center; overflow-x: auto; padding-bottom: 8px; margin-bottom: 4px; scrollbar-width: none; }
+  .flow::-webkit-scrollbar{ display: none; }
+  .node{ flex: 0 0 auto; width: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 14px 14px 14px; position: relative; }
+  .node .num{ position: absolute; top: 11px; right: 12px; width: 26px; height: 26px; border-radius: 50%; background: var(--teal); color: #072226; font-weight: 900; font-size: 0.85rem; display: grid; place-items: center; }
+  .node h4{ margin: 0 0 7px 0; font-size: 1rem; color: var(--ink); font-family: Georgia, serif; }
+  .node p{ margin: 0; font-size: 0.86rem; color: var(--muted); line-height: 1.5; }
+  .arrow{ color: var(--muted); font-weight: 900; font-size: 1.5rem; flex: 0 0 auto; opacity: 0.55; }
+  
+  /* cost bars */
+  .costrow{ display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .costrow:last-child{ border-bottom: none; }
+  .costrow .lbl{ display: inline-block; width: 205px; font-size: 0.9rem; color: var(--ink); flex-shrink: 0; }
+  .costrow .bar{ flex: 1; height: 9px; background: rgba(255,255,255,.07); border-radius: 6px; overflow: hidden; }
+  .costrow .bar-fill{ height: 100%; background: var(--teal); border-radius: 6px; width: 0%; transition: width 0.9s ease; }
+  .costrow .val{ width: 56px; text-align: right; font-size: 0.9rem; font-weight: 800; color: var(--ink); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  
+  /* footer */
+  #footer{ position: absolute; left: 0; right: 0; bottom: 0; height: 72px; display: flex; flex-direction: column; z-index: 20; pointer-events: none; user-select: none; }
+  #footer > *{ pointer-events: auto; }
+  #progress{ height: 4px; width: 100%; background: rgba(255,255,255,.07); border-radius: 2px; overflow: hidden; }
+  #progress-bar{ height: 100%; background: var(--teal); border-radius: 2px; transform: scalex(0); transform-origin: left; transition: transform 0.5s ease; }
+  .footer-row{ display: flex; align-items: center; justify-content: space-between; padding: 9px 60px 13px 60px; flex: 1; }
+  #hints{ font-size: 0.78rem; letter-spacing: 0.12rem; text-transform: uppercase; color: var(--dim); }
+  #dots{ display: flex; gap: 8px; }
+  .dot{ width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.22); border: 1px solid rgba(255,255,255,.35); cursor: pointer; transition: all .25s ease; }
+  .dot.active{ background: var(--teal); box-shadow: 0 0 0 3px rgba(62,199,179,.25); transform: scale(1.3); }
+  .dot:not(.active):hover{ background: rgba(255,255,255,.55); }
+  #counters{ font-variant-numeric: tabular-nums; font-size: 0.9rem; color: var(--muted); min-width: 76px; text-align: right; }
+  
+  /* notes panel */
+  #notes-overlay{ position: fixed; inset: 0; background: rgba(10,27,32,.6); backdrop-filter: blur(3px); z-index: 60; opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+  #notes-overlay.open{ opacity: 1; pointer-events: auto; }
+  #notes{ position: fixed; right: 0; top: 0; bottom: 0; width: min(470px, 44vw); background: var(--surface); border-left: 1px solid var(--border); color: var(--ink); z-index: 70; transform: translatex(120%); transition: transform .45s ease; display: flex; flex-direction: column; box-shadow: -24px 0 70px rgba(0,0,0,.5); }
+  #notes.open{ transform: translatex(0); }
+  .notes-head{ display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .notes-head .t{ font-size: 0.82rem; letter-spacing: 0.16rem; text-transform: uppercase; color: #8fd0c8; font-weight: 800; }
+  #notesText{ padding: 26px 26px 34px; font-size: 1.15rem; line-height: 1.75; color: #c9dde4; overflow-y: auto; flex: 1; }
+  #closeNotes{ background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; }
+  #closeNotes:hover{ color: var(--ink); border-color: var(--ink); }
+  .hidden{ display: none !important; }
+  
+  /* dashboard sketch (slide 11) */
+  .dash-sketch{ background: var(--surface-2); border: 1px solid var(--border); border-radius: 11px; padding: 18px 20px; }
+  .dash-head{ border-bottom: 1px solid var(--border); padding-bottom: 9px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .dash-head .t{ font-size: 0.8rem; letter-spacing: 0.14rem; text-transform: uppercase; color: #8fd0c8; font-weight: 800; }
+  .dash-head .addr{ font-size: 0.72rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--dim); background: rgba(0,0,0,.3); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,.07); }
+  .dash-row{ display: flex; gap: 14px; margin-bottom: 12px; }
+  .dash-stat{ flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 13px 14px; }
+  .dash-stat .v{ font-family: Georgia, serif; font-size: 1.6rem; font-weight: 700; color: var(--ink); }
+  .dash-stat .l{ font-size: 0.7rem; letter-spacing: 0.14rem; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+  .spark-wrap{ width: 100%; height: 72px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); margin-bottom: 12px; }
+  
+  h1.big{ font-family: Georgia, serif; font-size: clamp(2.8rem, 7vw, 5.6rem); margin: 0 0 6px 0; color: var(--ink); line-height: 1.02; font-weight: 700; letter-spacing: -0.02rem; }
+  .subtitle{ font-size: 1.55rem; color: var(--muted); margin: 0 0 3px 0; line-height: 1.35; }
+  .place{ font-size: 1.2rem; color: #8fd0c8; font-weight: 700; letter-spacing: 0.08rem; text-transform: uppercase; margin: 0; }
+  .meta{ font-size: 1rem; color: var(--muted); margin: 10px 0 0 0; font-variant-numeric: tabular-nums; }
+  
+  /* feature chart */
+  svg.chart{ width: 100%; height: auto; display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .chart-cap{ font-size: 0.78rem; color: var(--dim); letter-spacing: 0.12rem; text-transform: uppercase; margin-top: 8px; text-align: center; }
+  
+  .centered{ display: flex; flex-direction: column; align-items: center; text-align: center; height: 100%; justify-content: center; }
+  .centered > *{ max-width: 860px; }
+  
+  a{ color: #8fd0c8; }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div class="stage">
+    <!-- 1 · Title -->
+    <section class="slide" id="s1" aria-label="Slide 1 of 14 · Title" data-notes="Open with the problem: advisories are municipality-wide — they don't say whether this barangay is affected — and connectivity drops when warnings matter most.">
+      <div class="slide-inner centered">
+        <div class="kicker">Thesis Oral Defense</div>
+        <h1 class="big reveal" data-step="0">FLAIRE</h1>
+        <div class="subtitle reveal" data-step="1">Flood Level AI Risk Evaluation</div>
+        <p class="place reveal" data-step="2">An offline-first flood early-warning prototype &middot; Barangay Elvita, Narra, Palawan</p>
+        <p class="meta reveal" data-step="3">[Candidate Name] &middot; [Adviser] &middot; [Date]</p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px;" class="reveal" data-step="4">
+          <span class="chip r">Solar LoRa node</span>
+          <span class="chip r">Raspberry Pi 5</span>
+          <span class="chip r">SQLite</span>
+          <span class="chip r">Random Forest + fuzzy logic</span>
+          <span class="chip a">LAN dashboard + SMS</span>
+          <span class="chip c">≈ ₱23,700</span>
+        </div>
+        <p class="footnote reveal" data-step="5" style="margin-top:28px; font-size:0.92rem; color:var(--dim);">Decision-support tool — the BDRRMC makes the call.</p>
+      </div>
+    </section>
+
+    <!-- 2 · Problem & setting -->
+    <section class="slide" id="s2" aria-label="Slide 2 of 14 · Problem & setting" data-notes="Barangay Elvita, Narra, Palawan: local flooding, and connectivity drops exactly when warnings matter most.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">02 · Problem &amp; setting</span><h2 class="slide-title">Why Barangay Elvita needs a local warning</h2><div class="slide-deck">Flood context</div></header>
+        <div class="wrap">
+          <div class="col">
+            <ul class="bullets">
+              <li class="reveal" data-step="0">Flood-prone barangay on the Narra, Palawan coast</li>
+              <li class="reveal" data-step="1">Advisories arrive municipality-wide — they do not say whether this barangay is affected</li>
+              <li class="reveal" data-step="2">Connectivity fails exactly when warnings matter most</li>
+            </ul>
+            <div class="callout off reveal" data-step="3"><b>Design constraint:</b> works without internet — classification, storage, and dashboard run on a local Raspberry Pi 5</div>
+          </div>
+          <div class="col">
+            <div class="card reveal" data-step="2">
+              <h3 style="color:var(--teal);">Setting</h3>
+              <p style="font-size:1.3rem; margin:0 0 8px 0; color:var(--teal); font-weight:700;">Barangay Elvita</p>
+              <p style="margin:0;">Narra, Palawan &middot; river-monitoring prototype for the BDRRMC &middot; barangay-scale, offline-first early warning</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · Objectives & scope -->
+    <section class="slide" id="s3" aria-label="Slide 3 of 14 · Objectives & scope" data-notes="Scope is feasibility: a working offline-first decision-support prototype, not a validated flood predictor.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">03 · Objectives &amp; scope</span><h2 class="slide-title">Objectives &amp; scope</h2><div class="slide-deck">Decision-support framing</div></header>
+        <div class="wrap">
+          <div class="col">
+            <div class="card reveal" data-step="0">
+              <h3 style="color:var(--teal);">In scope</h3>
+              <ul class="bullets" style="margin:0;">
+                <li>Offline-first pipeline: sensor &rarr; LoRa &rarr; Pi 5 &rarr; dashboard + SMS</li>
+                <li>Risk classification: Random Forest + 20-rule fuzzy logic</li>
+                <li>Dual-horizon forecasts: 24 h and 48 h side by side</li>
+                <li>Field deployment and acceptability check</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card reveal" data-step="1" style="border-left-color:var(--amber);">
+              <h3 style="color:var(--amber);">Out of scope</h3>
+              <ul class="bullets" style="margin:0;">
+                <li>Validated flood-prediction skill</li>
+                <li>Measured warning lead time</li>
+                <li>Field-tested SMS delivery</li>
+                <li>Community-wide generalization (n = 2 survey)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="callout off reveal" data-step="2"><b>Framing:</b> a feasibility study — the system advises; the BDRRMC decides.</div>
+      </div>
+    </section>
+
+    <!-- 4 · System architecture -->
+    <section class="slide" id="s4" aria-label="Slide 4 of 14 · System architecture" data-notes="Everything runs on the Pi locally; internet only refreshes cached forecasts.">
+      <div class="slide-inner" style="justify-content:center">
+        <header class="slide-head"><span class="kicker">04 · System architecture</span><h2 class="slide-title">System architecture</h2><div class="slide-deck">Sensor to alert, offline-first</div></header>
+        <div class="flow reveal" data-step="0">
+          <div class="node"><div class="num">1</div><h4>Solar-powered sensor node</h4><p>Water level + rainfall, every minute</p></div>
+          <div class="arrow">&rarr;</div>
+          <div class="node"><div class="num">2</div><h4>LoRa radio</h4><p>RFM95W @915 MHz, kilometers range</p></div>
+          <div class="arrow">&rarr;</div>
+          <div class="node reveal" data-step="1"><div class="num">3</div><h4>Raspberry Pi 5</h4><p>LoRa receiver &middot; weather/tide fetcher (6 h cache) &middot; SQLite</p></div>
+          <div class="arrow reveal" data-step="1">&rarr;</div>
+          <div class="node reveal" data-step="2"><div class="num">4</div><h4>AI pipeline</h4><p>RF (8 features) &rarr; propensity &middot; fuzzy (20 rules) &rarr; risk &middot; 24 h / 48 h</p></div>
+          <div class="arrow reveal" data-step="2">&rarr;</div>
+          <div class="node reveal" data-step="2"><div class="num">5</div><h4>Outputs</h4><p>LAN dashboard &middot; SMS at Alarm / Critical</p></div>
+        </div>
+        <div class="callout off reveal" data-step="3"><b>Offline-first:</b> everything after the sensor runs locally on the Pi. Internet only refreshes the cached forecast.</div>
+      </div>
+    </section>
+
+    <!-- 5 · Hardware & cost -->
+    <section class="slide" id="s5" aria-label="Slide 5 of 14 · Hardware & cost" data-notes="₱23,700 total build cost — Pi 5 at ₱6,500 is about 27% of the total; within a barangay budget.">
+      <div class="slide-inner" style="justify-content:center">
+        <header class="slide-head"><span class="kicker">05 · Hardware &amp; cost</span><h2 class="slide-title">Hardware &amp; cost — about ₱23,700</h2><div class="slide-deck">Simple visual breakdown</div></header>
+        <div class="costrow reveal" data-step="0"><span class="lbl">Raspberry Pi 5</span><div class="bar"><div class="bar-fill" data-pct="100%"></div></div><span class="val">₱6,500</span></div>
+        <div class="costrow reveal" data-step="0"><span class="lbl">Adafruit 32u4 RFM9x LoRa board ×3</span><div class="bar"><div class="bar-fill" data-pct="83%"></div></div><span class="val">₱5,400</span></div>
+        <div class="costrow reveal" data-step="0"><span class="lbl">Ultrasonic water-level sensor</span><div class="bar"><div class="bar-fill" data-pct="12%"></div></div><span class="val">₱800</span></div>
+        <div class="costrow reveal" data-step="0"><span class="lbl">Enclosure / weatherproof housing</span><div class="bar"><div class="bar-fill" data-pct="31%"></div></div><span class="val">₱2,000</span></div>
+        <div class="costrow reveal" data-step="0"><span class="lbl">Power supply / solar panel kit</span><div class="bar"><div class="bar-fill" data-pct="46%"></div></div><span class="val">₱3,000</span></div>
+        <div class="costrow reveal" data-step="0"><span class="lbl">Miscellaneous hardware</span><div class="bar"><div class="bar-fill" data-pct="31%"></div></div><span class="val">₱2,000</span></div>
+        <div class="costrow reveal" data-step="0"><span class="lbl">GSM modem SIM and SMS load (yearly)</span><div class="bar"><div class="bar-fill" data-pct="31%"></div></div><span class="val">₱2,000</span></div>
+        <div class="costrow reveal" data-step="0"><span class="lbl">Transportation and field deployment</span><div class="bar"><div class="bar-fill" data-pct="15%"></div></div><span class="val">₱1,000</span></div>
+        <div class="costrow reveal" data-step="0"><span class="lbl">Printing, documentation, miscellaneous</span><div class="bar"><div class="bar-fill" data-pct="15%"></div></div><span class="val">₱1,000</span></div>
+        <div class="stats reveal" style="margin-top:10px;" data-step="1">
+          <div class="stat big"><div class="num">₱23,700</div><div class="lab">Total build cost</div></div>
+        </div>
+        <p class="callout off reveal" data-step="2" style="margin-top:16px;"><b>Note:</b> Pi 5 at ₱6,500 is about 27% of the total build cost — one board runs the full Python stack.</p>
+      </div>
+    </section>
+
+    <!-- 6 · Data pipeline -->
+    <section class="slide" id="s6" aria-label="Slide 6 of 14 · Data pipeline" data-notes="One-minute LoRa ingestion; distance and tip counts convert to level and rainfall; forecasts cached every six hours.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">06 · Data pipeline</span><h2 class="slide-title">Data pipeline — one minute at a time</h2><div class="slide-deck">Ingestion formulas &amp; forecast cache</div></header>
+        <div class="wrap">
+          <div class="col">
+            <div class="card reveal" data-step="0" style="border-left-color:var(--teal);">
+              <h3 style="color:var(--teal);">Every 60 seconds — LoRa</h3>
+              <ul class="bullets" style="margin:0;">
+                <li>water level = 2.5 m − sensor distance</li>
+                <li>rainfall = tip count × 0.2 mm</li>
+                <li>stale-data warning after 5 silent minutes</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card reveal" data-step="1" style="border-left-color:var(--amber);">
+              <h3 style="color:var(--amber);">Every 6 hours — Open-Meteo</h3>
+              <ul class="bullets" style="margin:0;">
+                <li>weather + tide forecast fetched</li>
+                <li>cached locally for 6 hours</li>
+                <li>7-day outlook in SQLite; classification never waits on live internet</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="callout off reveal" data-step="2"><b>Formulas run on the Pi;</b> only the forecast refresh needs internet.</div>
+      </div>
+    </section>
+
+    <!-- 7 · Methodology -->
+    <section class="slide" id="s7" aria-label="Slide 7 of 14 · Methodology" data-notes="RF gives propensity from eight features; the fuzzy layer makes the final call with twenty readable rules.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">07 · Methodology</span><h2 class="slide-title">Methodology — two models, one call</h2><div class="slide-deck">Dataset, model, classifier, output</div></header>
+        <div class="wrap" style="gap: 14px;">
+          <div class="card reveal" data-step="0">
+            <h3 style="color:var(--teal);">Data</h3>
+            <p style="margin:0; font-size:1.05rem;">1,826 records &middot; 2020–2024</p>
+          </div>
+          <div class="card reveal" data-step="0">
+            <h3 style="color:var(--teal);">Random Forest</h3>
+            <p style="margin:0; font-size:1.05rem;">8 features &rarr; flood propensity (Low / Medium / High)</p>
+          </div>
+          <div class="card reveal" data-step="0">
+            <h3 style="color:var(--teal);">Fuzzy logic</h3>
+            <p style="margin:0; font-size:1.05rem;">20 rules &middot; 5 inputs &rarr; risk level</p>
+          </div>
+          <div class="card reveal" data-step="1">
+            <h3 style="color:var(--teal);">Prediction</h3>
+            <p style="margin:0; font-size:1.05rem;">Dual horizon — 24 h and 48 h side by side</p>
+          </div>
+          <div class="card reveal" data-step="1">
+            <h3 style="color:var(--teal);">Output</h3>
+            <p style="margin:0; font-size:1.05rem;">4 risk levels <span class="chip r">Receding</span><span class="chip a">Alert</span><span class="chip al">Alarm</span><span class="chip c">Critical</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 · Model results -->
+    <section class="slide" id="s8" aria-label="Slide 8 of 14 · Model results" data-notes="Honest number: 94.26% measures consistency with our own labels — not flood-prediction skill.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">08 · Model results</span><h2 class="slide-title">Model results — what the numbers actually say</h2><div class="slide-deck">Hold-out evaluation, 80/20 split</div></header>
+        <div class="stats reveal" data-step="0">
+          <div class="stat big"><div class="num">94.26%</div><div class="lab">Accuracy</div></div>
+          <div class="stat"><div class="num">0.933</div><div class="lab">Macro F1</div></div>
+          <div class="stat"><div class="num">0.943</div><div class="lab">Weighted F1</div></div>
+          <div class="stat"><div class="num">1,826</div><div class="lab">Records</div></div>
+        </div>
+        <div class="reveal" data-step="1" style="margin-top:16px;">
+          <div style="font-size:0.85rem; color:var(--muted); letter-spacing:0.14rem; text-transform: uppercase; margin-bottom:8px;">Feature importance</div>
+          <svg class="chart" viewBox="0 0 1200 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="chartTitle">
+            <title id="chartTitle">Feature importance — Random Forest, 8 features</title>
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#3ec7b3"/>
+                <stop offset="100%" stop-color="#2e948a"/>
+              </linearGradient>
+            </defs>
+            <!-- axis baseline -->
+            <line x1="150" y1="262" x2="1150" y2="262" stroke="#26525c" stroke-width="1"/>
+            <g stroke="#26525c" stroke-width="1" opacity=".5">
+              <line x1="400" y1="220" x2="400" y2="262"/>
+              <line x1="650" y1="220" x2="650" y2="262"/>
+              <line x1="900" y1="220" x2="900" y2="262"/>
+              <line x1="1150" y1="220" x2="1150" y2="262"/>
+            </g>
+            <!-- bars: x=150 start, width proportional (0.40 = 1000px) -->
+            <rect x="150" y="30" width="1000" height="20" fill="url(#g1)"/>
+            <rect x="150" y="58" width="606" height="20" fill="url(#g1)"/>
+            <rect x="150" y="86" width="276" height="20" fill="url(#g1)"/>
+            <rect x="150" y="114" width="229" height="20" fill="url(#g1)"/>
+            <rect x="150" y="142" width="110" height="20" fill="url(#g1)"/>
+            <rect x="150" y="170" width="103" height="20" fill="url(#g1)"/>
+            <rect x="150" y="198" width="89" height="20" fill="url(#g1)"/>
+            <rect x="150" y="226" width="85" height="20" fill="url(#g1)"/>
+            <!-- feature labels -->
+            <text x="140" y="43" text-anchor="end" font-size="11" fill="#b9ccd2" font-weight="700">R7</text>
+            <text x="140" y="71" text-anchor="end" font-size="11" fill="#b9ccd2" font-weight="700">R3</text>
+            <text x="140" y="99" text-anchor="end" font-size="11" fill="#b9ccd2" font-weight="700">R1</text>
+            <text x="140" y="127" text-anchor="end" font-size="11" fill="#b9ccd2" font-weight="700">rain_days</text>
+            <text x="140" y="155" text-anchor="end" font-size="11" fill="#b9ccd2" font-weight="700">TMAX</text>
+            <text x="140" y="183" text-anchor="end" font-size="11" fill="#b9ccd2" font-weight="700">TideMax</text>
+            <text x="140" y="211" text-anchor="end" font-size="11" fill="#b9ccd2" font-weight="700">TideMin</text>
+            <text x="140" y="239" text-anchor="end" font-size="11" fill="#b9ccd2" font-weight="700">TMIN</text>
+            <!-- value labels at bar end -->
+            <text x="1158" y="43" font-size="11" fill="#e8f2f5" font-weight="800" font-variant-numeric="tabular-nums">0.40</text>
+            <text x="764" y="71" font-size="11" fill="#e8f2f5" font-weight="800" font-variant-numeric="tabular-nums">0.24</text>
+            <text x="434" y="99" font-size="11" fill="#e8f2f5" font-weight="800" font-variant-numeric="tabular-nums">0.11</text>
+            <text x="387" y="127" font-size="11" fill="#e8f2f5" font-weight="800" font-variant-numeric="tabular-nums">0.09</text>
+            <text x="268" y="155" font-size="11" fill="#e8f2f5" font-weight="800" font-variant-numeric="tabular-nums">0.04</text>
+            <text x="261" y="183" font-size="11" fill="#e8f2f5" font-weight="800" font-variant-numeric="tabular-nums">0.04</text>
+            <text x="247" y="211" font-size="11" fill="#e8f2f5" font-weight="800" font-variant-numeric="tabular-nums">0.04</text>
+            <text x="243" y="239" font-size="11" fill="#e8f2f5" font-weight="800" font-variant-numeric="tabular-nums">0.03</text>
+            <!-- axis labels -->
+            <text x="400" y="279" text-anchor="middle" font-size="10" fill="#6e939c">0.1</text>
+            <text x="650" y="279" text-anchor="middle" font-size="10" fill="#6e939c">0.2</text>
+            <text x="900" y="279" text-anchor="middle" font-size="10" fill="#6e939c">0.3</text>
+            <text x="1150" y="279" text-anchor="middle" font-size="10" fill="#6e939c">0.4</text>
+          </svg>
+          <p class="chart-cap">Share of each feature in the model's split decisions — rainfall features dominate</p>
+        </div>
+        <div class="callout warn reveal" data-step="2"><b>Honest caveat:</b> 94.26% is agreement with rule-derived labels — not demonstrated flood-prediction skill. The labels were built from the same eight features.</div>
+      </div>
+    </section>
+
+    <!-- 9 · Deployment results -->
+    <section class="slide" id="s9" aria-label="Slide 9 of 14 · Deployment results" data-notes="21.5 hours logged before the battery died; the river stayed at Receding the whole time.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">09 · Deployment results</span><h2 class="slide-title">Deployment results — field test</h2><div class="slide-deck">One node, one battery, real data</div></header>
+        <div class="stats reveal" data-step="0">
+          <div class="stat"><div class="num">21.5 h</div><div class="lab">Logged</div></div>
+          <div class="stat"><div class="num">13,568</div><div class="lab">Records</div></div>
+          <div class="stat big"><div class="num">Battery died</div><div class="lab">Deployment ended</div></div>
+          <div class="stat"><div class="num"><span class="chip r" style="padding:.1rem .5rem; font-size:.72rem;">Receding</span></div><div class="lab">River stayed here</div></div>
+        </div>
+        <div class="callout off reveal" data-step="1" style="margin-top:16px;"><b>Retrospective check of 4 documented floods:</b> 2 caught — both heavy-rainfall events the rule already flags; 2 missed — moderate rainfall. The model mirrored its own scoring rule.</div>
+      </div>
+    </section>
+
+    <!-- 10 · TAM survey -->
+    <section class="slide" id="s10" aria-label="Slide 10 of 14 · TAM survey" data-notes="Two BDRRMC focal persons rated six dimensions — preliminary, small-n feedback only.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">10 · Acceptability</span><h2 class="slide-title">Acceptability — TAM survey</h2><div class="slide-deck">Technology acceptance model, 5-point Likert</div></header>
+        <div class="stats reveal" data-step="0">
+          <div class="stat"><div class="num">2</div><div class="lab">Focal persons</div></div>
+          <div class="stat"><div class="num">6</div><div class="lab">Dimensions</div></div>
+          <div class="stat"><div class="num">24</div><div class="lab">Items</div></div>
+          <div class="stat big"><div class="num">5.00</div><div class="lab">Five dimensions</div></div>
+          <div class="stat big"><div class="num">4.75</div><div class="lab">Usability</div></div>
+        </div>
+        <div class="callout off reveal" data-step="1" style="margin-top:16px;"><b>Small-n note:</b> two BDRRMC focal persons — preliminary feedback, not generalizable. Instrument reviewed by subject-matter experts and pilot-tested.</div>
+      </div>
+    </section>
+
+    <!-- 11 · Demo placeholder -->
+    <section class="slide" id="s11" aria-label="Slide 11 of 14 · Live demo" data-notes="Walk the panel through the LAN dashboard: status, water-level chart, fuzzy details.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">11 · Live demo</span><h2 class="slide-title">Live demo — dashboard walkthrough</h2><div class="slide-deck">Connect to the Pi's LAN IP</div></header>
+        <div class="centered" style="justify-content: flex-start; align-items: flex-start; height: auto;">
+          <div class="reveal" data-step="0" style="font-size: clamp(2.6rem, 7vw, 5rem); font-family: Georgia, serif; font-weight: 700; color: var(--ink); line-height: 1.05;">Live Demo</div>
+          <div class="reveal" data-step="1" style="font-size:1.25rem; color: var(--muted); margin-top:8px;">Open the LAN dashboard &middot; walk through status, charts, and fuzzy details</div>
+          <div class="dash-sketch reveal" data-step="2" style="margin-top:26px;">
+            <div class="dash-head"><div class="t">LAN Dashboard (illustrative)</div><div class="addr">http://192.168.1.42:8000</div></div>
+            <div class="dash-row">
+              <div class="dash-stat"><div class="v">1.24 m</div><div class="l">Water level</div></div>
+              <div class="dash-stat"><div class="v">24 h / 48 h</div><div class="l">Risk horizons</div></div>
+              <div class="dash-stat"><div class="v"><span class="chip r">Receding</span></div><div class="l">24 h · 48 h risk</div></div>
+            </div>
+            <div class="spark-wrap"><svg viewBox="0 0 100 80" preserveAspectRatio="none" style="width:100%; height:100%; display:block;"><polyline points="2,56 14,62 28,50 42,66 56,48 70,58 84,44 98,52" fill="none" stroke="var(--teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div style="font-size:0.88rem; color: var(--muted);">Fuzzy details: rule 4 &middot; RF propensity: Low &middot; inputs: water level, rate of rise, forecast rain, tide</div>
+          </div>
+          <div class="callout ok reveal" data-step="3" style="margin-top:20px; max-width: 700px;"><b>Keyboard:</b> [&rarr;] [space] advance slides &middot; [S] speaker notes &middot; [F] fullscreen</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 · Limitations -->
+    <section class="slide" id="s12" aria-label="Slide 12 of 14 · Limitations" data-notes="Four honest limitations — name them before the panel does; each has a recommendation.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">12 · Limitations</span><h2 class="slide-title">Limitations — stated plainly</h2><div class="slide-deck">What the study does not claim</div></header>
+        <div class="wrap" style="gap: 14px;">
+          <div class="card reveal" data-step="0" style="border-left-color:var(--red);">
+            <h3 style="color:var(--red);">1. Labels from the same 8 features</h3>
+            <p style="margin:0; font-size:1.05rem;">94.26% is rule agreement, not prediction skill</p>
+          </div>
+          <div class="card reveal" data-step="1" style="border-left-color:var(--red);">
+            <h3 style="color:var(--red);">2. River never rose above Receding</h3>
+            <p style="margin:0; font-size:1.05rem;">Alarm / Critical never field-tested; no SMS sent</p>
+          </div>
+          <div class="card reveal" data-step="2" style="border-left-color:var(--amber);">
+            <h3 style="color:var(--amber);">3. One battery, 21.5 h</h3>
+            <p style="margin:0; font-size:1.05rem;">Power and sensor reliability need hardening</p>
+          </div>
+          <div class="card reveal" data-step="3" style="border-left-color:var(--amber);">
+            <h3 style="color:var(--amber);">4. n = 2 respondents</h3>
+            <p style="margin:0; font-size:1.05rem;">Acceptability is preliminary, not generalizable</p>
+          </div>
+        </div>
+        <div class="callout off reveal" data-step="4" style="margin-top:14px;"><b>Every limitation carries a recommendation in the conclusions.</b></div>
+      </div>
+    </section>
+
+    <!-- 13 · Contributions & conclusion -->
+    <section class="slide" id="s13" aria-label="Slide 13 of 14 · Contributions & conclusion" data-notes="Feasibility established; predictive value is future work with independent flood labels.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">13 · Contributions &amp; conclusion</span><h2 class="slide-title">Contributions &amp; conclusion</h2><div class="slide-deck">What this thesis adds</div></header>
+        <ul class="bullets">
+          <li class="reveal" data-step="0">Offline-first, barangay-scale prototype — about ₱23,700</li>
+          <li class="reveal" data-step="0">Hybrid RF + fuzzy pipeline on a single Raspberry Pi 5</li>
+          <li class="reveal" data-step="1">Feasibility established — predictive skill is future work, not a claim</li>
+          <li class="reveal" data-step="1">Honest evaluation: limitations disclosed, recommendations listed</li>
+        </ul>
+        <div class="callout ok reveal" data-step="2" style="margin-top:16px;"><b>A decision-support tool, not an autonomous warning system — the BDRRMC makes the call.</b></div>
+      </div>
+    </section>
+
+    <!-- 14 · Closing / Q&A -->
+    <section class="slide" id="s14" aria-label="Slide 14 of 14 · Thank you — Q&A" data-notes="Thank the panel — open for Q&A.">
+      <div class="slide-inner centered">
+        <div class="reveal" data-step="0" style="font-size: clamp(3rem, 8vw, 5.5rem); font-family: Georgia, serif; font-weight: 700; color: var(--ink); line-height: 1.05; margin: 0 0 10px 0;">Thank you.</div>
+        <div class="subtitle reveal" data-step="1">FLAIRE — Flood Level AI Risk Evaluation &middot; Barangay Elvita, Narra, Palawan</div>
+        <div class="place reveal" data-step="2">Questions &amp; discussion</div>
+      </div>
+    </section>
+  </div>
+
+  <footer id="footer">
+    <div id="progress"><div id="progress-bar"></div></div>
+    <div class="footer-row">
+      <div id="hints">[&larr; &rarr;] navigate &middot; [space] advance &middot; [S] speaker notes &middot; [F] fullscreen</div>
+      <div id="dots"></div>
+      <div id="counters">1 / 14</div>
+    </div>
+  </footer>
+</div>
+
+<div id="notes-overlay"></div>
+<div id="notes" class="hidden">
+  <div class="notes-head"><span class="t">Speaker notes — slide <span id="notesNo">1</span></span><button id="closeNotes">&times; Close</button></div>
+  <div id="notesText"></div>
+</div>
+
+<script>
+(function(){
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  var n = slides.length;
+  var cur = 0;
+  var step = slides.map(function(){ return -1; });
+  var maxStep = slides.map(function(s){
+    var rs = s.querySelectorAll('.reveal'), m = -1;
+    rs.forEach(function(r){ var v = Number(r.dataset.step || 0); if(v > m) m = v; });
+    return m;
+  });
+  var progressBar = document.getElementById('progress-bar');
+  var counter = document.getElementById('counters');
+  var dotsWrap = document.getElementById('dots');
+  var notesPanel = document.getElementById('notes');
+  var notesOverlay = document.getElementById('notes-overlay');
+  var notesText = document.getElementById('notesText');
+  var notesNo = document.getElementById('notesNo');
+  var notesOpen = false;
+
+  for(var i = 0; i < n; i++){
+    var d = document.createElement('div');
+    d.className = 'dot';
+    d.dataset.i = i;
+    d.addEventListener('click', function(e){ e.stopPropagation(); jump(Number(this.dataset.i)); });
+    dotsWrap.appendChild(d);
+  }
+
+  function jump(i){
+    i = Math.max(0, Math.min(n - 1, i));
+    if(i === cur && !notesOpen) return;
+    cur = i;
+    step[cur] = -1;
+    render();
+    if(notesOpen){
+      notesNo.textContent = cur + 1;
+      notesText.textContent = slides[cur].dataset.notes || '\u2014';
+    }
+  }
+  function goNext(){
+    if(notesOpen){ closeNotes(); return; }
+    if(step[cur] < maxStep[cur]){
+      step[cur]++;
+      render();
+      return;
+    }
+    if(cur < n - 1) jump(cur + 1);
+  }
+  function goPrev(){
+    if(notesOpen){ closeNotes(); return; }
+    jump(cur - 1);
+  }
+  function render(){
+    slides.forEach(function(s, i){
+      s.classList.remove('current', 'past', 'future');
+      s.classList.add(i < cur ? 'past' : i > cur ? 'future' : 'current');
+      s.setAttribute('aria-hidden', i !== cur ? 'true' : 'false');
+      if(i === cur){
+        s.setAttribute('data-step', step[cur]);
+        s.querySelectorAll('.reveal').forEach(function(el, idx){
+          var st = Number(el.dataset.step || 0);
+          if(st <= step[cur]){
+            el.classList.add('shown');
+            el.style.transitionDelay = (idx * 70) + 'ms';
+          } else {
+            el.classList.remove('shown');
+            el.style.transitionDelay = '';
+          }
+        });
+        animateFills(s);
+      } else {
+        s.removeAttribute('data-step');
+        s.querySelectorAll('.reveal.shown').forEach(function(el){
+          el.classList.remove('shown');
+          el.style.transitionDelay = '';
+        });
+      }
+    });
+    var pct = n > 1 ? (cur / (n - 1)) * 100 : 0;
+    progressBar.style.transform = 'scalex(' + (pct / 100) + ')';
+    counter.textContent = (cur + 1) + ' / ' + n;
+    [].forEach.call(dotsWrap.children, function(d, i){ d.classList.toggle('active', i === cur); });
+    if(!notesOpen) history.replaceState(null, '', '#slide=' + (cur + 1));
+  }
+  function animateFills(s){
+    s.querySelectorAll('.bar-fill').forEach(function(el){
+      var pct = el.dataset.pct;
+      el.style.width = '0%';
+      el.offsetHeight; // reflow
+      el.style.width = pct;
+    });
+  }
+  function toggleFS(){
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen().catch(function(){});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+  document.addEventListener('fullscreenchange', function(){
+    document.body.classList.toggle('fs', !!document.fullscreenElement);
+  });
+  function toggleNotes(){
+    notesOpen = !notesOpen;
+    notesOverlay.classList.toggle('open', notesOpen);
+    notesPanel.classList.toggle('open', notesOpen);
+    if(notesOpen){
+      notesNo.textContent = cur + 1;
+      notesText.textContent = slides[cur].dataset.notes || '—';
+    }
+  }
+  function closeNotes(){
+    notesOpen = false;
+    notesOverlay.classList.remove('open');
+    notesPanel.classList.remove('open');
+  }
+
+  document.addEventListener('keydown', function(e){
+    var k = e.key;
+    if(k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp'){ e.preventDefault(); goPrev(); return; }
+    if(k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' '){ e.preventDefault(); goNext(); return; }
+    if(k === 'Home'){ e.preventDefault(); jump(0); return; }
+    if(k === 'End'){ e.preventDefault(); jump(n - 1); return; }
+    if(k === 'f' || k === 'F'){ e.preventDefault(); toggleFS(); return; }
+    if(k === 's' || k === 'S'){ e.preventDefault(); toggleNotes(); return; }
+    if(k === 'Escape'){ if(notesOpen) closeNotes(); }
+  });
+
+  var stage = document.querySelector('.stage');
+  stage.addEventListener('click', function(e){
+    if(e.target.closest('.dot')) return;
+    if(e.target.closest('#notes, #notes-overlay, #closeNotes')) return;
+    goNext();
+  });
+  var tx = 0;
+  stage.addEventListener('touchstart', function(e){ tx = e.changedTouches[0].clientX; }, {passive: true});
+  stage.addEventListener('touchend', function(e){
+    var dx = e.changedTouches[0].clientX - tx;
+    if(Math.abs(dx) > 60){ e.preventDefault(); dx > 0 ? goPrev() : goNext(); }
+  }, {passive: true});
+
+  document.getElementById('closeNotes').addEventListener('click', closeNotes);
+  notesOverlay.addEventListener('click', closeNotes);
+
+  var m = location.hash.match(/#slide=(\d+)/);
+  if(m) cur = Math.max(0, Math.min(n - 1, parseInt(m[1], 10) - 1));
+  step[cur] = maxStep[cur]; // open fully revealed; later slides still build step-by-step
+  render();
+})();
+</script>
+</body>
+</html>
