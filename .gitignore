@@ -19,3 +19,6 @@ data/*.db-shm
 # OS / editor
 .DS_Store
 Thumbs.db
+
+~$*
+~WRL*.tmp
