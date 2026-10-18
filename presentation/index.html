@@ -195,10 +195,43 @@
       </div>
     </section>
 
-    <!-- 2 · Problem & setting -->
-    <section class="slide" id="s2" aria-label="Slide 2 of 14 · Problem & setting" data-notes="Barangay Elvita, Narra, Palawan: local flooding, and connectivity drops exactly when warnings matter most.">
+    <!-- 2 · Standard Operating Procedure -->
+    <section class="slide" id="s2" aria-label="Slide 2 of 14 · Standard Operating Procedure" data-notes="SOP: offline-first operation, SMS only at Alarm/Critical, BDRRMC retains alert authority, maintenance duties.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">02 · Problem &amp; setting</span><h2 class="slide-title">Why Barangay Elvita needs a local warning</h2><div class="slide-deck">Flood context</div></header>
+        <header class="slide-head"><span class="kicker">02 · Standard operating procedure</span><h2 class="slide-title">Standard operating procedure</h2><div class="slide-deck">Operation &amp; maintenance</div></header>
+        <div class="wrap" style="gap: 16px;">
+          <div class="col" style="flex:1;">
+            <div class="card reveal" data-step="0" style="border-left-color:var(--teal);">
+              <h3 style="color:var(--teal);">Operation</h3>
+              <ul class="bullets" style="margin:0;">
+                <li>LoRa sensor node sends water level + rainfall to the Pi 5 (about every 5 s)</li>
+                <li>Pi 5 runs receiver, weather/tide fetcher (6 h cache), SQLite, AI pipeline, dashboard, SMS handler</li>
+                <li>Classification and dashboard run fully offline — internet only refreshes cached forecasts</li>
+                <li>SMS alerts trigger only at Alarm / Critical; BDRRMC confirms before public release</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col" style="flex:1;">
+            <div class="card reveal" data-step="1" style="border-left-color:var(--amber);">
+              <h3 style="color:var(--amber);">Maintenance</h3>
+              <ul class="bullets" style="margin:0;">
+                <li>Secure sensor, wiring, and enclosure; inspect for dangling wires causing false readings</li>
+                <li>Flag invalid readings (zero/negative distance, sudden jumps); retain raw values for audit</li>
+                <li>Validate rain-gauge tips against a known volume of water</li>
+                <li>Monitor battery voltage and solar charging; reposition or enlarge panel if needed</li>
+                <li>Sync and document Raspberry Pi timestamps (installation, startup, shutdown, retrieval)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="callout off reveal" data-step="2"><b>Authority:</b> FLAIRE advises; the BDRRMC makes the alert call and supplements MDRRMO advisories, manual observation, and local knowledge.</div>
+      </div>
+    </section>
+
+    <!-- 3 · Problem & setting -->
+    <section class="slide" id="s3" aria-label="Slide 3 of 14 · Problem & setting" data-notes="Barangay Elvita, Narra, Palawan: local flooding, and connectivity drops exactly when warnings matter most.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker">03 · Problem &amp; setting</span><h2 class="slide-title">Why Barangay Elvita needs a local warning</h2><div class="slide-deck">Flood context</div></header>
         <div class="wrap">
           <div class="col">
             <ul class="bullets">
@@ -219,10 +252,10 @@
       </div>
     </section>
 
-    <!-- 3 · Objectives & scope -->
-    <section class="slide" id="s3" aria-label="Slide 3 of 14 · Objectives & scope" data-notes="Scope is feasibility: a working offline-first decision-support prototype, not a validated flood predictor.">
+    <!-- 4 · Objectives & scope -->
+    <section class="slide" id="s4" aria-label="Slide 4 of 14 · Objectives & scope" data-notes="Scope is feasibility: a working offline-first decision-support prototype, not a validated flood predictor.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">03 · Objectives &amp; scope</span><h2 class="slide-title">Objectives &amp; scope</h2><div class="slide-deck">Decision-support framing</div></header>
+        <header class="slide-head"><span class="kicker">04 · Objectives &amp; scope</span><h2 class="slide-title">Objectives &amp; scope</h2><div class="slide-deck">Decision-support framing</div></header>
         <div class="wrap">
           <div class="col">
             <div class="card reveal" data-step="0">
@@ -251,10 +284,10 @@
       </div>
     </section>
 
-    <!-- 4 · System architecture -->
-    <section class="slide" id="s4" aria-label="Slide 4 of 14 · System architecture" data-notes="Everything runs on the Pi locally; internet only refreshes cached forecasts.">
+    <!-- 5 · System architecture -->
+    <section class="slide" id="s5" aria-label="Slide 5 of 14 · System architecture" data-notes="Everything runs on the Pi locally; internet only refreshes cached forecasts.">
       <div class="slide-inner" style="justify-content:center">
-        <header class="slide-head"><span class="kicker">04 · System architecture</span><h2 class="slide-title">System architecture</h2><div class="slide-deck">Sensor to alert, offline-first</div></header>
+        <header class="slide-head"><span class="kicker">05 · System architecture</span><h2 class="slide-title">System architecture</h2><div class="slide-deck">Sensor to alert, offline-first</div></header>
         <div class="flow reveal" data-step="0">
           <div class="node"><div class="num">1</div><h4>Solar-powered sensor node</h4><p>Water level + rainfall, every minute</p></div>
           <div class="arrow">&rarr;</div>
@@ -270,10 +303,10 @@
       </div>
     </section>
 
-    <!-- 5 · Hardware & cost -->
-    <section class="slide" id="s5" aria-label="Slide 5 of 14 · Hardware & cost" data-notes="₱27,920 total build cost — Pi 5 at ₱6,500 is about 23% of the total; Node ₱7,070 · Edge ₱19,050 · General ₱1,800.">
+    <!-- 6 · Hardware & cost -->
+    <section class="slide" id="s6" aria-label="Slide 6 of 14 · Hardware & cost" data-notes="₱27,920 total build cost — Pi 5 at ₱6,500 is about 23% of the total; Node ₱7,070 · Edge ₱19,050 · General ₱1,800.">
       <div class="slide-inner" style="justify-content:center">
-        <header class="slide-head"><span class="kicker">05 · Hardware &amp; cost</span><h2 class="slide-title">Hardware &amp; cost — about ₱27,920</h2><div class="slide-deck">Itemized bill of materials</div></header>
+        <header class="slide-head"><span class="kicker">06 · Hardware &amp; cost</span><h2 class="slide-title">Hardware &amp; cost — about ₱27,920</h2><div class="slide-deck">Itemized bill of materials</div></header>
         <div class="wrap reveal" data-step="0" style="gap:26px;">
           <div class="col" style="flex:1; min-width:260px; max-width:640px;">
             <div class="card">
@@ -344,10 +377,10 @@
       </div>
     </section>
 
-    <!-- 6 · Data pipeline -->
-    <section class="slide" id="s6" aria-label="Slide 6 of 14 · Data pipeline" data-notes="One-minute LoRa ingestion; distance and tip counts convert to level and rainfall; forecasts cached every six hours.">
+    <!-- 7 · Data pipeline -->
+    <section class="slide" id="s7" aria-label="Slide 7 of 14 · Data pipeline" data-notes="One-minute LoRa ingestion; distance and tip counts convert to level and rainfall; forecasts cached every six hours.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">06 · Data pipeline</span><h2 class="slide-title">Data pipeline — one minute at a time</h2><div class="slide-deck">Ingestion formulas &amp; forecast cache</div></header>
+        <header class="slide-head"><span class="kicker">07 · Data pipeline</span><h2 class="slide-title">Data pipeline — one minute at a time</h2><div class="slide-deck">Ingestion formulas &amp; forecast cache</div></header>
         <div class="wrap">
           <div class="col">
             <div class="card reveal" data-step="0" style="border-left-color:var(--teal);">
@@ -374,10 +407,10 @@
       </div>
     </section>
 
-    <!-- 7 · Methodology -->
-    <section class="slide" id="s7" aria-label="Slide 7 of 14 · Methodology" data-notes="RF gives propensity from eight features; the fuzzy layer makes the final call with twenty readable rules.">
+    <!-- 8 · Methodology -->
+    <section class="slide" id="s8" aria-label="Slide 8 of 14 · Methodology" data-notes="RF gives propensity from eight features; the fuzzy layer makes the final call with twenty readable rules.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">07 · Methodology</span><h2 class="slide-title">Methodology — two models, one call</h2><div class="slide-deck">Dataset, model, classifier, output</div></header>
+        <header class="slide-head"><span class="kicker">08 · Methodology</span><h2 class="slide-title">Methodology — two models, one call</h2><div class="slide-deck">Dataset, model, classifier, output</div></header>
         <div class="wrap" style="gap: 14px;">
           <div class="card reveal" data-step="0">
             <h3 style="color:var(--teal);">Data</h3>
@@ -403,10 +436,10 @@
       </div>
     </section>
 
-    <!-- 8 · Model results -->
-    <section class="slide" id="s8" aria-label="Slide 8 of 14 · Model results" data-notes="Honest number: 94.26% measures consistency with our own labels — not flood-prediction skill.">
+    <!-- 9 · Model results -->
+    <section class="slide" id="s9" aria-label="Slide 9 of 14 · Model results" data-notes="Honest number: 94.26% measures consistency with our own labels — not flood-prediction skill.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">08 · Model results</span><h2 class="slide-title">Model results — what the numbers actually say</h2><div class="slide-deck">Hold-out evaluation, 80/20 split</div></header>
+        <header class="slide-head"><span class="kicker">09 · Model results</span><h2 class="slide-title">Model results — what the numbers actually say</h2><div class="slide-deck">Hold-out evaluation, 80/20 split</div></header>
         <div class="stats reveal" data-step="0">
           <div class="stat big"><div class="num">94.26%</div><div class="lab">Accuracy</div></div>
           <div class="stat"><div class="num">0.933</div><div class="lab">Macro F1</div></div>
@@ -470,10 +503,10 @@
       </div>
     </section>
 
-    <!-- 9 · Deployment results -->
-    <section class="slide" id="s9" aria-label="Slide 9 of 14 · Deployment results" data-notes="21.5 hours logged before the battery died; the river stayed at Receding the whole time.">
+    <!-- 10 · Deployment results -->
+    <section class="slide" id="s10" aria-label="Slide 10 of 14 · Deployment results" data-notes="21.5 hours logged before the battery died; the river stayed at Receding the whole time.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">09 · Deployment results</span><h2 class="slide-title">Deployment results — field test</h2><div class="slide-deck">One node, one battery, real data</div></header>
+        <header class="slide-head"><span class="kicker">10 · Deployment results</span><h2 class="slide-title">Deployment results — field test</h2><div class="slide-deck">One node, one battery, real data</div></header>
         <div class="stats reveal" data-step="0">
           <div class="stat"><div class="num">21.5 h</div><div class="lab">Logged</div></div>
           <div class="stat"><div class="num">13,568</div><div class="lab">Records</div></div>
@@ -484,10 +517,10 @@
       </div>
     </section>
 
-    <!-- 10 · TAM survey -->
-    <section class="slide" id="s10" aria-label="Slide 10 of 14 · TAM survey" data-notes="Two BDRRMC focal persons rated six dimensions — preliminary, small-n feedback only.">
+    <!-- 11 · TAM survey -->
+    <section class="slide" id="s11" aria-label="Slide 11 of 14 · TAM survey" data-notes="Two BDRRMC focal persons rated six dimensions — preliminary, small-n feedback only.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">10 · Acceptability</span><h2 class="slide-title">Acceptability — TAM survey</h2><div class="slide-deck">Technology acceptance model, 5-point Likert</div></header>
+        <header class="slide-head"><span class="kicker">11 · Acceptability</span><h2 class="slide-title">Acceptability — TAM survey</h2><div class="slide-deck">Technology acceptance model, 5-point Likert</div></header>
         <div class="stats reveal" data-step="0">
           <div class="stat"><div class="num">2</div><div class="lab">Focal persons</div></div>
           <div class="stat"><div class="num">6</div><div class="lab">Dimensions</div></div>
@@ -499,114 +532,10 @@
       </div>
     </section>
 
-    <!-- 11 · Demo placeholder -->
-    <section class="slide" id="s11" aria-label="Slide 11 of 14 · Live demo" data-notes="Walk the panel through the LAN dashboard: status, water-level chart, fuzzy details.">
+    <!-- 12 · Summary of Findings -->
+    <section class="slide" id="s12" aria-label="Slide 12 of 14 · Summary of Findings" data-notes="Key findings: manual current practices, 94.26% rule-agreement caveat, 21.5h deployment at Receding, n=2 acceptability.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">11 · Live demo</span><h2 class="slide-title">Live demo — dashboard walkthrough</h2><div class="slide-deck">Connect to the Pi's LAN IP</div></header>
-        <div class="centered" style="justify-content: flex-start; align-items: flex-start; height: auto;">
-          <div class="reveal" data-step="0" style="font-size: clamp(2.6rem, 7vw, 5rem); font-family: Georgia, serif; font-weight: 700; color: var(--ink); line-height: 1.05;">Live Demo</div>
-          <div class="reveal" data-step="1" style="font-size:1.25rem; color: var(--muted); margin-top:8px;">Open the LAN dashboard &middot; walk through status, charts, and fuzzy details</div>
-          <div class="dash-sketch reveal" data-step="2" style="margin-top:26px;">
-            <div class="dash-head"><div class="t">LAN Dashboard (illustrative)</div><div class="addr">http://192.168.1.42:8000</div></div>
-            <div class="dash-row">
-              <div class="dash-stat"><div class="v">1.24 m</div><div class="l">Water level</div></div>
-              <div class="dash-stat"><div class="v">24 h / 48 h</div><div class="l">Risk horizons</div></div>
-              <div class="dash-stat"><div class="v"><span class="chip r">Receding</span></div><div class="l">24 h · 48 h risk</div></div>
-            </div>
-            <div class="spark-wrap"><svg viewBox="0 0 100 80" preserveAspectRatio="none" style="width:100%; height:100%; display:block;"><polyline points="2,56 14,62 28,50 42,66 56,48 70,58 84,44 98,52" fill="none" stroke="var(--teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-            <div style="font-size:0.88rem; color: var(--muted);">Fuzzy details: rule 4 &middot; RF propensity: Low &middot; inputs: water level, rate of rise, forecast rain, tide</div>
-          </div>
-          <div class="callout ok reveal" data-step="3" style="margin-top:20px; max-width: 700px;"><b>Keyboard:</b> [&rarr;] [space] advance slides &middot; [S] speaker notes &middot; [F] fullscreen</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 12 · Limitations -->
-    <section class="slide" id="s12" aria-label="Slide 12 of 14 · Limitations" data-notes="Four honest limitations — name them before the panel does; each has a recommendation.">
-      <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">12 · Limitations</span><h2 class="slide-title">Limitations — stated plainly</h2><div class="slide-deck">What the study does not claim</div></header>
-        <div class="wrap" style="gap: 14px;">
-          <div class="card reveal" data-step="0" style="border-left-color:var(--red);">
-            <h3 style="color:var(--red);">1. Labels from the same 8 features</h3>
-            <p style="margin:0; font-size:1.05rem;">94.26% is rule agreement, not prediction skill</p>
-          </div>
-          <div class="card reveal" data-step="1" style="border-left-color:var(--red);">
-            <h3 style="color:var(--red);">2. River never rose above Receding</h3>
-            <p style="margin:0; font-size:1.05rem;">Alarm / Critical never field-tested; no SMS sent</p>
-          </div>
-          <div class="card reveal" data-step="2" style="border-left-color:var(--amber);">
-            <h3 style="color:var(--amber);">3. One battery, 21.5 h</h3>
-            <p style="margin:0; font-size:1.05rem;">Power and sensor reliability need hardening</p>
-          </div>
-          <div class="card reveal" data-step="3" style="border-left-color:var(--amber);">
-            <h3 style="color:var(--amber);">4. n = 2 respondents</h3>
-            <p style="margin:0; font-size:1.05rem;">Acceptability is preliminary, not generalizable</p>
-          </div>
-        </div>
-        <div class="callout off reveal" data-step="4" style="margin-top:14px;"><b>Every limitation carries a recommendation in the conclusions.</b></div>
-      </div>
-    </section>
-
-    <!-- 13 · Contributions & conclusion -->
-    <section class="slide" id="s13" aria-label="Slide 13 of 14 · Contributions & conclusion" data-notes="Feasibility established; predictive value is future work with independent flood labels.">
-      <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">13 · Contributions &amp; conclusion</span><h2 class="slide-title">Contributions &amp; conclusion</h2><div class="slide-deck">What this thesis adds</div></header>
-        <ul class="bullets">
-          <li class="reveal" data-step="0">Offline-first, barangay-scale prototype — about ₱27,920</li>
-          <li class="reveal" data-step="0">Hybrid RF + fuzzy pipeline on a single Raspberry Pi 5</li>
-          <li class="reveal" data-step="1">Feasibility established — predictive skill is future work, not a claim</li>
-          <li class="reveal" data-step="1">Honest evaluation: limitations disclosed, recommendations listed</li>
-        </ul>
-        <div class="callout ok reveal" data-step="2" style="margin-top:16px;"><b>A decision-support tool, not an autonomous warning system — the BDRRMC makes the call.</b></div>
-      </div>
-    </section>
-
-    <!-- 14 · Closing / Q&A -->
-    <section class="slide" id="s14" aria-label="Slide 14 of 14 · Thank you — Q&A" data-notes="Thank the panel — open for Q&A.">
-      <div class="slide-inner centered">
-        <div class="reveal" data-step="0" style="font-size: clamp(3rem, 8vw, 5.5rem); font-family: Georgia, serif; font-weight: 700; color: var(--ink); line-height: 1.05; margin: 0 0 10px 0;">Thank you.</div>
-        <div class="subtitle reveal" data-step="1">FLAIRE — Flood Level AI Risk Evaluation &middot; Barangay Elvita, Narra, Palawan</div>
-        <div class="place reveal" data-step="2">Questions &amp; discussion</div>
-      </div>
-    </section>
-
-    <!-- 15 · Standard Operating Procedure -->
-    <section class="slide" id="s15" aria-label="Slide 15 of 18 · Standard Operating Procedure" data-notes="SOP: offline-first operation, SMS only at Alarm/Critical, BDRRMC retains alert authority, maintenance duties.">
-      <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">15 · Standard operating procedure</span><h2 class="slide-title">Standard operating procedure</h2><div class="slide-deck">Operation &amp; maintenance</div></header>
-        <div class="wrap" style="gap: 16px;">
-          <div class="col" style="flex:1;">
-            <div class="card reveal" data-step="0" style="border-left-color:var(--teal);">
-              <h3 style="color:var(--teal);">Operation</h3>
-              <ul class="bullets" style="margin:0;">
-                <li>LoRa sensor node sends water level + rainfall to the Pi 5 (about every 5 s)</li>
-                <li>Pi 5 runs receiver, weather/tide fetcher (6 h cache), SQLite, AI pipeline, dashboard, SMS handler</li>
-                <li>Classification and dashboard run fully offline — internet only refreshes cached forecasts</li>
-                <li>SMS alerts trigger only at Alarm / Critical; BDRRMC confirms before public release</li>
-              </ul>
-            </div>
-          </div>
-          <div class="col" style="flex:1;">
-            <div class="card reveal" data-step="1" style="border-left-color:var(--amber);">
-              <h3 style="color:var(--amber);">Maintenance</h3>
-              <ul class="bullets" style="margin:0;">
-                <li>Secure sensor, wiring, and enclosure; inspect for dangling wires causing false readings</li>
-                <li>Flag invalid readings (zero/negative distance, sudden jumps); retain raw values for audit</li>
-                <li>Validate rain-gauge tips against a known volume of water</li>
-                <li>Monitor battery voltage and solar charging; reposition or enlarge panel if needed</li>
-                <li>Sync and document Raspberry Pi timestamps (installation, startup, shutdown, retrieval)</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div class="callout off reveal" data-step="2"><b>Authority:</b> FLAIRE advises; the BDRRMC makes the alert call and supplements MDRRMO advisories, manual observation, and local knowledge.</div>
-      </div>
-    </section>
-
-    <!-- 16 · Summary of Findings -->
-    <section class="slide" id="s16" aria-label="Slide 16 of 18 · Summary of Findings" data-notes="Key findings: manual current practices, 94.26% rule-agreement caveat, 21.5h deployment at Receding, n=2 acceptability.">
-      <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">16 · Summary of findings</span><h2 class="slide-title">Summary of findings</h2><div class="slide-deck">Chapter 5, evidence-based</div></header>
+        <header class="slide-head"><span class="kicker">12 · Summary of findings</span><h2 class="slide-title">Summary of findings</h2><div class="slide-deck">Chapter 5, evidence-based</div></header>
         <ul class="bullets">
           <li class="reveal" data-step="0">Current monitoring is manual: rain gauge, visual observation, tide calendar, plus MDRRMO advisories for the whole municipality</li>
           <li class="reveal" data-step="0">MDRRMO alerts may not reflect barangay-specific conditions — localized monitoring is needed</li>
@@ -618,10 +547,10 @@
       </div>
     </section>
 
-    <!-- 17 · Conclusions -->
-    <section class="slide" id="s17" aria-label="Slide 17 of 18 · Conclusions" data-notes="Feasibility established; predictive skill not yet demonstrated; BDRRMC keeps decision authority.">
+    <!-- 13 · Conclusions -->
+    <section class="slide" id="s13" aria-label="Slide 13 of 14 · Conclusions" data-notes="Feasibility established; predictive skill not yet demonstrated; BDRRMC keeps decision authority.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">17 · Conclusions</span><h2 class="slide-title">Conclusions</h2><div class="slide-deck">What the study establishes</div></header>
+        <header class="slide-head"><span class="kicker">13 · Conclusions</span><h2 class="slide-title">Conclusions</h2><div class="slide-deck">What the study establishes</div></header>
         <ul class="bullets">
           <li class="reveal" data-step="0">Current practices are manual and municipality-wide — barangay-level, localized monitoring is needed</li>
           <li class="reveal" data-step="0">FLAIRE addresses this via its offline-first design: LoRa sensing, local storage, cached forecasts, LAN dashboard, SMS alerts</li>
@@ -635,10 +564,10 @@
       </div>
     </section>
 
-    <!-- 18 · Recommendations -->
-    <section class="slide" id="s18" aria-label="Slide 18 of 18 · Recommendations" data-notes="Concrete Chapter 5 recommendations: system, model, and deployment improvement.">
+    <!-- 14 · Recommendations -->
+    <section class="slide" id="s14" aria-label="Slide 14 of 14 · Recommendations" data-notes="Concrete Chapter 5 recommendations: system, model, and deployment improvement.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker">18 · Recommendations</span><h2 class="slide-title">Recommendations</h2><div class="slide-deck">Chapter 5, actionable</div></header>
+        <header class="slide-head"><span class="kicker">14 · Recommendations</span><h2 class="slide-title">Recommendations</h2><div class="slide-deck">Chapter 5, actionable</div></header>
         <div class="wrap" style="gap: 14px;">
           <div class="col" style="flex:1; min-width:250px;">
             <div class="card reveal" data-step="0" style="border-left-color:var(--teal);">
@@ -646,7 +575,7 @@
               <ul class="bullets" style="margin:0; font-size:1.02rem;">
                 <li>Secure sensor, wiring, enclosure; inspect during installation/maintenance</li>
                 <li>Flag invalid readings (zero/negative, sudden jumps); retain raw values for audit</li>
-                <li>Validate rain-gauge tips against a known water volume</li>
+                <li>Validate rain-gauge tips against a known volume of water</li>
                 <li>Add SMS store-and-forward with retry and delivery confirmation</li>
                 <li>Improve power reliability: panel placement, battery capacity, voltage/charging monitoring</li>
                 <li>Sync and document Raspberry Pi timestamps</li>
@@ -679,16 +608,16 @@
             </div>
           </div>
         </div>
+        <div class="callout ok reveal" data-step="3" style="margin-top:16px;"><b>Thank you — questions?</b></div>
       </div>
     </section>
   </div>
 
-  <footer id="footer">
     <div id="progress"><div id="progress-bar"></div></div>
     <div class="footer-row">
       <div id="hints">[&larr; &rarr;] navigate &middot; [space] advance &middot; [S] speaker notes &middot; [F] fullscreen</div>
       <div id="dots"></div>
-      <div id="counters">1 / 18</div>
+      <div id="counters">1 / 14</div>
     </div>
   </footer>
 </div>

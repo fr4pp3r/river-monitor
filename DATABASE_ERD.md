@@ -150,3 +150,16 @@ erDiagram
 - **Alerting**: `alerts`, `alert_contacts`
 - **Auth/audit**: `users`, `audit_log`
 - **Ops**: `system_status`
+
+## Description and Discussion
+
+### Description
+The ERD models the data layer of the River Monitor system, a SQLite database on a Raspberry Pi 5. It contains 11 entities grouped into six functional domains: sensor ingestion, weather/tide, AI prediction output, alerting, authentication/audit, and operations. Each entity is identified by a surrogate integer primary key (`id`), and natural keys such as `username`, `phone_number`, and `date` are enforced as `UNIQUE`. There are no declared foreign keys; integrity is maintained in application code, which keeps the schema simple and migration-friendly on SQLite.
+
+### Discussion
+- **Ingestion vs. aggregation split**: Raw 1-minute readings live in `sensor_data`, while `rainfall_hourly` and `rainfall_daily` are derived aggregates. This separates high-frequency capture from the coarser time windows the AI pipeline needs (R1/R3/R7, rain days), avoiding repeated full-table scans.
+- **Dual-horizon prediction in one row**: `predictions` stores both 24 h and 48 h results (risk level, RF propensity, fuzzy inputs, triggered rule, fallback flag) in a single row keyed by `timestamp`. This keeps the two horizons aligned to one prediction event and simplifies "latest prediction" lookups.
+- **Alerting lifecycle**: `alerts` captures the full lifecycle (pending → sent/failed) plus acknowledgement (`acknowledged`, `acknowledged_by`, `acknowledged_at`), while `alert_contacts` holds recipient preferences (`receive_alert/warning/critical`). `alerts.sent_to` stores the resolved phone list as text, decoupling delivery records from contact changes.
+- **Auth and accountability**: `users` supports two roles (viewer/admin) with password hashes; `audit_log` records mutating actions with actor, role, target, and IP. This provides a minimal but complete accountability trail for a LAN dashboard.
+- **Operational observability**: `system_status` keeps the latest status per component (LoRa, SMS, weather, model) for the dashboard's health view, and `weather_data`/`tidal_data` cache Open-Meteo responses so the AI pipeline and dashboard can run offline within the cache window.
+- **Trade-offs**: Skipping foreign keys eases SQLite migrations and keeps the schema portable, at the cost of referential checks being handled in Python. JSON columns (`forecast_data`, `fuzzy_inputs`) keep flexible, versioned payloads without schema churn. Overall, the ERD favors read/write simplicity and operational resilience over strict relational normalization.
