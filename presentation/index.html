@@ -116,6 +116,10 @@
   .costrow .bar{ flex: 1; height: 9px; background: rgba(255,255,255,.07); border-radius: 6px; overflow: hidden; }
   .costrow .bar-fill{ height: 100%; background: var(--teal); border-radius: 6px; width: 0%; transition: width 0.9s ease; }
   .costrow .val{ width: 56px; text-align: right; font-size: 0.9rem; font-weight: 800; color: var(--ink); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .bom{ display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+  .bomrow{ display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--ink); }
+  .bomrow span:last-child{ color: var(--teal); font-weight: 800; font-variant-numeric: tabular-nums; min-width: 62px; text-align: right; }
+  .bomsub{ margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 0.95rem; color: var(--ink); font-weight: 800; }
   
   /* footer */
   #footer{ position: absolute; left: 0; right: 0; bottom: 0; height: 72px; display: flex; flex-direction: column; z-index: 20; pointer-events: none; user-select: none; }
@@ -185,7 +189,7 @@
           <span class="chip r">SQLite</span>
           <span class="chip r">Random Forest + fuzzy logic</span>
           <span class="chip a">LAN dashboard + SMS</span>
-          <span class="chip c">≈ ₱23,700</span>
+          <span class="chip c">≈ ₱27,920</span>
         </div>
         <p class="footnote reveal" data-step="5" style="margin-top:28px; font-size:0.92rem; color:var(--dim);">Decision-support tool — the BDRRMC makes the call.</p>
       </div>
@@ -267,22 +271,76 @@
     </section>
 
     <!-- 5 · Hardware & cost -->
-    <section class="slide" id="s5" aria-label="Slide 5 of 14 · Hardware & cost" data-notes="₱23,700 total build cost — Pi 5 at ₱6,500 is about 27% of the total; within a barangay budget.">
+    <section class="slide" id="s5" aria-label="Slide 5 of 14 · Hardware & cost" data-notes="₱27,920 total build cost — Pi 5 at ₱6,500 is about 23% of the total; Node ₱7,070 · Edge ₱19,050 · General ₱1,800.">
       <div class="slide-inner" style="justify-content:center">
-        <header class="slide-head"><span class="kicker">05 · Hardware &amp; cost</span><h2 class="slide-title">Hardware &amp; cost — about ₱23,700</h2><div class="slide-deck">Simple visual breakdown</div></header>
-        <div class="costrow reveal" data-step="0"><span class="lbl">Raspberry Pi 5</span><div class="bar"><div class="bar-fill" data-pct="100%"></div></div><span class="val">₱6,500</span></div>
-        <div class="costrow reveal" data-step="0"><span class="lbl">Adafruit 32u4 RFM9x LoRa board ×3</span><div class="bar"><div class="bar-fill" data-pct="83%"></div></div><span class="val">₱5,400</span></div>
-        <div class="costrow reveal" data-step="0"><span class="lbl">Ultrasonic water-level sensor</span><div class="bar"><div class="bar-fill" data-pct="12%"></div></div><span class="val">₱800</span></div>
-        <div class="costrow reveal" data-step="0"><span class="lbl">Enclosure / weatherproof housing</span><div class="bar"><div class="bar-fill" data-pct="31%"></div></div><span class="val">₱2,000</span></div>
-        <div class="costrow reveal" data-step="0"><span class="lbl">Power supply / solar panel kit</span><div class="bar"><div class="bar-fill" data-pct="46%"></div></div><span class="val">₱3,000</span></div>
-        <div class="costrow reveal" data-step="0"><span class="lbl">Miscellaneous hardware</span><div class="bar"><div class="bar-fill" data-pct="31%"></div></div><span class="val">₱2,000</span></div>
-        <div class="costrow reveal" data-step="0"><span class="lbl">GSM modem SIM and SMS load (yearly)</span><div class="bar"><div class="bar-fill" data-pct="31%"></div></div><span class="val">₱2,000</span></div>
-        <div class="costrow reveal" data-step="0"><span class="lbl">Transportation and field deployment</span><div class="bar"><div class="bar-fill" data-pct="15%"></div></div><span class="val">₱1,000</span></div>
-        <div class="costrow reveal" data-step="0"><span class="lbl">Printing, documentation, miscellaneous</span><div class="bar"><div class="bar-fill" data-pct="15%"></div></div><span class="val">₱1,000</span></div>
-        <div class="stats reveal" style="margin-top:10px;" data-step="1">
-          <div class="stat big"><div class="num">₱23,700</div><div class="lab">Total build cost</div></div>
+        <header class="slide-head"><span class="kicker">05 · Hardware &amp; cost</span><h2 class="slide-title">Hardware &amp; cost — about ₱27,920</h2><div class="slide-deck">Itemized bill of materials</div></header>
+        <div class="wrap reveal" data-step="0" style="gap:26px;">
+          <div class="col" style="flex:1; min-width:260px; max-width:640px;">
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+                <div style="font-size:0.9rem; letter-spacing:0.14rem; text-transform:uppercase; font-weight:800; color:var(--teal);">Node</div>
+                <div style="font-size:1.1rem; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;">₱7,070</div>
+              </div>
+              <div class="bom">
+                <div class="bomrow"><span>Adafruit RFM95 LoRa</span><span>₱2,500</span></div>
+                <div class="bomrow"><span>Mini magnets</span><span>₱100</span></div>
+                <div class="bomrow"><span>Meshtastic 915 MHz LoRa antenna</span><span>₱300</span></div>
+                <div class="bomrow"><span>Reed switch</span><span>₱200</span></div>
+                <div class="bomrow"><span>MCP73871 power boost</span><span>₱300</span></div>
+                <div class="bomrow"><span>UART 7.5 m waterproof ultrasonic sensor</span><span>₱1,500</span></div>
+                <div class="bomrow"><span>3.5 W solar panel</span><span>₱200</span></div>
+                <div class="bomrow"><span>3.7 V 10 Ah battery</span><span>₱220</span></div>
+                <div class="bomrow"><span>Enclosure box</span><span>₱250</span></div>
+                <div class="bomrow"><span>PVC pipe</span><span>₱1,000</span></div>
+                <div class="bomrow"><span>Housing materials</span><span>₱500</span></div>
+              </div>
+              <div class="bomsub">Subtotal — ₱7,070</div>
+              <div class="bar" style="margin-top:6px;"><div class="bar-fill" data-pct="37%"></div></div>
+            </div>
+          </div>
+          <div class="col" style="flex:1; min-width:260px; max-width:760px;">
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+                <div style="font-size:0.9rem; letter-spacing:0.14rem; text-transform:uppercase; font-weight:800; color:var(--teal);">Edge</div>
+                <div style="font-size:1.1rem; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;">₱19,050</div>
+              </div>
+              <div class="bom">
+                <div class="bomrow"><span>Meshtastic 915 MHz LoRa antenna</span><span>₱300</span></div>
+                <div class="bomrow"><span>52Pi RPi5 power expansion board</span><span>₱1,600</span></div>
+                <div class="bomrow"><span>Micro SD card</span><span>₱750</span></div>
+                <div class="bomrow"><span>RPi5 active cooler</span><span>₱250</span></div>
+                <div class="bomrow"><span>Raspberry Pi 5 2 GB board</span><span>₱6,500</span></div>
+                <div class="bomrow"><span>12 V 12 Ah LiFePO4 battery pack</span><span>₱2,220</span></div>
+                <div class="bomrow"><span>LoRa RFM95W transceiver board</span><span>₱2,000</span></div>
+                <div class="bomrow"><span>60 W solar panel w/ controller</span><span>₱1,900</span></div>
+                <div class="bomrow"><span>SIMCOM A7608e-H</span><span>₱1,530</span></div>
+                <div class="bomrow"><span>SMS load (yearly)</span><span>₱2,000</span></div>
+              </div>
+              <div class="bomsub">Subtotal — ₱19,050</div>
+              <div class="bar" style="margin-top:6px;"><div class="bar-fill" data-pct="100%"></div></div>
+            </div>
+          </div>
+          <div class="col" style="flex:1; min-width:220px; max-width:420px;">
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+                <div style="font-size:0.9rem; letter-spacing:0.14rem; text-transform:uppercase; font-weight:800; color:var(--teal);">General</div>
+                <div style="font-size:1.1rem; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;">₱1,800</div>
+              </div>
+              <div class="bom">
+                <div class="bomrow"><span>Breadboard (2 × 100)</span><span>₱200</span></div>
+                <div class="bomrow"><span>Wires</span><span>₱200</span></div>
+                <div class="bomrow"><span>Marine plywood</span><span>₱400</span></div>
+                <div class="bomrow"><span>Miscellaneous electrical components</span><span>₱1,000</span></div>
+              </div>
+              <div class="bomsub">Subtotal — ₱1,800</div>
+              <div class="bar" style="margin-top:6px;"><div class="bar-fill" data-pct="9%"></div></div>
+            </div>
+          </div>
         </div>
-        <p class="callout off reveal" data-step="2" style="margin-top:16px;"><b>Note:</b> Pi 5 at ₱6,500 is about 27% of the total build cost — one board runs the full Python stack.</p>
+        <div class="stats reveal" style="margin-top:16px;" data-step="1">
+          <div class="stat big"><div class="num">₱27,920</div><div class="lab">Total build cost</div></div>
+        </div>
+        <p class="callout off reveal" data-step="2" style="margin-top:16px;"><b>Note:</b> Pi 5 at ₱6,500 is about 23% of the total build cost — one board runs the full Python stack.</p>
       </div>
     </section>
 
@@ -494,7 +552,7 @@
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker">13 · Contributions &amp; conclusion</span><h2 class="slide-title">Contributions &amp; conclusion</h2><div class="slide-deck">What this thesis adds</div></header>
         <ul class="bullets">
-          <li class="reveal" data-step="0">Offline-first, barangay-scale prototype — about ₱23,700</li>
+          <li class="reveal" data-step="0">Offline-first, barangay-scale prototype — about ₱27,920</li>
           <li class="reveal" data-step="0">Hybrid RF + fuzzy pipeline on a single Raspberry Pi 5</li>
           <li class="reveal" data-step="1">Feasibility established — predictive skill is future work, not a claim</li>
           <li class="reveal" data-step="1">Honest evaluation: limitations disclosed, recommendations listed</li>

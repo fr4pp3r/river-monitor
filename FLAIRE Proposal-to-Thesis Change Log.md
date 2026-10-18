@@ -42,7 +42,7 @@ None of these are fatal, and the thesis documents each one itself — which is t
 | 11 | Hardware | 2 × ESP32 nodes + ultrasonic, Raspberry Pi gateway (P378) | 1 × Adafruit 32u4 RFM9x node + ultrasonic + **rain gauge**, Raspberry Pi 5 (P366, P437) |
 | 12 | Forecast source | OpenWeatherMap API (P379) | Open-Meteo API (P221, P343, P404) |
 | 13 | Dashboard stack | Flask (P379, P402) | FastAPI (P467) |
-| 14 | Total cost | ₱28,200 (total row, Table 3.1) | ₱23,700 (Table 3.2) |
+| 14 | Total cost | ₱28,200 (total row, Table 3.1) | ₱27,920 (Table 3.2) |
 | 15 | Alert channels | multi-channel: sirens, queued SMS, social media (P214, P243ff.) | dashboard + SMS at Alarm/Critical; siren/social media are BDRRMC actions (P249, P377) |
 | 16 | Chapters 4–5 | headings only (P418, P420, P421) | full results and conclusions written from scratch |
 
@@ -221,9 +221,9 @@ Not present in the proposal at all. Contents:
 | SMS | SMS Gateway Service (yearly) — 2,000 | GSM modem SIM and SMS load (yearly) — 2,000 |
 | Transport | Transportation and field deployment — 1,000 | Transportation and field deployment — 1,000 |
 | Printing | Printing, documentation, and miscellaneous — 1,000 | Printing, documentation, and miscellaneous — 1,000 |
-| **Total** | **₱28,200** | **₱23,700** |
+| **Total** | **₱28,200** | **₱27,920** |
 
-  Net: −₱2,500 on the edge computer (Pi AI HAT+ → Pi 5), −₱2,000 by deleting the paid Weather Forecast API (Open-Meteo is free), and the per-node "x2" quantities dropped for the single-node build. The ₱800 ultrasonic sensor line and the ₱5,400 board line still reflect multi-unit purchases.
+  Net: −₱2,500 on the edge computer (Pi AI HAT+ → Pi 5), −₱2,000 by deleting the paid Weather Forecast API (Open-Meteo is free), and the per-node "x2" quantities dropped for the single-node build. The ₱800 ultrasonic sensor line and the ₱5,400 board line still reflect multi-unit purchases. Note: the thesis column above records the earlier comparison; Table 3.2 has since been revised to the actual-parts BOM (25 line items — Node ₱7,070, Edge ₱19,050, General ₱1,800 — totaling ₱27,920), which is why the thesis rows no longer sum to the total row.
 - **Narrative changed.** "deployment of **2 sensor nodes**" (P398) removed (P463); "ESP32 LoRa V3 boards… **Raspberry Pi 4**… **Flask** LAN dashboard… **IP67 enclosures**… approximately **₱9,400 per sensor node**" (P402) → "**Adafruit 32u4 RFM9x LoRa boards**… **Raspberry Pi 5**… **FastAPI** LAN dashboard… **weather-resistant enclosures**" (P467); the per-node ₱9,400 figure and the IP67 rating are gone. Note P467 still says "**Machine Learning model**" where the rest of the thesis says Random Forest + fuzzy logic — a naming inconsistency.
 - **Benefits rewritten.**
   - Proposal (P405): "support a **24–48-hour predictive decision window** through local AI analysis of cached weather data and real-time LoRa sensor inputs" → Thesis (P470–P471): continuous monitoring, local storage, Random Forest + fuzzy-logic pipeline on the Raspberry Pi 5, LAN dashboard; "the system is **designed to** generate Alert, Alarm, or Critical classifications and to send SMS notifications for Alarm or Critical conditions."
@@ -322,9 +322,9 @@ Beyond the unfulfilled-commitment list, the cross-read surfaces these unresolved
 9. **Container items still empty.** Table of Contents, Acknowledgement, Gantt grid (Figure 3.4 / Table 2), Appendices A/B/D–F, co-author bionotes, dangling "CURRICULUM VITAE" heading (P827).
 10. **List of Tables.** Tables 4.1–4.6 have no page numbers; the List of Figures is inherited from the proposal unchanged (no new figures were added for the new Ch4 tables).
 11. **Duplicated sentence in the adviser bionote.** The thesis repeats "His commitment to education is evident in his passion for teaching, training, and his involvement in the technology and computer-related industries." twice at P645; the proposal had it once (P429).
-12. **Cost rows still show multi-unit quantities** (`x3` board, `x2`-era pricing on a single-node build) while the deployment is single-node — a small coherence question at ₱23,700 total.
+12. ~~Cost rows still show multi-unit quantities~~ **Resolved** — Table 3.2 was revised to the actual-parts BOM (25 items grouped Node / Edge / General, totaling ₱27,920); no multi-unit rows remain.
 
-**Fixed after this comparison was written** (stage 11, applied to the docx and verified — 828 paragraphs / 13 tables unchanged, no stale strings, run structure preserved): item **2** (P279, P280, P281, P300), item **3** (P348, plus future-tense residue at P476 and P480), and item **6** (P467). Items **1, 4, 5, 7–12** remain open.
+**Fixed after this comparison was written** (stage 11, applied to the docx and verified — 828 paragraphs / 13 tables unchanged, no stale strings, run structure preserved): item **2** (P279, P280, P281, P300), item **3** (P348, plus future-tense residue at P476 and P480), and item **6** (P467). Items **1, 4, 5, 7–11** remain open; item **12** was resolved by the Table 3.2 cost revision.
 
 ---
 
@@ -358,7 +358,7 @@ Answer truthfully about contributions (§1, item 2 of the material table). The a
 The thesis reports these as data-quality findings, not river behaviour (P590, Table 4.5): 67 zero-distance records with a corresponding 2.500 m reading, 124 negative calculated water levels, and five implausibly short raw distances — all flagged for quality review. Presenting them unprompted is a strength; the panel may ask what the 2.500 m median-adjacent outlier implies for the recorded range of −0.012 m to 2.500 m (P543).
 
 **Q10. Total cost?**
-**₱23,700** (Table 3.2), down from **₱28,200** in the proposal — the drop is the Raspberry Pi AI HAT+ (₱9,000) becoming a Raspberry Pi 5 (₱6,500) and the paid Weather Forecast API line (₱2,000) being eliminated because Open-Meteo is free. Be ready for the follow-up on why the board line still reads `x3` and why multi-unit-era pricing remains in a single-node build (§10, item 12).
+**₱27,920** (Table 3.2, revised actual-parts BOM) against **₱28,200** in the proposal — edge station ₱19,050, river node ₱7,070, general materials ₱1,800; the paid Weather Forecast API line is gone entirely because Open-Meteo is free. The former multi-unit-row follow-up (§10, item 12) is resolved by the revision.
 
 ---
 

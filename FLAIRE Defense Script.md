@@ -8,7 +8,7 @@
 
 > FLAIRE — Flood Level AI Risk Evaluation — is an offline-first flood early-warning prototype for Barangay Elvita in Narra, Palawan. The problem there is specific: warnings come from municipality-wide advisories that don't say whether *this* barangay is affected, and connectivity drops exactly when warnings matter most.
 >
-> The system is a solar-powered sensor node that measures river level and rainfall and sends them by LoRa radio to a Raspberry Pi 5 — no internet required. On the device, a Random Forest model estimates flood propensity from eight meteorological and tide features, and a 20-rule fuzzy-logic classifier combines that propensity with the live water level, its rate of rise, cached seven-day weather and tide forecasts, and the tide, to produce four risk levels: Receding, Alert, Alarm, and Critical — shown on a LAN dashboard, with SMS alerts at the two highest levels. The whole build costs about ₱23,700.
+> The system is a solar-powered sensor node that measures river level and rainfall and sends them by LoRa radio to a Raspberry Pi 5 — no internet required. On the device, a Random Forest model estimates flood propensity from eight meteorological and tide features, and a 20-rule fuzzy-logic classifier combines that propensity with the live water level, its rate of rise, cached seven-day weather and tide forecasts, and the tide, to produce four risk levels: Receding, Alert, Alarm, and Critical — shown on a LAN dashboard, with SMS alerts at the two highest levels. The whole build costs about ₱27,920.
 >
 > The study designed, developed, and *initially* evaluated the system: a functional verification of the fuzzy layer, a check against four documented flood events, a field deployment of about 21.5 hours, and an acceptability rating by two BDRRMC focal persons.
 >
@@ -192,7 +192,7 @@ Assume at least one panelist has read your *accepted proposal*, because if they 
 ### F. Practical, Cost & Ethics
 
 **F1. What does it cost?**
-> "₱23,700 total — Raspberry Pi 5 at ₱6,500, three LoRa boards at ₱5,400, sensors, enclosure, solar kit, SIM and SMS load, transportation and documentation. Low enough for a barangay budget, and the cost table is in Chapter 4." *(cost table, P463)*
+> "₱27,920 total — the edge station at the barangay hall is ₱19,050, the river node ₱7,070, and general materials ₱1,800; the Raspberry Pi 5 alone is ₱6,500 of it. Low enough for a barangay budget, and the cost table is in Chapter 4." *(cost table, P463)*
 
 **F2. Can other barangays use it?**
 > "Yes — that's the policy-level claim: the architecture is modular and internet-independent, so it can be adapted to other flood-prone communities, with the caveat that the pilot was one barangay and one deployment." *(P242)*
@@ -252,7 +252,7 @@ These only exist if a panelist has read your *accepted proposal*. Assume one has
 > *(Do not improvise this. Agree one truthful sentence with all five members and have every one of them say the same thing. See G1 and the Part 6 checklist.)*
 
 **H9. "You switched forecast providers, dashboard frameworks and hardware — OpenWeatherMap to Open-Meteo, Flask to FastAPI, an ESP32 and Raspberry Pi 4 build to Adafruit RFM9x boards and a Pi 5. Why?"**
-> "Those are implementation decisions made during development, and the thesis documents the architecture that was actually built and piloted rather than the proposed one. The consequential change is cost: moving to Open-Meteo removed the paid weather-API line entirely, and the total came down from ₱28,200 in the proposal to ₱23,700 in the thesis. The rest is componentry the pilot actually ran."
+> "Those are implementation decisions made during development, and the thesis documents the architecture that was actually built and piloted rather than the proposed one. The consequential change is cost: moving to Open-Meteo removed the paid weather-API line entirely, and the total came down from ₱28,200 in the proposal to ₱27,920 in the thesis. The rest is componentry the pilot actually ran."
 
 **H10. "Your proposal said the sensor transmits every 10 minutes. Chapter 3 says every 5 seconds."**
 > *(**Verify the deployed firmware's actual sampling and transmission interval before the defense and make the text match it** — do not answer this from memory. Five-second and ten-minute intervals imply very different power budgets, which matters because the deployment ended when the battery depleted.)*
@@ -290,7 +290,7 @@ Every member must know these cold — expect any panelist to test any of the fiv
 2. **Offline-first means:** classification, dashboard, and storage run on a Raspberry Pi at the barangay; internet only refreshes cached forecasts.
 3. **Four risk levels:** Receding → Alert → Alarm → Critical; 20 fuzzy rules (15 core + 5 gap-fill).
 4. **Two AI layers:** Random Forest (8 features → flood propensity) feeding a fuzzy-logic classifier (propensity + water level + rate of rise + forecast rain + tide → risk level).
-5. **The honest numbers:** 94.26% = agreement with our own labeling rule, NOT flood prediction. 2 of 4 documented floods scored High — and both were the events our own rule already flags. 13,568 records / ~21.5 hours deployed. n=2 acceptability (5.00 five dimensions, 4.75 usability). Cost ₱23,700.
+5. **The honest numbers:** 94.26% = agreement with our own labeling rule, NOT flood prediction. 2 of 4 documented floods scored High — and both were the events our own rule already flags. 13,568 records / ~21.5 hours deployed. n=2 acceptability (5.00 five dimensions, 4.75 usability). Cost ₱27,920.
 6. **SMS:** works, enabled on the device, triggers only at Alarm/Critical — never fired in the field because the river stayed at Receding.
 7. **Three red lines:** never claim flood prediction, never claim lead time, never claim SMS was field-tested.
 8. **The AI rationale in one breath:** "We added the AI layer to explore whether ML can help assess flood risk — Chapter 1 states it as an aim, Chapter 5 answers it: technically feasible, predictive value not yet established."
