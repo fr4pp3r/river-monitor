@@ -151,6 +151,14 @@
   .pnum{ flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; background: var(--teal); color: #072226; font-weight: 900; font-size: 1rem; display: grid; place-items: center; font-family: Georgia, serif; flex-shrink: 0; }
   .problem-item p{ margin: 0; font-size: 1.05rem; color: var(--ink); line-height: 1.55; }
   
+  /* step strip — subsystem flowchart segments */
+  .step-strip{ display:flex; gap:10px; align-items:flex-start; overflow-x:auto; padding-bottom:6px; margin-bottom:4px; scrollbar-width:none; }
+  .step-strip::-webkit-scrollbar{ display:none; }
+  .step-node{ flex:0 0 auto; width:210px; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:14px 12px 12px 12px; position:relative; }
+  .step-node .stitle{ margin:0 0 7px 0; font-size:0.9rem; color:var(--ink); font-family:Georgia,serif; font-weight:700; letter-spacing:-0.01rem; }
+  .step-node .sdesc{ margin:0; font-size:0.86rem; color:var(--muted); line-height:1.5; }
+  .step-arrow{ color:var(--muted); font-weight:900; font-size:1.3rem; flex:0 0 auto; opacity:0.55; }
+  
   /* footer */
   #footer{ position: absolute; left: 0; right: 0; bottom: 0; height: 72px; display: flex; flex-direction: column; z-index: 20; pointer-events: none; user-select: none; }
   #footer > *{ pointer-events: auto; }
@@ -191,7 +199,7 @@
 <div id="viewport">
   <div class="stage">
     <!-- 1 · Title -->
-    <section class="slide" id="s1" aria-label="Slide 1 of 10 · Title" data-notes="Open with the problem: advisories are municipality-wide — they don't say whether this barangay is affected — and connectivity drops when warnings matter most.">
+    <section class="slide" id="s1" aria-label="Slide 1 of 12 · Title" data-notes="Open with the problem: advisories are municipality-wide — they don't say whether this barangay is affected — and connectivity drops when warnings matter most.">
       <div class="slide-inner centered">
         <div class="kicker reveal" data-step="0">Thesis Oral Defense</div>
         <h1 class="big reveal" data-step="1">FLAIRE</h1>
@@ -209,7 +217,7 @@
     </section>
 
     <!-- 2 · Background of the study (BLANK placeholder per user request) -->
-    <section class="slide" id="s2" aria-label="Slide 2 of 10 · Background of the study" data-notes="Placeholder slide per user request — insert background-of-study material here before the defense.">
+    <section class="slide" id="s2" aria-label="Slide 2 of 12 · Background of the study" data-notes="Placeholder slide per user request — insert background-of-study material here before the defense.">
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">02 · Background of the study</span><h2 class="slide-title reveal" data-step="0">Background of the study</h2></header>
         <div class="blank-zone reveal" data-step="1">
@@ -220,7 +228,7 @@
     </section>
 
     <!-- 3 · Statement of the Problem -->
-    <section class="slide" id="s3" aria-label="Slide 3 of 10 · Statement of the problem" data-notes="Statement of the problem from thesis Chapter 1: current flood-warning limitations in Brgy. Elvita and the five research questions FLAIRE seeks to answer.">
+    <section class="slide" id="s3" aria-label="Slide 3 of 12 · Statement of the problem" data-notes="Statement of the problem from thesis Chapter 1: current flood-warning limitations in Brgy. Elvita and the five research questions FLAIRE seeks to answer.">
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">03 · STATEMENT OF THE PROBLEM</span><h2 class="slide-title reveal" data-step="0">Statement of the problem</h2></header>
         <div class="reveal" data-step="1" style="margin-bottom:14px;">
@@ -254,7 +262,7 @@
     </section>
 
     <!-- 4 · Significance of the study -->
-    <section class="slide" id="s4" aria-label="Slide 4 of 10 · Significance of the study" data-notes="Beneficiaries per thesis Chapter 1: BDRRMC, barangay officials and residents, the academic community, and policy-makers / future deployments.">
+    <section class="slide" id="s4" aria-label="Slide 4 of 12 · Significance of the study" data-notes="Beneficiaries per thesis Chapter 1: BDRRMC, barangay officials and residents, the academic community, and policy-makers / future deployments.">
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">04 · Significance of the study</span><h2 class="slide-title reveal" data-step="0">Significance of the study</h2><div class="slide-deck reveal" data-step="0">Who benefits</div></header>
         <div class="benefit-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%;" class="reveal" data-step="1">
@@ -287,7 +295,7 @@
     </section>
 
     <!-- 5 · Scope and Delimitation -->
-    <section class="slide" id="s5" aria-label="Slide 5 of 10 · Scope and Delimitation" data-notes="Faithful to thesis Chapter 1: barangay-scale offline-first prototype, decision-support framing, n=2 acceptability survey, ~21.5 h deployment.">
+    <section class="slide" id="s5" aria-label="Slide 5 of 12 · Scope and Delimitation" data-notes="Faithful to thesis Chapter 1: barangay-scale offline-first prototype, decision-support framing, n=2 acceptability survey, ~21.5 h deployment.">
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">05 · Scope and Delimitation</span><h2 class="slide-title reveal" data-step="0">Scope and Delimitation</h2><div class="slide-deck reveal" data-step="0">In scope vs. boundaries</div></header>
         <div class="wrap reveal" data-step="1" style="gap:22px;">
@@ -321,7 +329,7 @@
     </section>
 
     <!-- 6 · Entity Relationship Diagram -->
-    <section class="slide" id="s6" aria-label="Slide 6 of 10 · Entity relationship diagram" data-notes="ERD placeholder — insert the database diagram from DATABASE_ERD.md here.">
+    <section class="slide" id="s6" aria-label="Slide 6 of 12 · Entity relationship diagram" data-notes="ERD placeholder — insert the database diagram from DATABASE_ERD.md here.">
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">06 · Entity relationship diagram</span><h2 class="slide-title reveal" data-step="0">Entity relationship diagram</h2><div class="slide-deck reveal" data-step="0">River-monitor database schema — insert figure</div></header>
         <div style="display:flex; justify-content:center;" class="reveal" data-step="1">
@@ -336,26 +344,90 @@
       </div>
     </section>
 
-    <!-- 7 · System Flowchart -->
-    <section class="slide" id="s7" aria-label="Slide 7 of 10 · System flowchart" data-notes="Flowchart placeholder — insert the system flowchart from SYSTEM_FLOWCHART.md here.">
+    <!-- 7 · System flowchart — Node -->
+    <section class="slide" id="s7" aria-label="Slide 7 of 12 · System flowchart — Node" data-notes="Field sensor node segment: ultrasonic water-level + tipping-bucket rain gauge, on-board controller, LoRa RFM95W @ 915 MHz, 1-min cadence, solar/battery power.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker reveal" data-step="0">07 · System flowchart</span><h2 class="slide-title reveal" data-step="0">System flowchart</h2><div class="slide-deck reveal" data-step="0">FLAIRE runtime flow — insert figure</div></header>
-        <div style="display:flex; justify-content:center;" class="reveal" data-step="1">
-          <!-- INSERT IMAGE HERE: slide 7 — Figure 3 — system flowchart (source: SYSTEM_FLOWCHART.md) -->
+        <header class="slide-head"><span class="kicker reveal" data-step="0">07 · SYSTEM FLOWCHART — NODE</span><h2 class="slide-title reveal" data-step="0">System flowchart — sensor node</h2><div class="slide-deck reveal" data-step="0">Field sensing segment</div></header>
+        <p class="reveal" data-step="1" style="font-size:1.02rem; color:var(--muted); line-height:1.6; margin-bottom:14px;">The sensor node measures river water level and rainfall, then transmits readings over LoRa every minute.</p>
+        <div class="step-strip reveal" data-step="2">
+          <div class="step-node"><h4 class="stitle">Sensors</h4><p class="sdesc">Ultrasonic water-level + tipping-bucket rain gauge</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">Controller</h4><p class="sdesc">On-board microcontroller (Adafruit 32u4 RFM9x)</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">LoRa TX</h4><p class="sdesc">RFM95W @ 915 MHz, 1-min cadence</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">Power</h4><p class="sdesc">Solar panel + battery</p></div>
+        </div>
+        <div style="display:flex; justify-content:center;" class="reveal" data-step="3">
+          <!-- INSERT IMAGE HERE: slide 7 — Figure 3 — sensor-node flowchart (source: SYSTEM_FLOWCHART.md INPUTS subgraph + thesis hardware) -->
           <div class="figbox" data-figure="3" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
-            <div class="fig-desc">FLAIRE system flowchart — insert the actual flowchart image here.</div>
+            <div class="fig-desc">Sensor-node flowchart — sensors, controller, LoRa RFM95W @ 915 MHz, solar/battery power.</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 3. FLAIRE system flowchart.</p>
-        <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: SYSTEM_FLOWCHART.md</p>
+        <p class="fig-cap">Figure 3. Sensor-node flowchart.</p>
+        <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: SYSTEM_FLOWCHART.md · thesis hardware (node side)</p>
       </div>
     </section>
 
-    <!-- 8 · Cost and Benefits -->
-    <section class="slide" id="s8" aria-label="Slide 8 of 10 · Cost and benefits" data-notes="₱27,920 BOM — Node ₱7,070 · Edge ₱19,050 · General ₱1,800 — plus thesis benefit categories: technical, operational, community-level.">
+    <!-- 8 · System flowchart — Edge device -->
+    <section class="slide" id="s8" aria-label="Slide 8 of 12 · System flowchart — Edge device" data-notes="Raspberry Pi 5 edge segment: LoRa receiver, Open-Meteo cache, SQLite, RF+fuzzy AI pipeline, SMS handler (A7608e-H, Alarm/Critical only).">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker reveal" data-step="0">08 · Cost and benefits</span><h2 class="slide-title reveal" data-step="0">Cost and benefits — about ₱27,920</h2><div class="slide-deck reveal" data-step="0">Bill of materials &amp; expected benefits</div></header>
+        <header class="slide-head"><span class="kicker reveal" data-step="0">08 · SYSTEM FLOWCHART — EDGE DEVICE</span><h2 class="slide-title reveal" data-step="0">System flowchart — edge device</h2><div class="slide-deck reveal" data-step="0">Raspberry Pi 5 segment</div></header>
+        <p class="reveal" data-step="1" style="font-size:1.02rem; color:var(--muted); line-height:1.6; margin-bottom:14px;">The Raspberry Pi 5 edge node receives LoRa data, enriches it with cached forecasts, classifies risk, and handles alerts — all offline.</p>
+        <div class="step-strip reveal" data-step="2">
+          <div class="step-node"><h4 class="stitle">LoRa receiver</h4><p class="sdesc">1-min ingestion from the sensor node</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">Forecast cache</h4><p class="sdesc">Open-Meteo weather + tide, 6-hour refresh</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">SQLite</h4><p class="sdesc">sensor_data, rainfall, weather, tidal, predictions</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">AI pipeline</h4><p class="sdesc">RF 8 features + 20-rule fuzzy, 24 h &amp; 48 h</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">SMS handler</h4><p class="sdesc">A7608e-H, Alarm / Critical only</p></div>
+        </div>
+        <div style="display:flex; justify-content:center;" class="reveal" data-step="3">
+          <!-- INSERT IMAGE HERE: slide 8 — Figure 4 — edge-device flowchart (source: SYSTEM_FLOWCHART.md) -->
+          <div class="figbox" data-figure="4" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
+            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-desc">Edge-device flowchart — LoRa receiver, forecast cache, SQLite, AI pipeline, SMS handler.</div>
+          </div>
+        </div>
+        <p class="fig-cap">Figure 4. Edge-device flowchart.</p>
+        <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: SYSTEM_FLOWCHART.md · thesis edge layer</p>
+      </div>
+    </section>
+
+    <!-- 9 · System flowchart — Dashboard -->
+    <section class="slide" id="s9" aria-label="Slide 9 of 12 · System flowchart — Dashboard" data-notes="FastAPI web dashboard segment: LAN server, browser dashboard, BDRRMC review/confirm, SMS fan-out to contacts.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker reveal" data-step="0">09 · SYSTEM FLOWCHART — DASHBOARD</span><h2 class="slide-title reveal" data-step="0">System flowchart — dashboard</h2><div class="slide-deck reveal" data-step="0">FastAPI web dashboard segment</div></header>
+        <p class="reveal" data-step="1" style="font-size:1.02rem; color:var(--muted); line-height:1.6; margin-bottom:14px;">The FastAPI dashboard serves BDRRMC personnel over LAN, showing live data and classifications, with human confirmation before public alerts.</p>
+        <div class="step-strip reveal" data-step="2">
+          <div class="step-node"><h4 class="stitle">FastAPI server</h4><p class="sdesc">On the Pi, reachable over LAN</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">Browser dashboard</h4><p class="sdesc">Charts, status cards, alerts</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">BDRRMC review</h4><p class="sdesc">Personnel confirm before release</p></div>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step-node"><h4 class="stitle">SMS fan-out</h4><p class="sdesc">Alerts to configured contacts</p></div>
+        </div>
+        <div style="display:flex; justify-content:center;" class="reveal" data-step="3">
+          <!-- INSERT IMAGE HERE: slide 9 — Figure 5 — dashboard flowchart (source: SYSTEM_FLOWCHART.md) -->
+          <div class="figbox" data-figure="5" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
+            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-desc">Dashboard flowchart — FastAPI server, browser dashboard, BDRRMC review, SMS fan-out.</div>
+          </div>
+        </div>
+        <p class="fig-cap">Figure 5. Dashboard flowchart.</p>
+        <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: SYSTEM_FLOWCHART.md · thesis UI layer</p>
+      </div>
+    </section>
+
+    <!-- 10 · Cost and Benefits -->
+    <section class="slide" id="s10" aria-label="Slide 10 of 12 · Cost and benefits" data-notes="₱27,920 BOM — Node ₱7,070 · Edge ₱19,050 · General ₱1,800 — plus thesis benefit categories: technical, operational, community-level.">
+      <div class="slide-inner">
+        <header class="slide-head"><span class="kicker reveal" data-step="0">10 · COST AND BENEFITS</span><h2 class="slide-title reveal" data-step="0">Cost and benefits — about ₱27,920</h2><div class="slide-deck reveal" data-step="0">Bill of materials &amp; expected benefits</div></header>
         <div class="wrap reveal" data-step="1" style="gap:22px;">
           <div class="col" style="flex:1; min-width:260px; max-width:640px;">
             <div class="card">
@@ -428,21 +500,21 @@
           Operational — continuous hydrological information and AI risk classifications for BDRRMC personnel; Receding classification under stable conditions; Alert / Alarm / Critical with SMS during heavy rainfall.<br>
           Community — improved situational awareness and earlier preparedness; reduced dependence on visual observation and municipality-wide MDRRMO alerts. Final alert authority stays with the BDRRMC — decision-support, not autonomous warning.
         </div>
-        <!-- INSERT IMAGE HERE: slide 8 — Figure 4 — benefits figure -->
+        <!-- INSERT IMAGE HERE: slide 10 — Figure 6 — benefits figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
-          <div class="figbox" data-figure="4" style="width:42%; aspect-ratio:4/3; min-width:300px;">
+          <div class="figbox" data-figure="6" style="width:42%; aspect-ratio:4/3; min-width:300px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Cost and benefits figure — benefit categories (technical, operational, community-level).</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 4. Cost and benefits — benefit categories.</p>
+        <p class="fig-cap">Figure 6. Cost and benefits — benefit categories.</p>
       </div>
     </section>
 
-    <!-- 9 · Results and Discussion -->
-    <section class="slide" id="s9" aria-label="Slide 9 of 10 · Results and discussion" data-notes="94.26% accuracy and macro F1 0.933 on rule-derived labels; 13,568 records over ~21.5 h; n=2 TAM 5.00/4.75; 2 of 4 documented events caught.">
+    <!-- 11 · Results and Discussion -->
+    <section class="slide" id="s11" aria-label="Slide 11 of 12 · Results and discussion" data-notes="94.26% accuracy and macro F1 0.933 on rule-derived labels; 13,568 records over ~21.5 h; n=2 TAM 5.00/4.75; 2 of 4 documented events caught.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker reveal" data-step="0">09 · Results and discussion</span><h2 class="slide-title reveal" data-step="0">Results and discussion</h2><div class="slide-deck reveal" data-step="0">Hold-out test · field deployment · acceptability</div></header>
+        <header class="slide-head"><span class="kicker reveal" data-step="0">11 · RESULTS AND DISCUSSION</span><h2 class="slide-title reveal" data-step="0">Results and discussion</h2><div class="slide-deck reveal" data-step="0">Hold-out test · field deployment · acceptability</div></header>
         <div class="stats reveal" data-step="1" style="margin-top:6px; gap:10px;">
           <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.7rem;">94.26%</div><div class="lab">Accuracy</div></div>
           <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.7rem;">0.933</div><div class="lab">Macro F1</div></div>
@@ -454,26 +526,26 @@
           <b>Honest caveat:</b> 94.26% measures consistency with the study's own rule-derived labels — built from the same eight features — not demonstrated flood-prediction skill. Independent labels and chronological validation are needed.
         </div>
         <div class="wrap reveal" data-step="3" style="gap:16px; margin-top:10px; align-items:center;">
-          <!-- INSERT IMAGE HERE: slide 9 — Figure 5 — confusion matrix / feature importance -->
-          <div class="figbox" data-figure="5" style="height:31vh; aspect-ratio:16/9; min-width:300px;">
+          <!-- INSERT IMAGE HERE: slide 11 — Figure 7 — confusion matrix / feature importance -->
+          <div class="figbox" data-figure="7" style="height:31vh; aspect-ratio:16/9; min-width:300px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Confusion matrix / feature-importance figure (hold-out test set, Random Forest).</div>
           </div>
-          <!-- INSERT IMAGE HERE: slide 9 — Figure 6 — deployment / survey -->
-          <div class="figbox" data-figure="6" style="height:31vh; aspect-ratio:16/9; min-width:300px;">
+          <!-- INSERT IMAGE HERE: slide 11 — Figure 8 — deployment / survey -->
+          <div class="figbox" data-figure="8" style="height:31vh; aspect-ratio:16/9; min-width:300px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Deployment / survey figure — field records, battery curve, TAM responses.</div>
           </div>
         </div>
-        <p class="fig-cap" style="margin-top:4px;">Figure 5. Confusion matrix / feature-importance figure.</p>
-        <p class="fig-cap">Figure 6. Deployment / survey figure.</p>
+        <p class="fig-cap" style="margin-top:4px;">Figure 7. Confusion matrix / feature-importance figure.</p>
+        <p class="fig-cap">Figure 8. Deployment / survey figure.</p>
       </div>
     </section>
 
-    <!-- 10 · Summary, Conclusion and Recommendation -->
-    <section class="slide" id="s10" aria-label="Slide 10 of 10 · Summary, conclusion and recommendation" data-notes="Three key findings, feasibility conclusion (decision-support, not prediction), four recommendations — then 'Thank you — questions?'.">
+    <!-- 12 · Summary, Conclusion and Recommendation -->
+    <section class="slide" id="s12" aria-label="Slide 12 of 12 · Summary, conclusion &amp; recommendation" data-notes="Three key findings, feasibility conclusion (decision-support, not prediction), four recommendations — then 'Thank you — questions?'.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker reveal" data-step="0">10 · Summary, conclusion and recommendation</span><h2 class="slide-title reveal" data-step="0">Summary, conclusion &amp; recommendation</h2><div class="slide-deck reveal" data-step="0">Chapter 5 — what the study establishes</div></header>
+        <header class="slide-head"><span class="kicker reveal" data-step="0">12 · SUMMARY, CONCLUSION &amp; RECOMMENDATION</span><h2 class="slide-title reveal" data-step="0">Summary, conclusion &amp; recommendation</h2><div class="slide-deck reveal" data-step="0">Chapter 5 — what the study establishes</div></header>
         <div class="wrap reveal" data-step="1" style="gap:16px;">
           <div class="col" style="flex:1; min-width:260px;">
             <div class="card" style="border-left-color:var(--teal);">
@@ -516,7 +588,7 @@
   <div class="footer-row">
     <div id="hints">[&larr; &rarr;] navigate &middot; [space] advance &middot; [S] speaker notes &middot; [F] fullscreen</div>
     <div id="dots"></div>
-    <div id="counters">1 / 10</div>
+    <div id="counters">1 / 12</div>
   </div>
 </div>
 

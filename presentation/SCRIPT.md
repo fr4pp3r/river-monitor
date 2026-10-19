@@ -1,6 +1,6 @@
 # FLAIRE — Thesis Defense Speech Script
 
-**How to use:** Spoken remarks for the 10-slide deck. Read aloud, not memorized — keep the numbers exact. Section estimates sum to roughly 12 minutes 35 seconds; guidance for 15- and 10-minute deliveries is appended.
+**How to use:** Spoken remarks for the 12-slide deck. Read aloud, not memorized — keep the numbers exact. Section estimates sum to roughly 13 minutes 30 seconds; guidance for 15- and 10-minute deliveries is appended.
 
 ---
 
@@ -38,11 +38,19 @@ The evaluation is bounded too: because the model's labels derive from the same f
 
 The entity-relationship diagram on screen shows FLAIRE's data model: one SQLite database on the Raspberry Pi, with eleven entities in six functional domains. Raw one-minute readings land in sensor_data, whose rain tips are aggregated into rainfall_hourly and rainfall_daily — the windows the model's multi-day features are computed from. tidal_data and weather_data cache the Open-Meteo weather and tide forecasts so the pipeline runs offline within the cache window. The model's output lives in predictions — one row per event covering both the twenty-four-hour and forty-eight-hour horizons, with the Random Forest propensity, the fuzzy inputs, and the rule that fired. alerts and alert_contacts carry the SMS lifecycle from delivery to acknowledgement, while users and audit_log provide authentication and an accountability trail, and system_status tracks component health — with relationships maintained in application code, keeping the schema simple and migration-friendly on SQLite.
 
-## [Slide 7] — System Flowchart (≈0:45)
+## [Slide 7] — System Flowchart: Node (≈0:35)
 
-The flowchart on screen traces one full cycle of the system. A LoRa water-level sensor transmits distance and rain-tip counts every minute to the receiver on the Raspberry Pi 5, which writes them to the SQLite database alongside a seven-day weather-and-tide forecast fetched from Open-Meteo and cached every six hours. From those stored inputs, the AI pipeline runs the Random Forest and the twenty fuzzy rules for the twenty-four-hour and forty-eight-hour horizons, and writes the risk classification back to the database. The FastAPI dashboard serves the results to the browser, and the SMS handler fires only on Alarm or Critical. From there, the BDRRMC makes the final call on every public alert.
+The flowchart's first segment is the field node. Out on a solar-powered pole by the river, an ultrasonic sensor measures the water distance and a tipping-bucket gauge counts rainfall tips, sampled every minute. Those two numbers travel over the LoRa radio — an RFM95W at nine hundred fifteen megahertz — straight to the barangay hall, with no internet connection involved at any point. That is the entire input side: without it, nothing downstream has anything to classify.
 
-## [Slide 8] — Cost and Benefits (≈1:40)
+## [Slide 8] — System Flowchart: Edge Device (≈0:45)
+
+The middle segment is the edge device — the Raspberry Pi 5 at the barangay hall. Its LoRa receiver ingests each minute's packet, while a weather-and-tide fetcher caches the seven-day Open-Meteo forecast every six hours whenever internet is available. Both streams persist together in the SQLite database. From those stored inputs, the AI pipeline runs the Random Forest on its eight features and then the twenty fuzzy rules, computing the risk classification for the twenty-four-hour and forty-eight-hour horizons and writing each prediction back to the database. From there, the SMS handler stands ready — it fires only at Alarm and Critical.
+
+## [Slide 9] — System Flowchart: Dashboard (≈0:35)
+
+The last segment is what the barangay actually sees. A FastAPI web server serves a dashboard over the local network — no cloud in the loop — with status cards, charts, and alert history for the BDRRMC. The committee reviews the risk level, confirms every public alert, and the confirmed alerts fan out by SMS to the configured contacts. That is one full cycle, end to end — and as we saw, every piece of it runs without the internet. Which raises the question of what that capability costs — so let me turn to cost and benefits.
+
+## [Slide 10] — Cost and Benefits (≈1:40)
 
 The hardware is deliberately affordable. The bill of materials comes to approximately twenty-seven thousand nine hundred twenty pesos, in three groups. The edge station at the barangay hall is nineteen thousand fifty pesos: the Raspberry Pi 5 two-gigabyte board, at six thousand five hundred pesos, is the main computer, alongside its LoRa transceiver and antenna, a sixty-watt solar panel with controller and lithium-iron-phosphate battery pack, and the A-seven-six-zero-eight-e SMS modem with a year of load for alerts to barangay officials' phones. The river node is seven thousand seventy pesos: its own RFM95 LoRa radio and antenna, a waterproof ultrasonic distance sensor, a small solar panel with charger and battery, a reed switch and magnets for the rain gauge, and its enclosure, PVC pipe, and housing materials. General materials — breadboard, wiring, marine plywood, and miscellaneous electrical components — come to eighteen hundred pesos.
 
@@ -50,7 +58,7 @@ I want to emphasize the cost point because it is a feasibility argument: at this
 
 Beyond the price tag, the benefits are technical, operational, and community-wide: continuous water-level and rainfall monitoring without requiring constant internet connectivity; operational support for BDRRMC personnel through continuous hydrological information and AI-based risk classification; and community-level situational awareness and earlier preparedness — reducing dependence on visual water-level observation and external advisories — while final alert dissemination remains under the committee's authority.
 
-## [Slide 9] — Results and Discussion (≈2:50)
+## [Slide 11] — Results and Discussion (≈2:50)
 
 Now the results, in three threads — the model's metrics, the field deployment, and acceptability — from the hybrid pipeline you saw in the flowchart: a Random Forest trained on one thousand eight hundred twenty-six daily records from 2020 through 2024, feeding a twenty-rule fuzzy-logic classifier that combines the model's propensity with the live water level, its rate of rise, forecast rainfall, and the tide.
 
@@ -62,7 +70,7 @@ Second, the field deployment. We installed the prototype beside the river in Elv
 
 Third, acceptability. We administered a Technology Acceptance Model survey to the two BDRRMC focal persons — the system's intended operators — twenty-four five-point Likert items across six dimensions. Five dimensions rated a perfect five point zero; usability rated four point seven five. I must flag the small sample directly: with two respondents, these are preliminary ratings and should not be generalized — but they are an honest, encouraging signal from the system's operators.
 
-## [Slide 10] — Summary, Conclusion and Recommendation (≈1:40)
+## [Slide 12] — Summary, Conclusion and Recommendation (≈1:40)
 
 To close: the summary, conclusions, and recommendations. Three findings anchor this study. First, the barangay's current practice is manual — municipality-wide advisories and word of mouth — which establishes the need for localized, internet-independent monitoring. Second, the evaluated prototype achieved ninety-four point two six percent held-out agreement with its own rule-derived labels, and, in the field, logged twenty-one point five hours and thirteen thousand five hundred sixty-eight records — validating the sensor-and-logging pipeline under real conditions. Third, the two BDRRMC focal persons rated the system a perfect five point zero on five TAM dimensions and four point seven five on usability — encouraging, and explicitly not generalizable.
 
@@ -74,6 +82,6 @@ Which leads to the recommendations: build independent flood-event labels; valida
 
 ## Appendix — Timing Guide
 
-- **15 minutes (target):** Deliver all 10 sections as written, at a natural 145–150 words per minute. The section estimates sum to roughly 12 minutes 35 seconds — a 15-minute slot with room for pauses, slide transitions, and the figure-pointing moments in Sections 6 and 7. To fill the full fifteen with depth, add three expansions without inventing facts: Section 9 — walk one illustrative fuzzy rule aloud (e.g., very high water level with rapid rise), name the per-class numbers (Low 97 F1, Medium 91, High 92), and note the confusion matrix shows errors never jump across two classes. Section 5 — quote the delimitations one by one. Section 4 — walk each beneficiary group through its specific payoff.
-- **10 minutes (compressed):** Keep Sections 1, 2, and 9 nearly intact — the overview, the background, and the results with the verbatim caveat are load-bearing. Cut Section 7 to two sentences and point to the figure; reduce Section 3 to the general-problem framing plus a quick pass over the five questions; Section 4 to two sentences; Section 5 to the geographic and evaluation boundaries only; Section 6 to the sensor_data, predictions, and alerts sentences; Section 8 to the top-line cost, the three-group total, and one benefit; and Section 10 by delivering the recommendations list without expansion. Saves roughly 2 minutes 20 seconds.
-- **Hard rules at any speed:** never say "predicts floods," never claim a measured lead time, never say SMS was field-exercised, and always read the caveat sentence in Section 9 verbatim.
+- **15 minutes (target):** Deliver all 12 sections as written, at a natural 145–150 words per minute. The section estimates sum to roughly 13 minutes 30 seconds — a 15-minute slot with room for pauses, slide transitions, and the figure-pointing moments in Sections 6, 7, 8, and 9. To fill the full fifteen with depth, add three expansions without inventing facts: Section 11 — walk one illustrative fuzzy rule aloud (e.g., very high water level with rapid rise), name the per-class numbers (Low 97 F1, Medium 91, High 92), and note the confusion matrix shows errors never jump across two classes. Section 5 — quote the delimitations one by one. Section 4 — walk each beneficiary group through its specific payoff.
+- **10 minutes (compressed):** Keep Sections 1, 2, and 11 nearly intact — the overview, the background, and the results with the verbatim caveat are load-bearing. Collapse Sections 7, 8, and 9 to one sentence each and point to each figure; reduce Section 3 to the general-problem framing plus a quick pass over the five questions; Section 4 to two sentences; Section 5 to the geographic and evaluation boundaries only; Section 6 to the sensor_data, predictions, and alerts sentences; Section 10 to the top-line cost, the three-group total, and one benefit; and Section 12 by delivering the recommendations list without expansion. Saves roughly 2 minutes 20 seconds.
+- **Hard rules at any speed:** never say "predicts floods," never claim a measured lead time, never say SMS was field-exercised, and always read the caveat sentence in Section 11 verbatim.
