@@ -559,7 +559,7 @@
     </section>
 
     <!-- 13 · Results and discussion — Q3: Random Forest consistency -->
-    <section class="slide" id="s13" aria-label="Slide 13 of 16 · Results and discussion — Q3" data-notes="Q3 findings (thesis Ch.4): RF 94.26% accuracy, macro F1 0.933 on held-out set; labels rule-derived so consistency ≠ prediction skill.">
+    <section class="slide" id="s13" aria-label="Slide 13 of 16 · Results and discussion — Q3" data-notes="Q3 findings (thesis Ch.4): RF 94.26% accuracy, macro F1 0.933 on held-out set; labels rule-derived so consistency ≠ prediction skill; 2 of 4 documented flood events matched the rule's High class.">
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">13 · RESULTS AND DISCUSSION — Q3</span><h2 class="slide-title reveal" data-step="0">Results and discussion — Q3: Random Forest consistency</h2><div class="slide-deck reveal" data-step="0">Research question 3 — model vs. scoring rule</div></header>
         <p class="reveal" data-step="1" style="font-size:1.02rem; color:var(--muted); line-height:1.6; margin-bottom:14px;">Q3: How consistently does the Random Forest reproduce the rule-derived Low, Medium, and High flood-propensity categories on a held-out test set?</p>
@@ -568,12 +568,14 @@
           <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.7rem;">0.933</div><div class="lab">Macro F1</div></div>
           <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.7rem;">0.943</div><div class="lab">Weighted F1</div></div>
           <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.35rem;">1,826</div><div class="lab">Training records</div></div>
+          <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.35rem;">2 of 4</div><div class="lab">Events matched rule</div></div>
         </div>
         <ul class="bullets reveal" data-step="3" style="margin:0; margin-top:10px;">
           <li>Trained 2020–2024 on PAGASA meteorological + NAMRIA tidal data (1,826 daily records)</li>
           <li>Random stratified 80/20 split (1,460 train / 366 test); no cross-validation</li>
           <li>Rule-derived labels (composite score ≥6.0 High, ≥3.0 Medium, &lt;3.0 Low) from the same 8 features</li>
           <li>Low F1 0.9728 · Medium F1 0.9099 · High F1 0.9160 · High recall 0.9524</li>
+          <li>External probe: 2 of 4 documented flood events (2020–2025) classified High by the rule — diagnostic case check, not validation</li>
         </ul>
         <div class="callout warn reveal" data-step="4" style="margin-top:12px;">
           <b>Honest caveat:</b> 94.26% measures consistency with the study's own rule-derived labels — built from the same eight features — not demonstrated flood-prediction skill. Independent labels and chronological validation are needed.
@@ -590,21 +592,19 @@
     </section>
 
     <!-- 14 · Results and discussion — Q4: Field deployment performance -->
-    <section class="slide" id="s14" aria-label="Slide 14 of 16 · Results and discussion — Q4" data-notes="Q4 findings (thesis Ch.4): 13,568 records over ~21.5 h; battery died early; water stayed Receding/Low; 2 of 4 documented events matched rule's High class.">
+    <section class="slide" id="s14" aria-label="Slide 14 of 16 · Results and discussion — Q4" data-notes="Q4 findings (thesis Ch.4): 13,568 records over ~21.5 h; battery died early; water stayed Receding/Low; sensor-logging pipeline validated.">
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">14 · RESULTS AND DISCUSSION — Q4</span><h2 class="slide-title reveal" data-step="0">Results and discussion — Q4: Field deployment performance</h2><div class="slide-deck reveal" data-step="0">Research question 4 — limited field deployment</div></header>
         <p class="reveal" data-step="1" style="font-size:1.02rem; color:var(--muted); line-height:1.6; margin-bottom:14px;">Q4: How did the FLAIRE prototype perform during a limited field deployment in terms of sensor-data capture, data logging, and data quality?</p>
         <div class="stats reveal" data-step="2" style="margin-top:6px; gap:10px;">
           <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.35rem;">21.5 h</div><div class="lab">Logged</div></div>
           <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.35rem;">13,568</div><div class="lab">Records</div></div>
-          <div class="stat" style="padding:10px 8px;"><div class="num" style="font-size:1.35rem;">2 of 4</div><div class="lab">Events caught</div></div>
         </div>
         <ul class="bullets reveal" data-step="3" style="margin:0; margin-top:10px;">
           <li>Logged 13,568 LoRa records over ~21.5 h (intended ~47 h; battery depletion ended it early)</li>
           <li>Water level stayed in the Low band (≈0.01–0.18 m), below the 0.80 m alert threshold</li>
           <li>67 zero-distance, 124 negative, and 5 implausible-distance readings flagged for review</li>
           <li>River stayed Receding — Alert, Alarm, and Critical classes could not be exercised</li>
-          <li>2 of 4 documented flood events classified High (rule match); diagnostic case check, not validation</li>
         </ul>
         <!-- INSERT IMAGE HERE: slide 14 — Figure 10 — deployment / water-level time-series figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
