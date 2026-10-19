@@ -145,6 +145,12 @@
   .blank-zone .bz-label{ font-size: 0.85rem; letter-spacing: 0.2rem; text-transform: uppercase; font-weight: 800; color: #9fc0c8; }
   .blank-zone .bz-hint{ font-size: 0.9rem; color: var(--muted); max-width: 64ch; line-height: 1.6; }
   
+  /* statement-of-problem numbered items */
+  .problems{ display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+  .problem-item{ display: flex; gap: 14px; align-items: flex-start; }
+  .pnum{ flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; background: var(--teal); color: #072226; font-weight: 900; font-size: 1rem; display: grid; place-items: center; font-family: Georgia, serif; flex-shrink: 0; }
+  .problem-item p{ margin: 0; font-size: 1.05rem; color: var(--ink); line-height: 1.55; }
+  
   /* footer */
   #footer{ position: absolute; left: 0; right: 0; bottom: 0; height: 72px; display: flex; flex-direction: column; z-index: 20; pointer-events: none; user-select: none; }
   #footer > *{ pointer-events: auto; }
@@ -213,46 +219,37 @@
       </div>
     </section>
 
-    <!-- 3 · Standard Operating Procedure -->
-    <section class="slide" id="s3" aria-label="Slide 3 of 10 · Standard operating procedure" data-notes="SOP: offline-first operation; SMS only at Alarm/Critical; BDRRMC retains alert authority; routine node and Pi 5 maintenance duties.">
+    <!-- 3 · Statement of the Problem -->
+    <section class="slide" id="s3" aria-label="Slide 3 of 10 · Statement of the problem" data-notes="Statement of the problem from thesis Chapter 1: current flood-warning limitations in Brgy. Elvita and the five research questions FLAIRE seeks to answer.">
       <div class="slide-inner">
-        <header class="slide-head"><span class="kicker reveal" data-step="0">03 · Standard operating procedure</span><h2 class="slide-title reveal" data-step="0">Standard operating procedure</h2><div class="slide-deck reveal" data-step="0">Operation &amp; maintenance</div></header>
-        <div class="wrap reveal" data-step="1" style="gap:16px;">
-          <div class="col" style="flex:1;">
-            <div class="card" style="border-left-color:var(--teal);">
-              <h3 style="color:var(--teal);">Operation</h3>
-              <ul class="bullets" style="margin:0;">
-                <li>LoRa sensor node sends water level + rainfall to the Pi 5 (about every 5 s)</li>
-                <li>Pi 5 runs receiver, weather/tide fetcher (6 h cache), SQLite, AI pipeline, dashboard, SMS handler</li>
-                <li>Classification and dashboard run fully offline — internet only refreshes cached forecasts</li>
-                <li>SMS alerts trigger only at Alarm / Critical; BDRRMC confirms before public release</li>
-              </ul>
-            </div>
+        <header class="slide-head"><span class="kicker reveal" data-step="0">03 · STATEMENT OF THE PROBLEM</span><h2 class="slide-title reveal" data-step="0">Statement of the problem</h2></header>
+        <div class="reveal" data-step="1" style="margin-bottom:14px;">
+          <p style="font-size:1.02rem; color:var(--muted); line-height:1.6; font-style:italic; border-left:3px solid var(--teal); padding-left:16px; margin:0;">
+            Flooding is a persistent threat in Brgy. Elvita, Narra, Palawan — a flood-vulnerable barangay along a major river system with limited structural flood-mitigation works, unreliable internet connectivity, and continued reliance on manual observation and threshold-based warnings. Existing centralized systems can be unreachable during network outages, and few documented implementations combine offline, edge-based hybrid AI analytics for rural barangay deployment. FLAIRE addresses this gap.
+          </p>
+        </div>
+        <div class="problems reveal" data-step="2">
+          <div class="problem-item">
+            <span class="pnum">1</span>
+            <p>What are the key problems and limitations in current flood-warning practices and data utilization in Brgy. Elvita, Narra, Palawan, and how can these be addressed through an offline-first, AI-based flood early-warning system?</p>
           </div>
-          <div class="col" style="flex:1;">
-            <div class="card" style="border-left-color:var(--amber);">
-              <h3 style="color:var(--amber);">Maintenance</h3>
-              <ul class="bullets" style="margin:0;">
-                <li>Secure sensor, wiring, and enclosure; inspect for dangling wires causing false readings</li>
-                <li>Flag invalid readings (zero/negative distance, sudden jumps); retain raw values for audit</li>
-                <li>Validate rain-gauge tips against a known volume of water</li>
-                <li>Monitor battery voltage and solar charging; reposition or enlarge panel if needed</li>
-                <li>Sync and document Raspberry Pi timestamps (installation, startup, shutdown, retrieval)</li>
-              </ul>
-            </div>
+          <div class="problem-item">
+            <span class="pnum">2</span>
+            <p>How can a Fuzzy-AI riverine flood-risk classification system be designed and developed for Brgy. Elvita that integrates cached seven-day weather and tide forecast data from OpenMeteo (updated at least daily, every six hours, and stored in a local database); real-time water-level and rainfall data from a LoRa-based hydrological sensor node transmitted to a Raspberry Pi 5 edge device; a hybrid AI pipeline in which a Random Forest model estimates flood propensity using R1, R3, R7, rain_days, TMAX, TMIN, TideMax, and TideMin while a fuzzy-logic classifier with 20 rules classifies flood risk as Receding, Alert, Alarm, or Critical; and a local web dashboard accessible through a LAN, enabling BDRRMC personnel to monitor real-time sensor data, AI-based risk classifications, and visualizations without internet connectivity, with alerts delivered through the dashboard and SMS?</p>
+          </div>
+          <div class="problem-item">
+            <span class="pnum">3</span>
+            <p>How consistently does the Random Forest flood-propensity model reproduce the rule-derived Low, Medium, and High flood-propensity categories on a held-out test set, in terms of accuracy, precision, recall, and F1-score?</p>
+          </div>
+          <div class="problem-item">
+            <span class="pnum">4</span>
+            <p>How did the FLAIRE prototype perform during a limited field deployment in terms of sensor-data capture, data logging, and data quality?</p>
+          </div>
+          <div class="problem-item">
+            <span class="pnum">5</span>
+            <p>How acceptable is the developed FLAIRE system to the BDRRMC focal persons of Brgy. Elvita, Narra, Palawan in terms of functionality, usability, reliability, perceived contribution to disaster preparedness, attitude toward use, and intention to use, as measured through a Technology Acceptance Model (TAM)-based interview or survey?</p>
           </div>
         </div>
-        <div class="wrap reveal" data-step="2" style="gap:18px; align-items:flex-start;">
-          <!-- INSERT IMAGE HERE: slide 3 — SOP diagram (operation, maintenance, alert authority) -->
-          <div class="figbox" data-figure="1" style="width:36%; aspect-ratio:16/9; min-width:260px;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
-            <div class="fig-desc">Standard operating procedure diagram — operation panel, maintenance panel, and BDRRMC alert authority.</div>
-          </div>
-          <div class="callout off" style="flex:1;">
-            <b>Authority:</b> FLAIRE advises; the BDRRMC makes the alert call and supplements MDRRMO advisories, manual observation, and local knowledge.
-          </div>
-        </div>
-        <p class="fig-cap" style="margin-top:0;">Figure 1. Standard operating procedure diagram.</p>
       </div>
     </section>
 
@@ -278,14 +275,14 @@
             <p style="margin:0; font-size:0.92rem; color:var(--ink); line-height:1.5;">Evidence that barangay-scale early warning can run with minimal internet dependency and edge-based AI — an initial basis for scaling low-cost, power-resilient monitoring to similar communities.</p>
           </div>
         </div>
-        <!-- INSERT IMAGE HERE: slide 4 — significance / beneficiaries figure -->
+        <!-- INSERT IMAGE HERE: slide 4 — Figure 1 — significance / beneficiaries figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="2">
-          <div class="figbox" data-figure="2" style="width:40%; aspect-ratio:16/9; min-width:300px;">
+          <div class="figbox" data-figure="1" style="width:40%; aspect-ratio:16/9; min-width:300px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Significance of the study — beneficiary map (BDRRMC, residents, researchers, policy).</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 2. Significance of the study — beneficiaries.</p>
+        <p class="fig-cap">Figure 1. Significance of the study — beneficiaries.</p>
       </div>
     </section>
 
@@ -328,13 +325,13 @@
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">06 · Entity relationship diagram</span><h2 class="slide-title reveal" data-step="0">Entity relationship diagram</h2><div class="slide-deck reveal" data-step="0">River-monitor database schema — insert figure</div></header>
         <div style="display:flex; justify-content:center;" class="reveal" data-step="1">
-          <!-- INSERT IMAGE HERE: slide 6 — entity relationship diagram (source: DATABASE_ERD.md) -->
-          <div class="figbox" data-figure="3" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
+          <!-- INSERT IMAGE HERE: slide 6 — Figure 2 — entity relationship diagram (source: DATABASE_ERD.md) -->
+          <div class="figbox" data-figure="2" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Entity-relationship diagram of the FLAIRE river-monitor database — insert the actual ERD image here.</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 3. Entity-relationship diagram of the river-monitor database.</p>
+        <p class="fig-cap">Figure 2. Entity-relationship diagram of the river-monitor database.</p>
         <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: DATABASE_ERD.md</p>
       </div>
     </section>
@@ -344,13 +341,13 @@
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">07 · System flowchart</span><h2 class="slide-title reveal" data-step="0">System flowchart</h2><div class="slide-deck reveal" data-step="0">FLAIRE runtime flow — insert figure</div></header>
         <div style="display:flex; justify-content:center;" class="reveal" data-step="1">
-          <!-- INSERT IMAGE HERE: slide 7 — system flowchart (source: SYSTEM_FLOWCHART.md) -->
-          <div class="figbox" data-figure="4" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
+          <!-- INSERT IMAGE HERE: slide 7 — Figure 3 — system flowchart (source: SYSTEM_FLOWCHART.md) -->
+          <div class="figbox" data-figure="3" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">FLAIRE system flowchart — insert the actual flowchart image here.</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 4. FLAIRE system flowchart.</p>
+        <p class="fig-cap">Figure 3. FLAIRE system flowchart.</p>
         <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: SYSTEM_FLOWCHART.md</p>
       </div>
     </section>
@@ -431,14 +428,14 @@
           Operational — continuous hydrological information and AI risk classifications for BDRRMC personnel; Receding classification under stable conditions; Alert / Alarm / Critical with SMS during heavy rainfall.<br>
           Community — improved situational awareness and earlier preparedness; reduced dependence on visual observation and municipality-wide MDRRMO alerts. Final alert authority stays with the BDRRMC — decision-support, not autonomous warning.
         </div>
-        <!-- INSERT IMAGE HERE: slide 8 — benefits figure -->
+        <!-- INSERT IMAGE HERE: slide 8 — Figure 4 — benefits figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
-          <div class="figbox" data-figure="5" style="width:42%; aspect-ratio:4/3; min-width:300px;">
+          <div class="figbox" data-figure="4" style="width:42%; aspect-ratio:4/3; min-width:300px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Cost and benefits figure — benefit categories (technical, operational, community-level).</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 5. Cost and benefits — benefit categories.</p>
+        <p class="fig-cap">Figure 4. Cost and benefits — benefit categories.</p>
       </div>
     </section>
 
@@ -457,19 +454,19 @@
           <b>Honest caveat:</b> 94.26% measures consistency with the study's own rule-derived labels — built from the same eight features — not demonstrated flood-prediction skill. Independent labels and chronological validation are needed.
         </div>
         <div class="wrap reveal" data-step="3" style="gap:16px; margin-top:10px; align-items:center;">
-          <!-- INSERT IMAGE HERE: slide 9 — confusion matrix / feature importance -->
-          <div class="figbox" data-figure="6" style="height:31vh; aspect-ratio:16/9; min-width:300px;">
+          <!-- INSERT IMAGE HERE: slide 9 — Figure 5 — confusion matrix / feature importance -->
+          <div class="figbox" data-figure="5" style="height:31vh; aspect-ratio:16/9; min-width:300px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Confusion matrix / feature-importance figure (hold-out test set, Random Forest).</div>
           </div>
-          <!-- INSERT IMAGE HERE: slide 9 — deployment / survey -->
-          <div class="figbox" data-figure="7" style="height:31vh; aspect-ratio:16/9; min-width:300px;">
+          <!-- INSERT IMAGE HERE: slide 9 — Figure 6 — deployment / survey -->
+          <div class="figbox" data-figure="6" style="height:31vh; aspect-ratio:16/9; min-width:300px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Deployment / survey figure — field records, battery curve, TAM responses.</div>
           </div>
         </div>
-        <p class="fig-cap" style="margin-top:4px;">Figure 6. Confusion matrix / feature-importance figure.</p>
-        <p class="fig-cap">Figure 7. Deployment / survey figure.</p>
+        <p class="fig-cap" style="margin-top:4px;">Figure 5. Confusion matrix / feature-importance figure.</p>
+        <p class="fig-cap">Figure 6. Deployment / survey figure.</p>
       </div>
     </section>
 
