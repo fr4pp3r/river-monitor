@@ -286,6 +286,40 @@ http://<raspberry-pi-ip>:8000
 
 Replace `<raspberry-pi-ip>` with your Raspberry Pi's local IP address.
 
+## Remote Access
+
+Run setup once and the dashboard has one stable address on every private network the Pi joins: `http://raspberrypi.local:8000` (mDNS, enabled by `avahi-daemon` during setup). If mDNS is unavailable on a client device, the LAN IP of that network works instead (`http://<raspberry-pi-ip>:8000`).
+
+The dashboard is only reachable from the private network the Pi is connected to at the time — never from the public internet.
+
+### Field use: phone hotspot autoconnect
+
+Setup can add a WiFi profile (connection name `phone-hotspot`) that auto-joins the phone hotspot `FLAIRE2026` (WPA2, PSK `flaire2026`) whenever it is in range. That gives the Pi internet in the field — keeping weather data and the clock current — and puts it on the hotspot's network, so devices connected to the same phone hotspot open the dashboard as usual via `http://raspberrypi.local:8000` or the hotspot LAN IP.
+
+Bare `--phone-hotspot` uses the project defaults; `=` values override the SSID or the PSK:
+
+```bash
+./setup.sh --phone-hotspot                                             # FLAIRE2026 / flaire2026
+./setup.sh --phone-hotspot=FLAIRE2026                                  # same, SSID explicit
+./setup.sh --phone-hotspot=OtherHotspot --phone-hotspot-psk="newpsk"   # different credentials
+```
+
+Note: the default PSK is committed with this repository, so it is a convenience, not a secret — rewrite it with `--phone-hotspot-psk=` when practical. Passing an empty value (`--phone-hotspot-psk=`) removes the password entirely; an unsecured hotspot invites accidental joins and evil-twin spoofing, so prefer a PSK.
+
+Re-running updates the `phone-hotspot` profile in place (new SSID, PSK, or priority). The equivalent `nmcli` steps, for later changes without re-running setup:
+
+```bash
+sudo nmcli con add type wifi ifname wlan0 con-name "phone-hotspot" ssid "FLAIRE2026"
+sudo nmcli con modify "phone-hotspot" 802-11-wireless-security.key-mgmt wpa-psk 802-11-wireless-security.psk "flaire2026"
+sudo nmcli con modify "phone-hotspot" connection.autoconnect yes connection.autoconnect-priority 20
+# Open network instead of WPA2:
+#   sudo nmcli con modify "phone-hotspot" 802-11-wireless-security.key-mgmt ""
+```
+
+Caveats:
+
+- **One radio**: the Pi has a single WiFi chip. While joined to the phone hotspot it is not on any other WiFi — AccessPopup's captive network (`192.168.5.50`) and the home LAN are unreachable in that state. In the field, reach the dashboard from a device connected to the same phone hotspot.
+
 ## Usage
 
 ### Dashboard Features
@@ -511,7 +545,7 @@ pip install -r requirements.txt --upgrade
 
 ## Security Considerations
 
-1. **LAN Access Only**: Dashboard only accessible on local network
+1. **Private networks only**: the dashboard is reachable only on the network the Pi is currently connected to (LAN, mDNS name, or the phone hotspot it auto-joins); it is not exposed to the public internet
 2. **Session Authentication**: Cookie-based sessions with PBKDF2-HMAC-SHA256 password hashes; two roles (`viewer` read-only, `admin` may change settings, contacts, alerts and users)
 3. **First-run credentials**: A default `admin`/`admin` account is created when the user table is empty. Set `ADMIN_PASSWORD` and a random `SECRET_KEY` in `.env` before deployment.
 4. **Audit Trail**: Mutating actions are recorded in the `audit_log` table and viewable from the Admin page.

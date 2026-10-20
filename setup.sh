@@ -63,8 +63,40 @@ apt_nonfatal() {
 # ---------------------------------------------------------------------------
 
 SKIP_SYSTEM_UPDATE=1
-if [ "$1" = "--update" ]; then
-    SKIP_SYSTEM_UPDATE=0
+PHONE_HOTSPOT_SSID=""
+PHONE_HOTSPOT_PSK=""
+PHONE_HOTSPOT_PSK_SET=0
+PHONE_HOTSPOT_CONFIGURED=0
+PHONE_HOTSPOT_DEFAULT_SSID="FLAIRE2026"
+PHONE_HOTSPOT_DEFAULT_PSK="flaire2026"
+
+# Parse flags. Value-taking flags are given as --flag=value (so values can
+# be empty); bare --phone-hotspot always means the default SSID below.
+for arg in "$@"; do
+    case "$arg" in
+        --update)
+            SKIP_SYSTEM_UPDATE=0
+            ;;
+        --phone-hotspot)
+            PHONE_HOTSPOT_SSID="$PHONE_HOTSPOT_DEFAULT_SSID"
+            ;;
+        --phone-hotspot=*)
+            PHONE_HOTSPOT_SSID="${arg#--phone-hotspot=}"
+            ;;
+        --phone-hotspot-psk=*)
+            PHONE_HOTSPOT_PSK="${arg#--phone-hotspot-psk=}"
+            PHONE_HOTSPOT_PSK_SET=1
+            ;;
+        *)
+            echo -e "${YELLOW}Note: ignoring unknown option: $arg${NC}"
+            ;;
+    esac
+done
+
+# A bare --phone-hotspot-psk=<PSK> without --phone-hotspot also turns the
+# feature on, using the default SSID.
+if [ -z "$PHONE_HOTSPOT_SSID" ] && [ "$PHONE_HOTSPOT_PSK_SET" -eq 1 ]; then
+    PHONE_HOTSPOT_SSID="$PHONE_HOTSPOT_DEFAULT_SSID"
 fi
 
 if [ "$SKIP_SYSTEM_UPDATE" -eq 1 ]; then
@@ -260,6 +292,127 @@ else
     echo -e "${GREEN}Cron job already exists${NC}"
 fi
 
+# ---------------------------------------------------------------------------
+# REMOTE ACCESS (mDNS; opt-in phone hotspot autoconnect follows below)
+# ---------------------------------------------------------------------------
+# mDNS (avahi-daemon) means devices on the same local link can reach the Pi
+# by hostname, http://<hostname>.local:8000, without knowing its IP. This
+# works on every network the Pi joins — its home LAN, another site, or the
+# phone hotspot it can auto-connect to (see the next section) — and unlike
+# a fixed LAN IP it does not change when the network changes.
+# The install is idempotent, so it runs on every setup.
+
+print_section "Configuring Remote Access"
+
+echo -e "${YELLOW}Installing avahi-daemon (mDNS)...${NC}"
+apt_nonfatal install -y avahi-daemon
+
+if sudo systemctl enable --now avahi-daemon; then
+    echo -e "${GREEN}mDNS enabled — reachable as http://$(hostname).local:8000 on every network the Pi joins${NC}"
+else
+    echo -e "${YELLOW}Warning: could not enable avahi-daemon; mDNS names may not resolve.${NC}"
+fi
+
+# ---------------------------------------------------------------------------
+# PHONE HOTSPOT AUTOCONNECT (opt-in)
+# ---------------------------------------------------------------------------
+# Run with one of:
+#   ./setup.sh --phone-hotspot
+#       uses the project default SSID (FLAIRE2026) and default WPA2 PSK
+#       (flaire2026). The PSK is committed in this repo, so it provides
+#       convenience rather than secrecy — rotate via --phone-hotspot-psk=.
+#   ./setup.sh --phone-hotspot=<SSID>            (overrides the SSID only)
+#   ./setup.sh --phone-hotspot=<SSID> --phone-hotspot-psk=<PSK>
+#   ./setup.sh --phone-hotspot --phone-hotspot-psk=   (explicit OPEN network;
+#       see the evil-twin warning printed below)
+# Creates an idempotent NetworkManager profile (name: "phone-hotspot") that
+# autoconnects whenever the phone hotspot is in range, giving the Pi internet
+# in the field (weather data stays current) and putting it on the hotspot's
+# network, where the dashboard is reachable via mDNS or the hotspot LAN IP.
+
+HOTSPOT_PSK="$PHONE_HOTSPOT_PSK"
+HOTSPOT_OPEN=0
+HOTSPOT_PSK_IS_DEFAULT=0
+if [ "$PHONE_HOTSPOT_PSK_SET" -eq 1 ] && [ -z "$PHONE_HOTSPOT_PSK" ]; then
+    HOTSPOT_OPEN=1
+elif [ -z "$PHONE_HOTSPOT_PSK" ]; then
+    HOTSPOT_PSK="$PHONE_HOTSPOT_DEFAULT_PSK"
+    HOTSPOT_PSK_IS_DEFAULT=1
+fi
+
+if [ -n "$PHONE_HOTSPOT_SSID" ]; then
+    print_section "Phone Hotspot Autoconnect"
+
+    if command_exists nmcli; then
+        HOTSPOT_CON_NAME="phone-hotspot"
+        HOTSPOT_FAILED=0
+
+        # Create the profile once, or update its SSID on re-runs.
+        if sudo nmcli connection show "$HOTSPOT_CON_NAME" >/dev/null 2>&1; then
+            echo -e "${YELLOW}Profile '$HOTSPOT_CON_NAME' exists — updating SSID to '$PHONE_HOTSPOT_SSID'...${NC}"
+            sudo nmcli connection modify "$HOTSPOT_CON_NAME" 802-11-wireless.ssid "$PHONE_HOTSPOT_SSID" || HOTSPOT_FAILED=1
+        else
+            echo -e "${YELLOW}Creating profile '$HOTSPOT_CON_NAME' for SSID '$PHONE_HOTSPOT_SSID'...${NC}"
+            sudo nmcli connection add type wifi ifname wlan0 con-name "$HOTSPOT_CON_NAME" ssid "$PHONE_HOTSPOT_SSID" || HOTSPOT_FAILED=1
+        fi
+
+        if [ "$HOTSPOT_FAILED" -eq 0 ]; then
+            # Security: explicit on each run, so re-runs cleanly switch
+            # between WPA2 and open (clears any prior stored key-mgmt).
+            if [ "$HOTSPOT_OPEN" -eq 1 ]; then
+                echo -e "${YELLOW}Setting profile to open (no security)...${NC}"
+                sudo nmcli connection modify "$HOTSPOT_CON_NAME" 802-11-wireless-security.key-mgmt "" || HOTSPOT_FAILED=1
+                HOTSPOT_MODE="open"
+            else
+                echo -e "${YELLOW}Securing profile with WPA2-PSK...${NC}"
+                sudo nmcli connection modify "$HOTSPOT_CON_NAME" 802-11-wireless-security.key-mgmt wpa-psk 802-11-wireless-security.psk "$HOTSPOT_PSK" || HOTSPOT_FAILED=1
+                HOTSPOT_MODE="WPA2-PSK"
+            fi
+
+            # Autoconnect when in range; priority 20 makes the Pi roam to the
+            # phone hotspot ahead of lower-priority networks.
+            sudo nmcli connection modify "$HOTSPOT_CON_NAME" connection.autoconnect yes connection.autoconnect-priority 20 || HOTSPOT_FAILED=1
+        fi
+
+        if [ "$HOTSPOT_FAILED" -eq 0 ]; then
+            PHONE_HOTSPOT_CONFIGURED=1
+            echo -e "${GREEN}Phone hotspot autoconnect configured${NC}"
+            echo -e "  SSID:     $PHONE_HOTSPOT_SSID ($HOTSPOT_MODE)"
+            echo -e "  Priority: 20 — the Pi joins it whenever the hotspot is in range"
+            echo ""
+            echo -e "${YELLOW}One-radio caveat: wlan0 is the Pi's only WiFi radio. While joined to the${NC}"
+            echo -e "${YELLOW}phone hotspot, the Pi is NOT on any other WiFi (AccessPopup, home LAN).${NC}"
+            echo -e "${YELLOW}Reach the dashboard then from a device connected to the same phone${NC}"
+            echo -e "${YELLOW}hotspot — via its LAN IP or the mDNS name.${NC}"
+            if [ "$HOTSPOT_OPEN" -eq 1 ]; then
+                echo ""
+                echo -e "${RED}Security warning (open network): unsecured WiFi invites both accidental${NC}"
+                echo -e "${RED}joins and evil-twin spoofing — anyone in range can broadcast the same SSID.${NC}"
+                echo -e "${RED}Prefer a PSK: re-run with --phone-hotspot-psk=<PSK>.${NC}"
+            elif [ "$HOTSPOT_PSK_IS_DEFAULT" -eq 1 ]; then
+                echo ""
+                echo -e "${YELLOW}Security note: the default WPA2 PSK (flaire2026) is committed in this${NC}"
+                echo -e "${YELLOW}repository's docs, so it is convenience, not secrecy. Rotate it when${NC}"
+                echo -e "${YELLOW}practical: re-run with --phone-hotspot-psk=<PSK>.${NC}"
+            fi
+        else
+            echo -e "${RED}Warning: the phone hotspot profile could not be fully configured.${NC}"
+            echo -e "${YELLOW}Check the nmcli error above, fix it, then re-run:${NC}"
+            echo -e "${YELLOW}  ./setup.sh --phone-hotspot=\"$PHONE_HOTSPOT_SSID\"${NC}"
+        fi
+    else
+        echo -e "${YELLOW}Warning: nmcli not found — this Raspberry Pi OS build does not use${NC}"
+        echo -e "${YELLOW}NetworkManager (pre-Bookworm). Configure the hotspot manually instead:${NC}"
+        echo -e "${YELLOW}add a network block to /etc/wpa_supplicant/wpa_supplicant.conf${NC}"
+        if [ "$HOTSPOT_OPEN" -eq 1 ]; then
+            echo -e "${YELLOW}   network={ ssid=\"$PHONE_HOTSPOT_SSID\" key_mgmt=NONE }${NC}"
+        else
+            echo -e "${YELLOW}   network={ ssid=\"$PHONE_HOTSPOT_SSID\" psk=\"$HOTSPOT_PSK\" }${NC}"
+        fi
+        echo -e "${YELLOW}Continuing setup without the hotspot profile.${NC}"
+    fi
+fi
+
 # Summary
 print_section "Setup Complete!"
 
@@ -285,8 +438,13 @@ echo "6. Start the system:"
 echo "   - Manually: python src/web/main.py"
 echo "   - As service: sudo systemctl start river-monitor"
 echo ""
-echo "7. Access the dashboard:"
-echo "   - Open a browser and go to: http://<raspberry-pi-ip>:8000"
+echo "7. Access the dashboard (any of these):"
+echo "   - mDNS hostname:  http://$(hostname).local:8000  (same name on every network the Pi joins)"
+echo "   - LAN IP:         http://<raspberry-pi-ip>:8000"
+if [ "$PHONE_HOTSPOT_CONFIGURED" -eq 1 ]; then
+    echo "   Phone hotspot autoconnect: will join '$PHONE_HOTSPOT_SSID' when in range."
+    echo "   (One WiFi radio: while joined, the Pi is not on other WiFi such as AccessPopup.)"
+fi
 echo ""
 echo "8. Test the LoRa receiver (in a separate terminal):"
 echo "   python src/data/lora_receiver.py"

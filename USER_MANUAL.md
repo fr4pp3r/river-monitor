@@ -61,10 +61,10 @@ This manual is written for two audiences:
 ### What You Need
 
 - A device with a web browser (Chrome, Firefox, Edge, or Safari)
-- Connection to the **same local network (LAN)** as the River Monitor station
+- A device connected to the same private network as the River Monitor station: the station's **home LAN**, or the **phone hotspot** it joins out in the field (see the table below)
 - A user account (see [Section 10](#10-user-accounts--roles))
 
-> **Note:** The dashboard is accessible only on the local network. It cannot be reached from the internet unless additional networking is configured.
+> **Note:** The dashboard is only reachable from the private network the station is connected to. It is never exposed to the public internet.
 
 ---
 
@@ -83,6 +83,19 @@ For example, if the station's IP address is `192.168.1.50`, you would visit:
 ```
 http://192.168.1.50:8000
 ```
+
+### Ways to Reach the Dashboard
+
+The station answers at the same name on every private network it joins:
+
+| Where you are | What to open |
+|---|---|
+| On the station's home LAN | `http://raspberrypi.local:8000` or `http://<station-ip>:8000` |
+| In the field, on the phone hotspot the station auto-joins | `http://raspberrypi.local:8000` or the hotspot's LAN IP |
+
+The `raspberrypi.local` address (mDNS) works from most current phones, laptops and desktops without knowing the IP; if a device does not resolve it, use the IP address of the network you are both on.
+
+If the administrator has set up **phone-hotspot autoconnect**, the station automatically joins the administrator's phone hotspot whenever it is nearby. That keeps its internet data current in the field and puts the station on the hotspot's network, so people connected to the same phone hotspot open the dashboard as usual. While it is on the phone hotspot, the station is not connected to other WiFi networks. See README.md (Remote Access → Field use) for how this is configured.
 
 ### Supported Devices
 
@@ -681,7 +694,7 @@ If the weather forecast seems out of date:
 
 ### Dashboard won't load
 
-- Confirm you're on the **same local network** as the station.
+- Confirm you're on a private network the station is connected to: its home LAN, or the same phone hotspot in the field (see the access table in Section 1).
 - Check the station's IP address and port (default `:8000`).
 - Try a different browser or device.
 - Ask an administrator to verify the server is running.
@@ -740,7 +753,7 @@ A: 24h is the risk for today (using today's weather forecast). 48h is the risk f
 A: The risk level combines five inputs (water level, rate of rise, forecast rain, tide, and the Random Forest propensity) via fuzzy logic. A moderate water level can still produce a high risk if rain is heavy and the tide is high. See the Fuzzy Rules page for the exact logic.
 
 **Q: Can I access the dashboard from my phone?**
-A: Yes, from any device on the same local network. It is not accessible from the public internet by default.
+A: Yes — from the station's home LAN, or from the phone hotspot it auto-joins in the field. It is never exposed to the public internet.
 
 **Q: Can two people be signed in at once?**
 A: Yes. Each user signs in with their own account; sessions are independent.
