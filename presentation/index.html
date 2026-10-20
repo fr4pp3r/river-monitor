@@ -349,15 +349,15 @@
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">07 · SYSTEM FLOWCHART — NODE</span><h2 class="slide-title reveal" data-step="0">System flowchart — sensor node</h2><div class="slide-deck reveal" data-step="0">Field sensing segment</div></header>
         <p class="reveal" data-step="1" style="font-size:1.02rem; color:var(--muted); line-height:1.6; margin-bottom:14px;">The sensor node measures river water level and rainfall, then transmits readings over LoRa every minute.</p>
-        <div class="step-strip reveal" data-step="2">
-          <div class="step-node"><h4 class="stitle">Sensors</h4><p class="sdesc">Ultrasonic water-level + tipping-bucket rain gauge</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">Controller</h4><p class="sdesc">On-board microcontroller (Adafruit 32u4 RFM9x)</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">LoRa TX</h4><p class="sdesc">RFM95W @ 915 MHz, 1-min cadence</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">Power</h4><p class="sdesc">Solar panel + battery</p></div>
+        <div style="display:flex; justify-content:center;" class="reveal" data-step="2">
+          <!-- INSERT IMAGE HERE: slide 7 — Figure 3 — sensor-node flowchart (source: SYSTEM_FLOWCHART.md INPUTS subgraph + thesis hardware) -->
+          <div class="figbox" data-figure="3" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
+            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-desc">Sensor-node flowchart — sensors, controller, LoRa RFM95W @ 915 MHz, solar/battery power.</div>
+          </div>
         </div>
+        <p class="fig-cap">Figure 3. Sensor-node flowchart.</p>
+        <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: SYSTEM_FLOWCHART.md · thesis hardware (node side)</p>
       </div>
     </section>
 
@@ -366,17 +366,15 @@
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">08 · SYSTEM FLOWCHART — EDGE DEVICE</span><h2 class="slide-title reveal" data-step="0">System flowchart — edge device</h2><div class="slide-deck reveal" data-step="0">Raspberry Pi 5 segment</div></header>
         <p class="reveal" data-step="1" style="font-size:1.02rem; color:var(--muted); line-height:1.6; margin-bottom:14px;">The Raspberry Pi 5 edge node receives LoRa data, enriches it with cached forecasts, classifies risk, and handles alerts — all offline.</p>
-        <div class="step-strip reveal" data-step="2">
-          <div class="step-node"><h4 class="stitle">LoRa receiver</h4><p class="sdesc">1-min ingestion from the sensor node</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">Forecast cache</h4><p class="sdesc">Open-Meteo weather + tide, 6-hour refresh</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">SQLite</h4><p class="sdesc">sensor_data, rainfall, weather, tidal, predictions</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">AI pipeline</h4><p class="sdesc">RF 8 features + 20-rule fuzzy, 24 h &amp; 48 h</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">SMS handler</h4><p class="sdesc">A7608e-H, Alarm / Critical only</p></div>
+        <div style="display:flex; justify-content:center;" class="reveal" data-step="2">
+          <!-- INSERT IMAGE HERE: slide 8 — Figure 4 — edge-device flowchart (source: SYSTEM_FLOWCHART.md) -->
+          <div class="figbox" data-figure="4" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
+            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-desc">Edge-device flowchart — LoRa receiver, forecast cache, SQLite, AI pipeline, SMS handler.</div>
+          </div>
         </div>
+        <p class="fig-cap">Figure 4. Edge-device flowchart.</p>
+        <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: SYSTEM_FLOWCHART.md · thesis edge layer</p>
       </div>
     </section>
 
@@ -385,15 +383,15 @@
       <div class="slide-inner">
         <header class="slide-head"><span class="kicker reveal" data-step="0">09 · SYSTEM FLOWCHART — DASHBOARD</span><h2 class="slide-title reveal" data-step="0">System flowchart — dashboard</h2><div class="slide-deck reveal" data-step="0">FastAPI web dashboard segment</div></header>
         <p class="reveal" data-step="1" style="font-size:1.02rem; color:var(--muted); line-height:1.6; margin-bottom:14px;">The FastAPI dashboard serves BDRRMC personnel over LAN, showing live data and classifications, with human confirmation before public alerts.</p>
-        <div class="step-strip reveal" data-step="2">
-          <div class="step-node"><h4 class="stitle">FastAPI server</h4><p class="sdesc">On the Pi, reachable over LAN</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">Browser dashboard</h4><p class="sdesc">Charts, status cards, alerts</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">BDRRMC review</h4><p class="sdesc">Personnel confirm before release</p></div>
-          <div class="step-arrow">&rarr;</div>
-          <div class="step-node"><h4 class="stitle">SMS fan-out</h4><p class="sdesc">Alerts to configured contacts</p></div>
+        <div style="display:flex; justify-content:center;" class="reveal" data-step="2">
+          <!-- INSERT IMAGE HERE: slide 9 — Figure 5 — dashboard flowchart (source: SYSTEM_FLOWCHART.md) -->
+          <div class="figbox" data-figure="5" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
+            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-desc">Dashboard flowchart — FastAPI server, browser dashboard, BDRRMC review, SMS fan-out.</div>
+          </div>
         </div>
+        <p class="fig-cap">Figure 5. Dashboard flowchart.</p>
+        <p style="font-size:0.82rem; color:var(--dim); text-align:center; margin-top:6px;">Source material: SYSTEM_FLOWCHART.md · thesis UI layer</p>
       </div>
     </section>
 
@@ -473,14 +471,14 @@
           Operational — continuous hydrological information and AI risk classifications for BDRRMC personnel; Receding classification under stable conditions; Alert / Alarm / Critical with SMS during heavy rainfall.<br>
           Community — improved situational awareness and earlier preparedness; reduced dependence on visual observation and municipality-wide MDRRMO alerts. Final alert authority stays with the BDRRMC — decision-support, not autonomous warning.
         </div>
-        <!-- INSERT IMAGE HERE: slide 10 — Figure 3 — benefits figure -->
+        <!-- INSERT IMAGE HERE: slide 10 — Figure 6 — benefits figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
-          <div class="figbox" data-figure="3" style="width:42%; aspect-ratio:4/3; min-width:300px;">
+          <div class="figbox" data-figure="6" style="width:42%; aspect-ratio:4/3; min-width:300px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Cost and benefits figure — benefit categories (technical, operational, community-level).</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 3. Cost and benefits — benefit categories.</p>
+        <p class="fig-cap">Figure 6. Cost and benefits — benefit categories.</p>
       </div>
     </section>
 
@@ -496,14 +494,14 @@
           <li>Network or power interruptions can limit communication and warning/response efforts</li>
           <li>No continuous, automated, barangay-specific water-level and rainfall records exist</li>
         </ul>
-        <!-- INSERT IMAGE HERE: slide 11 — Figure 4 — current-practice / needs-assessment figure -->
+        <!-- INSERT IMAGE HERE: slide 11 — Figure 7 — current-practice / needs-assessment figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="3">
-          <div class="figbox" data-figure="4" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
+          <div class="figbox" data-figure="7" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Current-practice / needs-assessment figure — manual monitoring, MDRRMO alerts, warning gap.</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 4. Current-practice / needs-assessment figure.</p>
+        <p class="fig-cap">Figure 7. Current-practice / needs-assessment figure.</p>
       </div>
     </section>
 
@@ -520,14 +518,14 @@
           <li>✓ LAN dashboard shows live status, graphs, RF/fuzzy results, alert history — no internet needed</li>
           <li>✓ SMS via GSM modem (Alarm/Critical only); BDRRMC retains alert authority</li>
         </ul>
-        <!-- INSERT IMAGE HERE: slide 12 — Figure 5 — system output / requirements-verification figure -->
+        <!-- INSERT IMAGE HERE: slide 12 — Figure 8 — system output / requirements-verification figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="3">
-          <div class="figbox" data-figure="5" style="height:30vh; aspect-ratio:16/9;">
+          <div class="figbox" data-figure="8" style="height:30vh; aspect-ratio:16/9;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">System output / requirements-verification figure — offline-first chain end to end.</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 5. System output / requirements-verification figure.</p>
+        <p class="fig-cap">Figure 8. System output / requirements-verification figure.</p>
       </div>
     </section>
 
@@ -553,14 +551,14 @@
         <div class="callout warn reveal" data-step="4" style="margin-top:12px;">
           <b>Honest caveat:</b> 94.26% measures consistency with the study's own rule-derived labels — built from the same eight features — not demonstrated flood-prediction skill. Independent labels and chronological validation are needed.
         </div>
-        <!-- INSERT IMAGE HERE: slide 13 — Figure 6 — confusion matrix / feature importance -->
+        <!-- INSERT IMAGE HERE: slide 13 — Figure 9 — confusion matrix / feature importance -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="5">
-          <div class="figbox" data-figure="6" style="height:30vh; aspect-ratio:16/9;">
+          <div class="figbox" data-figure="9" style="height:30vh; aspect-ratio:16/9;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Confusion matrix / feature-importance figure (hold-out test set, Random Forest).</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 6. Confusion matrix / feature-importance figure.</p>
+        <p class="fig-cap">Figure 9. Confusion matrix / feature-importance figure.</p>
       </div>
     </section>
 
@@ -579,14 +577,14 @@
           <li>67 zero-distance, 124 negative, and 5 implausible-distance readings flagged for review</li>
           <li>River stayed Receding — Alert, Alarm, and Critical classes could not be exercised</li>
         </ul>
-        <!-- INSERT IMAGE HERE: slide 14 — Figure 7 — deployment / water-level time-series figure -->
+        <!-- INSERT IMAGE HERE: slide 14 — Figure 10 — deployment / water-level time-series figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
-          <div class="figbox" data-figure="7" style="height:30vh; aspect-ratio:16/9;">
+          <div class="figbox" data-figure="10" style="height:30vh; aspect-ratio:16/9;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">Deployment / water-level time-series figure — field records and battery curve.</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 7. Deployment / water-level time-series figure.</p>
+        <p class="fig-cap">Figure 10. Deployment / water-level time-series figure.</p>
       </div>
     </section>
 
@@ -607,14 +605,14 @@
           <li>Small-n caveat: encouraging but not generalizable to all barangay officials/residents</li>
           <li>Perceived reliability read alongside deployment findings (battery depletion, anomalous readings)</li>
         </ul>
-        <!-- INSERT IMAGE HERE: slide 15 — Figure 8 — TAM survey results figure -->
+        <!-- INSERT IMAGE HERE: slide 15 — Figure 11 — TAM survey results figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
-          <div class="figbox" data-figure="8" style="height:30vh; aspect-ratio:16/9;">
+          <div class="figbox" data-figure="11" style="height:30vh; aspect-ratio:16/9;">
             <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
             <div class="fig-desc">TAM survey results figure — acceptability ratings by dimension.</div>
           </div>
         </div>
-        <p class="fig-cap">Figure 8. TAM survey results figure.</p>
+        <p class="fig-cap">Figure 11. TAM survey results figure.</p>
       </div>
     </section>
 
