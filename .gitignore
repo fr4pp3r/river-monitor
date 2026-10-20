@@ -11,12 +11,14 @@ venv/
 # Runtime data
 logs/
 config.json
+data/*.db
 data/weather_cache/
 # SQLite WAL sidecar files (created when journal_mode=WAL is enabled)
 data/*.db-wal
 data/*.db-shm
 
 # OS / editor
+.vs/
 .DS_Store
 Thumbs.db
 
