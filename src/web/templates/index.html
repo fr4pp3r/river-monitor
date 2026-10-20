@@ -8,6 +8,18 @@
     <link rel="icon" href="data:,">
     <!-- ?v= forces a refetch for browsers that heuristically cached the old stylesheet -->
     <link rel="stylesheet" href="/static/style.css?v=20261011d">
+    <!-- Apply a stored theme choice before first paint so the user never sees a
+         flash of the wrong theme. OS preference is only the default fallback. -->
+    <script>
+        try {
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme === 'dark' || storedTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', storedTheme);
+            }
+        } catch (e) {
+            // localStorage unavailable; theme falls back to system preference
+        }
+    </script>
     <!-- Chart libraries are served locally (no CDN round-trip, works offline on
          the LAN) and deferred so they never block first paint on mobile. -->
     <script src="/static/vendor/chart.umd.min.js" defer></script>
@@ -131,6 +143,10 @@
                 <h1>River Water Level Monitor</h1>
                 <p class="subtitle">Real-time Flood Risk Prediction System</p>
             </div>
+            <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch to dark mode" aria-pressed="false">
+                <svg class="icon theme-toggle__icon theme-toggle__icon--sun" style="width:20px;height:20px;"><use href="#i-sun"/></svg>
+                <svg class="icon theme-toggle__icon theme-toggle__icon--moon" style="width:20px;height:20px;"><use href="#i-moon"/></svg>
+            </button>
             <div class="header__auth" id="auth-user-area" style="display:none">
                 <span class="auth-user" id="auth-username"></span>
                 <span class="auth-role" id="auth-role"></span>
@@ -1137,9 +1153,9 @@
         // Risk metadata: colors + CSS classes, keyed by lowercase name
         const RISK_META = {
             'normal':   { color: '#16a34a', badge: 'risk-badge--normal' },
-            'receding': { color: '#0284c7', badge: 'risk-badge--receding' },
+            'receding': { color: '#0c4a6e', badge: 'risk-badge--receding' },
             'alert':    { color: '#f59e0b', badge: 'risk-badge--alert' },
-            'alarm':    { color: '#ea580c', badge: 'risk-badge--alarm' },
+            'alarm':    { color: '#f06e14', badge: 'risk-badge--alarm' },
             'critical': { color: '#dc2626', badge: 'risk-badge--critical' }
         };
 
@@ -1291,17 +1307,98 @@
         }
 
         // =====================================================================
-        // THEME (auto-detects system preference, no manual toggle)
+        // THEME (manual choice persisted in localStorage; OS preference is the
+        // default only until the user makes an explicit choice)
         // =====================================================================
-        function applySystemTheme() {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        const THEME_STORAGE_KEY = 'theme';
+        const THEME_DARK = 'dark';
+        const THEME_LIGHT = 'light';
+
+        let themeMediaQuery = null;
+        let themeUserChoice = false; // true once the user has explicitly picked a theme
+
+        function getSystemTheme() {
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? THEME_DARK : THEME_LIGHT;
+        }
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            const isDark = theme === THEME_DARK;
+            const toggle = $('theme-toggle');
+            if (toggle) {
+                toggle.setAttribute('aria-pressed', isDark);
+                toggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+            }
+            refreshChartColors();
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || getSystemTheme();
+            const next = current === THEME_DARK ? THEME_LIGHT : THEME_DARK;
+            localStorage.setItem(THEME_STORAGE_KEY, next);
+            themeUserChoice = true;
+            if (themeMediaQuery) {
+                themeMediaQuery.removeEventListener('change', onSystemThemeChange);
+                themeMediaQuery = null;
+            }
+            applyTheme(next);
+        }
+
+        function onSystemThemeChange(event) {
+            // OS/browser preference only applies while the user has not chosen
+            if (themeUserChoice) return;
+            applyTheme(event.matches ? THEME_DARK : THEME_LIGHT);
         }
 
         function initTheme() {
-            applySystemTheme();
-            // Re-apply when the OS/browser theme changes (e.g. automatic dark mode at sunset)
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystemTheme);
+            const stored = localStorage.getItem(THEME_STORAGE_KEY);
+            if (stored === THEME_DARK || stored === THEME_LIGHT) {
+                applyTheme(stored);
+                themeUserChoice = true;
+            } else {
+                applyTheme(getSystemTheme());
+            }
+            // Re-apply when the OS/browser theme changes. Only active while no
+            // explicit stored choice exists; toggleTheme() removes it.
+            themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            themeMediaQuery.addEventListener('change', onSystemThemeChange);
+        }
+
+        function readCssVar(name, fallback) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+        }
+
+        function refreshChartColors() {
+            const chartText = readCssVar('--chart-text', '#57606a');
+            const chartGrid = readCssVar('--chart-grid', 'rgba(0,0,0,0.06)');
+            const tooltipBg = readCssVar('--chart-tooltip-bg', 'rgba(31,35,40,0.92)');
+            const tooltipTitle = readCssVar('--chart-tooltip-title', '#ffffff');
+            const tooltipBody = readCssVar('--chart-tooltip-body', '#e6edf3');
+
+            [waterLevelChart, forecastChart].forEach(function (chart) {
+                if (!chart) return; // chart may not exist yet
+                const scales = chart.options.scales;
+                if (scales) {
+                    if (scales.x && scales.x.ticks) scales.x.ticks.color = chartText;
+                    if (scales.x && scales.x.grid && typeof scales.x.grid !== 'function') {
+                        scales.x.grid.color = chartGrid;
+                    }
+                    if (scales.y) {
+                        if (scales.y.ticks) scales.y.ticks.color = chartText;
+                        if (scales.y.grid) scales.y.grid.color = chartGrid;
+                    }
+                }
+                const plugins = chart.options.plugins;
+                if (plugins) {
+                    if (plugins.legend && plugins.legend.labels) plugins.legend.labels.color = chartText;
+                    if (plugins.tooltip) {
+                        plugins.tooltip.backgroundColor = tooltipBg;
+                        plugins.tooltip.titleColor = tooltipTitle;
+                        plugins.tooltip.bodyColor = tooltipBody;
+                    }
+                }
+                chart.update('none');
+            });
         }
 
         // =====================================================================
