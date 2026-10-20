@@ -46,16 +46,18 @@ RAIN_BUCKET_TIP_MM = 0.2  # Rainfall per tip in mm (adjust based on your bucket 
 # ============================================================================
 
 # Risk levels based on percentage of critical level
+# Alert < 3 ft (0.9144 m), Alarm 3-4 ft (0.9144-1.2192 m), Critical 4 ft+ (1.2192 m)
 RISK_THRESHOLDS = {
     "normal": 0.0,
-    "alert": 0.40,    # 40% of critical level
-    "alarm": 0.60,    # 60% of critical level
-    "critical": 1.0   # 100% of critical level
+    "alert": 0.0,     # Below 3 ft = Alert (0% of critical = 0 m)
+    "alarm": 0.75,    # 3 ft = 0.9144 m = 75% of 1.2192 m
+    "critical": 1.0   # 4 ft = 1.2192 m = 100% of critical level
 }
 
 # Critical water level (meters) - Adjust after hydrological survey
 # This is the water level at which risk is considered 100%
-CRITICAL_LEVEL_M = 2.0
+# 4 ft = 1.2192 m (Critical band starts here; Alert < 3 ft, Alarm 3-4 ft)
+CRITICAL_LEVEL_M = 1.2192
 
 # Receding condition: Water level must drop for this many hours to be considered receding
 RECEDING_HOURS = 2
@@ -168,11 +170,12 @@ RF_CLASSES = {0: 'Low', 1: 'Medium', 2: 'High'}
 # Fuzzy Logic Membership Function Thresholds
 
 # Water Level (mm) - from sensor
+# Alert < 3 ft (914 mm), Alarm 3-4 ft (914-1219 mm), Critical 4-6 ft (1219-1829 mm)
 WL_THRESHOLDS = {
-    'low_max': 610,
-    'medium_min': 610, 'medium_max': 1220,
-    'high_min': 1220, 'high_max': 1830,
-    'very_high_min': 1830
+    'low_max': 914,
+    'medium_min': 914, 'medium_max': 1219,
+    'high_min': 1219, 'high_max': 1829,
+    'very_high_min': 1829
 }
 
 # Forecast Rain (mm/day) - from Open-Meteo precipitation_sum

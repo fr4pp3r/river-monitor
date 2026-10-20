@@ -86,17 +86,17 @@ class Settings(BaseSettings):
     weather_timezone: str = "auto"
 
     # Risk
-    critical_level_m: float = 2.0
+    critical_level_m: float = 1.2192
     receding_hours: int = 2
     rain_day_threshold_mm: float = 2.0
 
-    # WL thresholds
-    wl_low_max: float = 610
-    wl_medium_min: float = 610
-    wl_medium_max: float = 1220
-    wl_high_min: float = 1220
-    wl_high_max: float = 1830
-    wl_very_high_min: float = 1830
+    # WL thresholds (mm): Alert < 914, Alarm 914-1219, Critical 1219+
+    wl_low_max: float = 914
+    wl_medium_min: float = 914
+    wl_medium_max: float = 1219
+    wl_high_min: float = 1219
+    wl_high_max: float = 1829
+    wl_very_high_min: float = 1829
 
     # FRain
     frain_none_max: float = 5

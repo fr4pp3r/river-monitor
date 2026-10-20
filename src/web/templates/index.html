@@ -231,16 +231,16 @@
                             <span class="risk-gauge__seg risk-gauge__seg--alarm"></span>
                             <span class="risk-gauge__seg risk-gauge__seg--critical"></span>
                             <!-- threshold markers -->
-                            <span class="risk-gauge__marker" id="marker-alert" style="left:40%" data-threshold="Alert 0.8m"></span>
-                            <span class="risk-gauge__marker" id="marker-alarm" style="left:60%" data-threshold="Alarm 1.2m"></span>
-                            <span class="risk-gauge__marker" id="marker-critical" style="left:100%" data-threshold="Critical 2.0m"></span>
+                            <span class="risk-gauge__marker" id="marker-alert" style="left:0%" data-threshold="Alert 0.0m"></span>
+                            <span class="risk-gauge__marker" id="marker-alarm" style="left:75%" data-threshold="Alarm 0.91m"></span>
+                            <span class="risk-gauge__marker" id="marker-critical" style="left:100%" data-threshold="Critical 1.22m"></span>
                             <!-- needle -->
                             <span class="risk-gauge__needle" id="risk-gauge-needle" style="left:0%"></span>
                         </div>
                         <div class="risk-gauge__legend">
                             <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alert-soft);border:1px solid var(--color-alert)"></span> Alert ≥ <span id="legend-alert">0.8</span> m</span>
                             <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-alarm-soft);border:1px solid var(--color-alarm)"></span> Alarm ≥ <span id="legend-alarm">1.2</span> m</span>
-                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-critical-soft);border:1px solid var(--color-critical)"></span> Critical ≥ <span id="legend-critical">2.0</span> m</span>
+                            <span class="risk-gauge__legend-item"><span class="risk-gauge__swatch" style="background:var(--color-critical-soft);border:1px solid var(--color-critical)"></span> Critical ≥ <span id="legend-critical">1.22</span> m</span>
                         </div>
                     </div>
 
@@ -1152,9 +1152,10 @@
         };
 
         // Risk threshold defaults; overridden from /api/config at runtime
-        let CRITICAL_LEVEL_M = 2.0;
-        let ALERT_THRESHOLD_M = CRITICAL_LEVEL_M * 0.40;
-        let ALARM_THRESHOLD_M = CRITICAL_LEVEL_M * 0.60;
+        // Alert < 3 ft (0.9144 m), Alarm 3-4 ft (1.2192 m), Critical 4 ft+
+        let CRITICAL_LEVEL_M = 1.2192;
+        let ALERT_THRESHOLD_M = 0.0;
+        let ALARM_THRESHOLD_M = CRITICAL_LEVEL_M * 0.75;
 
         // =====================================================================
         // UTILITIES
