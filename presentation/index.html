@@ -132,6 +132,14 @@
   .fig-label{ font-size: 0.7rem; letter-spacing: 0.22rem; text-transform: uppercase; color: var(--teal); font-weight: 800; }
   .fig-desc{ font-size: 0.88rem; line-height: 1.5; color: var(--muted); padding: 0 14px; }
   .fig-cap{ font-size: 0.76rem; letter-spacing: 0.14rem; text-transform: uppercase; color: var(--dim); margin-top: 8px; font-weight: 800; text-align: center; }
+  .figbox{ position: relative; }
+  .figbox.droptarget{ outline: 2px dashed var(--teal); outline-offset: 5px; background: rgba(46,204,166,.10); }
+  .fig-clear{
+    position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--border); background: rgba(12,34,40,.92); color: var(--muted);
+    font-size: 0.85rem; line-height: 1; cursor: pointer; z-index: 2;
+  }
+  .fig-clear:hover{ color: #fff; border-color: var(--teal); }
   
   /* blank slide placeholder */
   .blank-zone{
@@ -286,7 +294,7 @@
         <!-- INSERT IMAGE HERE: slide 4 — Figure 1 — significance / beneficiaries figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="2">
           <div class="figbox" data-figure="1" style="width:40%; aspect-ratio:16/9; min-width:300px;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Significance of the study — beneficiary map (BDRRMC, residents, researchers, policy).</div>
           </div>
         </div>
@@ -335,7 +343,7 @@
         <div style="display:flex; justify-content:center;" class="reveal" data-step="1">
           <!-- INSERT IMAGE HERE: slide 6 — Figure 2 — entity relationship diagram (source: DATABASE_ERD.md) -->
           <div class="figbox" data-figure="2" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Entity-relationship diagram of the FLAIRE river-monitor database — insert the actual ERD image here.</div>
           </div>
         </div>
@@ -352,7 +360,7 @@
         <div style="display:flex; justify-content:center;" class="reveal" data-step="2">
           <!-- INSERT IMAGE HERE: slide 7 — Figure 3 — sensor-node flowchart (source: SYSTEM_FLOWCHART.md INPUTS subgraph + thesis hardware) -->
           <div class="figbox" data-figure="3" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Sensor-node flowchart — sensors, controller, LoRa RFM95W @ 915 MHz, solar/battery power.</div>
           </div>
         </div>
@@ -369,7 +377,7 @@
         <div style="display:flex; justify-content:center;" class="reveal" data-step="2">
           <!-- INSERT IMAGE HERE: slide 8 — Figure 4 — edge-device flowchart (source: SYSTEM_FLOWCHART.md) -->
           <div class="figbox" data-figure="4" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Edge-device flowchart — LoRa receiver, forecast cache, SQLite, AI pipeline, SMS handler.</div>
           </div>
         </div>
@@ -386,7 +394,7 @@
         <div style="display:flex; justify-content:center;" class="reveal" data-step="2">
           <!-- INSERT IMAGE HERE: slide 9 — Figure 5 — dashboard flowchart (source: SYSTEM_FLOWCHART.md) -->
           <div class="figbox" data-figure="5" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Dashboard flowchart — FastAPI server, browser dashboard, BDRRMC review, SMS fan-out.</div>
           </div>
         </div>
@@ -474,7 +482,7 @@
         <!-- INSERT IMAGE HERE: slide 10 — Figure 6 — benefits figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
           <div class="figbox" data-figure="6" style="width:42%; aspect-ratio:4/3; min-width:300px;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Cost and benefits figure — benefit categories (technical, operational, community-level).</div>
           </div>
         </div>
@@ -497,7 +505,7 @@
         <!-- INSERT IMAGE HERE: slide 11 — Figure 7 — current-practice / needs-assessment figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="3">
           <div class="figbox" data-figure="7" style="width:66%; aspect-ratio:16/9; max-height:62vh; min-width:560px;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Current-practice / needs-assessment figure — manual monitoring, MDRRMO alerts, warning gap.</div>
           </div>
         </div>
@@ -521,7 +529,7 @@
         <!-- INSERT IMAGE HERE: slide 12 — Figure 8 — system output / requirements-verification figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="3">
           <div class="figbox" data-figure="8" style="height:30vh; aspect-ratio:16/9;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">System output / requirements-verification figure — offline-first chain end to end.</div>
           </div>
         </div>
@@ -554,7 +562,7 @@
         <!-- INSERT IMAGE HERE: slide 13 — Figure 9 — confusion matrix / feature importance -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="5">
           <div class="figbox" data-figure="9" style="height:30vh; aspect-ratio:16/9;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Confusion matrix / feature-importance figure (hold-out test set, Random Forest).</div>
           </div>
         </div>
@@ -580,7 +588,7 @@
         <!-- INSERT IMAGE HERE: slide 14 — Figure 10 — deployment / water-level time-series figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
           <div class="figbox" data-figure="10" style="height:30vh; aspect-ratio:16/9;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">Deployment / water-level time-series figure — field records and battery curve.</div>
           </div>
         </div>
@@ -608,7 +616,7 @@
         <!-- INSERT IMAGE HERE: slide 15 — Figure 11 — TAM survey results figure -->
         <div style="display:flex; justify-content:center;" class="reveal" data-step="4">
           <div class="figbox" data-figure="11" style="height:30vh; aspect-ratio:16/9;">
-            <div class="fig-label">◲ FIGURE PLACEHOLDER</div>
+            <div class="fig-label">◲ FIGURE PLACEHOLDER · DROP IMAGE TO INSERT</div>
             <div class="fig-desc">TAM survey results figure — acceptability ratings by dimension.</div>
           </div>
         </div>
@@ -815,6 +823,55 @@
 
   document.getElementById('closeNotes').addEventListener('click', closeNotes);
   notesOverlay.addEventListener('click', closeNotes);
+
+  /* ---- drag-and-drop figure insertion (localStorage auto-save) ---- */
+  var FIG_KEY = 'flaire-fig-';
+  function figNum(box){ return box.getAttribute('data-figure') || 'x'; }
+  function storeFig(num, url){
+    try { localStorage.setItem(FIG_KEY + num, url); return true; }
+    catch(err){ alert('That image is too large for auto-save (browser limit ≈ 5 MB). Downscale it and try again.'); return false; }
+  }
+  function clearFig(num){ try { localStorage.removeItem(FIG_KEY + num); } catch(err){} }
+  function paintStored(box, url){
+    box.innerHTML = '<img src="' + url + '" alt="Inserted figure" style="width:100%; height:100%; object-fit:contain; border-radius:6px;" />';
+    var btn = document.createElement('button');
+    btn.className = 'fig-clear';
+    btn.title = 'Remove saved image';
+    btn.textContent = '\u2715';
+    btn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      clearFig(figNum(box));
+      location.reload();
+    });
+    box.appendChild(btn);
+  }
+  [].forEach.call(document.querySelectorAll('.figbox'), function(box){
+    var num = figNum(box), saved = null;
+    try { saved = localStorage.getItem(FIG_KEY + num); } catch(err){}
+    if(saved){ paintStored(box, saved); }
+  });
+  ['dragover','dragenter'].forEach(function(ev){
+    document.addEventListener(ev, function(e){
+      var box = e.target && e.target.closest ? e.target.closest('.figbox') : null;
+      if(box){ e.preventDefault(); box.classList.add('droptarget'); }
+    });
+  });
+  document.addEventListener('dragleave', function(e){
+    var box = e.target && e.target.closest ? e.target.closest('.figbox') : null;
+    if(box){ box.classList.remove('droptarget'); }
+  });
+  document.addEventListener('drop', function(e){
+    var box = e.target && e.target.closest ? e.target.closest('.figbox') : null;
+    if(!box){ return; }
+    e.preventDefault();
+    box.classList.remove('droptarget');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(!f){ return; }
+    if(!f.type || f.type.indexOf('image/') !== 0){ alert('Please drop an image file (PNG/JPG).'); return; }
+    var rd = new FileReader();
+    rd.onload = function(){ if(storeFig(figNum(box), rd.result)){ paintStored(box, rd.result); } };
+    rd.readAsDataURL(f);
+  });
 
   var m = location.hash.match(/#slide=(\d+)/);
   if(m) cur = Math.max(0, Math.min(n - 1, parseInt(m[1], 10) - 1));
