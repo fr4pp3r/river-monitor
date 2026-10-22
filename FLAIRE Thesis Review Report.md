@@ -94,3 +94,62 @@ Never claim it forecast a flood, never claim lead time was measured, never claim
 3. Fill the remaining appendices, Gantt bars, acknowledgement, table of contents, and all five bionotes/CVs.
 
 None of these require new thinking — only assembly. **The argument is done; the container isn't.**
+
+---
+
+## 6. Addendum (post-review, 2026-10-22) — three newly verified discrepancies and one new piece of evidence
+
+This addendum is appended to the third-pass review; **nothing above has been rewritten.** It records three factual discrepancies found afterwards by re-deriving the shipped artifacts from the running code, and one piece of new evidence that closes a question the review had ranked but could not answer.
+
+### 6.1 The label-rule paragraph is wrong — highest priority (Chapter 4, RF evaluation results)
+
+The thesis states:
+
+> "A composite score incorporated one-day, three-day, and seven-day rainfall; number of rainy days; maximum and minimum temperature; and maximum and minimum tide levels. Scores of at least 6.0 were labeled High, scores of at least 3.0 were labeled Medium, and scores below 3.0 were labeled Low."
+
+That rule does **not** generate the shipped labels. Re-running both generators against `training_data4.csv`:
+
+| Generator | Reproduces the shipped labels? | Distribution it yields |
+|---|---|---|
+| Composite, ≥6.0 / ≥3.0 (what the thesis describes) | 1,172 / 1,826 = **64.2%** | 506 / 1,125 / 195 |
+| Composite, best possible cut pair (4.0 / 5.5) | 1,478 / 1,826 = 80.9% | — |
+| **Quantile-weighted, ≥1.5 / ≥0.7** (`add_target_features_only.py:105-137`) | 1,826 / 1,826 = **100.0%** | 918 / 593 / 315 = shipped |
+
+The shipped labels came from the quantile-weighted variant: each feature bucketed at its p50/p75/p90, weighted (R7 .30, R3 .20, R1 .15, rain_days .10, TideMax .10, TideMin .05, TMAX .05, TMIN .05), the buckets multiplied by 1/2/3, cut at ≥1.5 for High and ≥0.7 for Medium.
+
+**What survives and what does not.** The substantive finding is untouched — the labels still come from a rule over the same eight features, so 94.26% still measures rule-consistency rather than flood-prediction skill, and the abstract's and conclusions' framing (P250, P603, P606) still holds. What must change is the *named* rule. This is a one-paragraph correction, not a re-analysis.
+
+**Also unstated in the thesis:** 223 of the 1,826 training rows (12.2%) have a missing `TideMax`/`TideMin`. The shipped pipeline applies **no imputation and drops no rows** (`src/model/preprocess.py:366-385`); scikit-learn's Random Forest routes NaN natively per split. The thesis discloses only one missing tide value (the 30/03/2022 flood event). The 12.2% figure belongs in the limitations discussion.
+
+### 6.2 The fuzzy water-level bands are stale (Chapter 4, field deployment)
+
+The thesis says the observed 0.01–0.18 m range "lies entirely within the lowest (Low) water-level band of the fuzzy-logic classifier (below 0.61 m) and well below the alert threshold (0.80 m)". The running system (`src/config.py:60`, `:174-179`) uses **914 / 1,219 / 1,829 mm** with a **1.2192 m** critical level, and the dashboard renders the same (Alarm at 0.9144 m = 3 ft, Critical at 1.2192 m = 4 ft).
+
+**The paragraph's conclusion is unaffected** — the deployment did stay in the Low band and never reached Alert under either set of numbers. Only the numbers need fixing.
+
+Note that **three threshold sets were in circulation** across the project: thesis text (0.61 m / 0.80 m), `src/config.py` (914 / 1,219 / 1,829 mm with a 1.2192 m critical level), and the README plus the older `possible_question.md` (610 / 1,220 / 1,830 mm with a 2.0 m critical level). **The code is authoritative; the thesis and README text were stale.** All prep documents and the README are now aligned to the code.
+
+### 6.3 Threshold provenance must not be overstated
+
+`src/config.py` carries the comment "Adjust after hydrological survey", and the thesis recommends establishing barangay-specific thresholds with the BDRRMC and MDRRMO. **No hydrological survey was completed.** The correct statement is: anchored on PAGASA's 3 ft and 4 ft warning bands, with the values to be finalized against the barangay's hydrological survey. Do not claim a completed survey.
+
+### 6.4 New evidence: a model-family benchmark, and a chronological-split check
+
+The review's ranked question 2 ("What did the AI layer add?") is now answerable with numbers. Four model families on the same stratified 80/20 split (`random_state=42`, shipped hyperparameters):
+
+| Model | Accuracy | Macro F1 | F1 (High) | Size | Inference* |
+|---|---|---|---|---|---|
+| Logistic Regression | 0.9126 | 0.8974 | 0.8750 | 0.9 KB | 0.20 ms |
+| Decision Tree | 0.9180 | 0.9057 | 0.8923 | 20.8 KB | 0.22 ms |
+| **Random Forest (shipped)** | **0.9426** | 0.9329 | 0.9160 | 2,041 KB | 13.3 ms |
+| Gradient Boosting | **0.9536** | 0.9423 | 0.9173 | 383 KB | 2.04 ms |
+
+*measured on the development PC, not on a Pi.*
+
+**Random Forest did not win** — gradient boosting was about one point ahead. The defensible claim is that RF was the *default*, not the best: it is the documented literature choice (P307 Refadah; Mesias & Bagtasa; Schumacher et al.), its bagged construction suits 1,826 noisy rows with a 918/593/315 imbalance and 12.2% missing tide, and a 2 MB pickle that infers in milliseconds on a Pi fits a pipeline that runs every five minutes. **The narrow spread across four families is itself the evidence for the circularity this report has kept flagging** — the target is a threshold function of the same eight inputs, so no model family can separate far from any other.
+
+A **chronological 80/20 split** of the same Random Forest gives **0.8962** accuracy (macro F1 0.8906) against 0.9426 stratified — a 4.6-point drop, confirming the thesis's own "may inflate apparent generalization performance" caveat empirically.
+
+**Consequences for the defense:** never claim RF beat the alternatives, and be ready to volunteer the gradient-boosting number. `possible_question.md`, `FLAIRE Defense Script.md` (B3, B5) and `FLAIRE Thesis Cheat Sheet.md` now carry this framing and the matching never-say items.
+
+**One open decision for the author:** the benchmark is currently a defense-side answer only. If it is to be reported in the thesis, it needs a Chapter 4 table and paragraph; if it is not, the numbers must not be presented as a thesis finding.

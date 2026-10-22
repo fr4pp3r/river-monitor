@@ -362,4 +362,28 @@ The thesis reports these as data-quality findings, not river behaviour (P590, Ta
 
 ---
 
+## 12. Addendum (post-review, 2026-10-22) — a model-family benchmark now exists
+
+This addendum supersedes nothing above. It scopes one item whose status has changed since the delta was written, and states plainly what has *not* changed.
+
+**What was added.** A model comparison that the proposal never promised and the thesis does not report: four model families trained and evaluated on the same stratified 80/20 split with `random_state=42` and the shipped hyperparameters.
+
+| Model | Accuracy | Macro F1 | F1 (High) |
+|---|---|---|---|
+| Logistic Regression | 0.9126 | 0.8974 | 0.8750 |
+| Decision Tree | 0.9180 | 0.9057 | 0.8923 |
+| **Random Forest (shipped)** | **0.9426** | 0.9329 | 0.9160 |
+| Gradient Boosting | 0.9536 | 0.9423 | 0.9173 |
+
+A chronological 80/20 evaluation of the same Random Forest gives **0.8962** accuracy (macro F1 0.8906) against 0.9426 stratified — a 4.6-point drop that confirms the thesis's own caveat that a random split over rolling-window features may inflate apparent generalization performance.
+
+**What this does and does not change.**
+
+- **§9 row 1 and §11 Q1 remain accurate exactly as written.** The proposal's commitment (RQ3 P225; method P334; instrumentation P380; benefits P406) was to compare the model against **a traditional threshold-based warning method**. That comparison still was not completed and is still future work (P344) — it needs documented flood events to stand a baseline against, and four events cannot support it. The benchmark above is a **model-family comparison**: it asks which classifier best reproduces the rule, not whether the rule-based system outperforms an operational threshold method. **Do not let the benchmark be heard as the threshold baseline.**
+- **§5's literature line (P122) is now incomplete.** "No substantially new literature was added for the Random Forest or fuzzy-logic choice" remains true of the *document*, but the Random Forest justification in Chapter 2 (P307 Refadah; Mesias & Bagtasa) is no longer the whole answer. The empirical supplement says something the literature cannot: four very different model families land within about four points of each other, because the target is a deterministic threshold function of the same eight inputs. That is the circularity of §10 made visible.
+- **The framing moves from "uncompared" to "compared, and the comparison does not claim a win."** Random Forest was the defensible default, not the top scorer — gradient boosting scored 0.9536 against our 0.9426. Say it that way. `possible_question.md`, `FLAIRE Defense Script.md` (B3) and `FLAIRE Thesis Cheat Sheet.md` all use this framing.
+- **The thesis document itself is unchanged by this addendum.** If the benchmark is to be reported in the thesis, that is a new Chapter 4 table and paragraph. If it is not, the benchmark stays a defense-side answer. **Decide before printing** — a number that exists in the repository but not in the thesis must not be presented as a thesis finding.
+
+---
+
 *Prepared from a full-text, table-inclusive extraction of both documents. Paragraph indices (`P###`) are stable identifiers from that extraction and can be used to jump straight to any cited passage for a final read-through.*

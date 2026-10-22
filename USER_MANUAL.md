@@ -196,17 +196,17 @@ A green pulsing **live indicator** with the text "Live" confirms that data is fl
 Below the status values, a horizontal **gauge** visualizes where the current water level sits relative to the three risk thresholds:
 
 ```
-Normal  ────── Alert ────── Alarm ────── Critical
-  0%          40%           60%           100%
+Alert  ─────────────── Alarm ──────── Critical
+  0%                   75%             100%
 ```
 
 - The **needle** shows the current level as a percentage of the critical level.
 - The **legend** below shows the actual water level (in meters) at which each threshold is crossed, e.g.:
-  - Alert ≥ 0.8 m
-  - Alarm ≥ 1.2 m
-  - Critical ≥ 2.0 m
+  - Alert ≥ 0.0 m (start of the Alert band — everything below 3 ft)
+  - Alarm ≥ 0.91 m (3 ft)
+  - Critical ≥ 1.22 m (4 ft)
 
-These threshold levels are set by the administrator in [Settings](#7-the-settings-page) based on a hydrological survey of the river.
+These threshold levels are set by the administrator in [Settings](#7-the-settings-page). The shipped defaults (Alert from 0 m, Alarm at 3 ft / 0.91 m, Critical at 4 ft / 1.22 m) are placeholders, to be finalized from a hydrological survey of the river.
 
 ---
 
@@ -367,7 +367,7 @@ The **Fuzzy Rules** page is a reference documenting the 20 fuzzy inference rules
 
 ### What's on the Page
 
-1. **Input Variables & Membership Functions** — Shows each fuzzy input (Water Level, Rate of Rise, Forecast Rain, Tide, RF Propensity) and how continuous values map to linguistic terms (e.g. Water Level: Low < 610 mm, Medium 610–1220 mm, High 1220–1830 mm, Very High > 1830 mm).
+1. **Input Variables & Membership Functions** — Shows each fuzzy input (Water Level, Rate of Rise, Forecast Rain, Tide, RF Propensity) and how continuous values map to linguistic terms (e.g. Water Level: Low < 914 mm, Medium 914–1219 mm, High 1219–1829 mm, Very High > 1829 mm).
 
 2. **Output Variable: Flood Risk Level** — Shows the four output terms (Receding, Alert, Alarm, Critical).
 
@@ -442,16 +442,16 @@ Calibration values for the ultrasonic distance sensor and rain gauge:
 
 | Setting | Default | Notes |
 |---------|---------|-------|
-| **Critical Water Level** | 2.0 meters | The water level at which risk = 100% (Critical). Set this after a hydrological survey. |
+| **Critical Water Level** | 1.2192 meters (4 ft) | The water level at which risk = 100% (Critical). Adjust after a hydrological survey. |
 | **Receding Hours** | 2 hours | How many hours the level must be dropping before the risk is classified "Receding". |
 
 **Risk Threshold Ratios** (as fractions of the critical level):
 
 | Transition | Default | Effective Level |
 |-----------|---------|-----------------|
-| Normal → Alert | 0.40 | 40% of critical (0.8 m) |
-| Alert → Alarm | 0.60 | 60% of critical (1.2 m) |
-| Alarm → Critical | 1.00 | 100% of critical (2.0 m) |
+| Normal → Alert | 0.00 | 0% of critical (0 m — start of the Alert band) |
+| Alert → Alarm | 0.75 | 75% of critical (0.91 m / 3 ft) |
+| Alarm → Critical | 1.00 | 100% of critical (1.22 m / 4 ft) |
 
 ### 7.6 Weather API
 
@@ -785,7 +785,7 @@ A: Follow your emergency response protocol immediately. The dashboard is a decis
 | **Alert / Alarm / Critical** | Increasingly severe flood risk levels (Yellow / Orange / Red). |
 | **Open-Meteo** | The free weather and marine (tide) data API used for forecasts. |
 | **Rain Tip** | One tip of the tipping-bucket rain gauge (default 0.2 mm of rainfall). |
-| **Critical Level** | The water level set as 100% risk (default 2.0 m). Configured after a hydrological survey. |
+| **Critical Level** | The water level set as 100% risk (default 1.2192 m / 4 ft). Adjusted after a hydrological survey. |
 | **Cooldown** | The minimum time (default 30 min) between SMS alerts to prevent message flooding. |
 | **Audit Log** | A record of system actions (sign-ins, settings changes, acknowledgements) for accountability. |
 | **Viewer / Admin** | The two user roles. Admins can change settings, manage users/contacts, and acknowledge alerts; Viewers have read-only access. |

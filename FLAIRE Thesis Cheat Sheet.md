@@ -16,6 +16,10 @@
 | F1 scores | Low 0.97 · Medium 0.91 · High 0.92 |
 | Weighted avg | 0.9433 precision / 0.9426 recall / 0.9426 F1 |
 | High class | Recall 0.9524 (60/63) · Precision 0.8824 (8 Medium→High) |
+| **Benchmark (same split)** | LR 0.9126 · DT 0.9180 · **RF 0.9426** · GB 0.9536 — RF is the defensible default, *not* the top scorer |
+| **Chronological split** | **0.8962** accuracy (macro F1 0.8906) vs 0.9426 stratified — confirms the inflation caveat |
+| **Label rule (actual)** | Quantile-weighted, cuts ≥1.5 High / ≥0.7 Medium (`add_target_features_only.py`) — reproduces **100%** of the shipped labels |
+| **Missing tide in training** | 223 / 1,826 rows (**12.2%**) — no imputation, no row dropping; RF routes NaN natively |
 | RF features (8) | R1, R3, R7, rain_days, TMAX, TMIN, TideMax, TideMin |
 | Fuzzy rules | 20 total = 15 core + 5 gap-fill |
 | Fuzzy inputs (5) | water level (0–3000 mm), rate of rise, forecast rain, tide, RF propensity |
@@ -26,12 +30,13 @@
 | Deployment anomalies | 67 zero-distance/2.500 m, 124 negative, 5 implausible short |
 | Deployment reached | **Receding only** — Alert/Alarm/Critical never exercised |
 | Acceptability (n=2) | functionality 5.00 · usability 4.75 · others 5.00 |
-| Total cost | **₱23,700** (Pi 5 alone ₱6,500) |
+| Total cost | **₱27,920** (Table 3.2 — edge station ₱19,050, river node ₱7,070, general materials ₱1,800) |
 | Flood events | 4 documented: 21/10/2021, 30/03/2022, 27/12/2022, 23/11/2023 → **2 High / 2 Medium** |
 | Forecast horizon | Cached Open-Meteo, 7 days, updated every 6 h |
 
 **Fuzzy water-level breakpoints (current code, `src/config.py`):**
-Alert < 0.914 m · Alarm 0.914–1.219 m · Critical ≥ 1.219 m · Very High ≥ 1.829 m
+Low < 0.914 m (3 ft) · Medium 0.914–1.219 m · High 1.219–1.829 m · Very High ≥ 1.829 m (6 ft)
+Risk transitions: Alarm at 0.914 m (3 ft) · Critical at 1.2192 m (4 ft) — **critical level 1.2192 m, a placeholder pending the barangay's hydrological survey**
 
 ---
 
@@ -46,9 +51,14 @@ Alert < 0.914 m · Alarm 0.914–1.219 m · Critical ≥ 1.219 m · Very High �
 **Never say (the thesis denies these):**
 - "The model predicts floods" — it was trained on rule-derived labels from the same features (P250, P524, P603)
 - "We measured lead time" — explicitly out of scope, future work (P250, P526, P604)
-- "We beat a threshold baseline" — comparison not completed, future work (P344, P526, P604)
+- "We beat a threshold baseline" — the *threshold-based warning-method* comparison is still future work (P344, P526, P604). We **did** benchmark four model families (LR 0.9126 / DT 0.9180 / RF 0.9426 / GB 0.9536) — that is a different, narrower claim, and RF did not win it.
 - "Two sensor nodes" / "monsoon-season campaign" — single node, ~21.5 h (P252)
 - "It was tested in a typhoon" — deployment stayed at Receding (P633)
+- "RF is the most accurate model" — gradient boosting scored higher (0.9536); RF was the defensible default.
+- "The thresholds are 0.61 m / 0.80 m / 2.0 m" — the running system uses 914 / 1,219 / 1,829 mm with a 1.2192 m critical level.
+- "The labels came from a composite score of ≥6.0 / ≥3.0" — the shipped labels came from the quantile-weighted rule; the thesis sentence naming those cuts is wrong and must be corrected.
+- "The thresholds came from a completed hydrological survey" — they are placeholders pending the barangay's hydrological survey.
+- "The fuzzy weights are membership centroids" — they are hand-set design constants in the code.
 
 ---
 
@@ -109,7 +119,9 @@ Evidence base for each design choice, split local vs foreign.
 ## PART D — TOP DEFENSE QUESTIONS (say it this way)
 
 **Q: "Your labels came from the same features the model trained on. What did the RF add?"**
-> The RF added a reproducible, edge-executable approximation of our scoring rule — 94.26% agreement. It did not add independent predictive skill; we say so explicitly. The AI layer's value is that it runs offline on a Pi, and its usefulness beyond the composite score remains to be shown with independent flood-event labels. *(P250, P603, P606)*
+> The RF added a reproducible, edge-executable approximation of our scoring rule — 94.26% agreement. It did not add independent predictive skill; we say so explicitly. The AI layer's value is that it runs offline on a Pi, and its usefulness beyond our scoring rule remains to be shown with independent flood-event labels. *(P250, P603, P606)*
+>
+> *(Precision: the labels came from a quantile-weighted score over the same features — p50/p75/p90 buckets weighted R7 .30 / R3 .20 / R1 .15 / rain_days .10 / TideMax .10 / TideMin .05 / TMAX .05 / TMIN .05, cut at ≥1.5 High and ≥0.7 Medium. Do **not** describe them as "a composite score of ≥6.0 / ≥3.0" — that sentence is in the printed thesis and it is wrong; those cuts reproduce only 64.2% of the shipped labels, while the quantile-weighted rule reproduces 100%.)*
 
 **Q: "Only 2 of 4 floods were High, and both were ones your rule already flags."**
 > Correct. The 94.26% reflects agreement with our own rule, not flood prediction. The four-event check shows the rule-derived labels capture accumulated-rainfall signals but do not reliably encode flood occurrence — which is why independent labels and chronological validation are the top recommendations. *(P538, P603, P606)*
@@ -118,13 +130,22 @@ Evidence base for each design choice, split local vs foreign.
 > SMS is implemented and fires at Alarm and Critical, but the deployment never rose above Receding, so no alert fired in the field. The capability is there; the real-event trigger test is future work. *(P249, P604)*
 
 **Q: "38.5% hit an explicit rule — 61.5% is a hand-weighted fallback. Who validated the weights?"**
-> The weights are the fuzzy membership centroids, not tuned predictions. We verified functional completeness — all 768 combos and 3,150 grid points return a defined class, output monotonic in water level and rate of rise, no runtime errors. It was not validated against real flood outcomes. *(P480–P482)*
+> The weights are hand-set design constants in the code (`src/model/fuzzy_logic.py`) — not tuned predictions, and not "membership centroids". We verified functional completeness — all 768 combos and 3,150 grid points return a defined class, output monotonic in water level and rate of rise, no runtime errors. It was not validated against real flood outcomes. *(P480–P482)*
 
 **Q: "Title says January 2026, deployment says October 2026."**
 > *(Verify the fix before printing — this is the #1 question and the only one that must be eliminated, not answered.)*
 
 **Q: "What's the cost?"**
-> ₱23,700 total. The Pi 5 is ₱6,500 of it. Low enough for a barangay budget; full table in Chapter 4.
+> ₱27,920 total (Table 3.2 — edge station ₱19,050, river node ₱7,070, general materials ₱1,800). The Pi 5 is ₱6,500 of it. Low enough for a barangay budget; full table in Chapter 4.
+
+**Q: "Why Random Forest? Why not logistic regression or a decision tree?"**
+> We benchmarked four model families on the same stratified split: logistic regression 0.9126, decision tree 0.9180, **Random Forest 0.9426**, gradient boosting 0.9536. So RF did *not* win — gradient boosting was about one point ahead. RF was the defensible default: it is the documented, literature-backed choice for this problem class (Refadah's review; Mesias & Bagtasa for Philippine typhoon-rainfall prediction), its bagged construction suits 1,826 noisy rows with a 918/593/315 class imbalance and 12.2% missing tide, and a 2 MB scikit-learn pickle that infers in milliseconds on a Pi fits a pipeline that runs every five minutes. The narrow spread across four families is itself the finding — the target is a threshold function of the same eight inputs, which is exactly why we report 94.26% as agreement with our own rule rather than as predictive skill. *(P307, P603)*
+
+**Q: "Why combine Random Forest with fuzzy logic? Why not one model?"**
+> They are complementary in time, information and audience. The RF works on historical and forecast aggregates (R1/R3/R7, rain days, temperature, tide) for the 24 h and 48 h horizons; the fuzzy layer works on the live state — level now, rate of rise, forecast rain, tide — and consumes the RF propensity as one of its five inputs, so the output is the fusion, not either input. The RF's output is the methodology artifact (metrics, feature importances, confusion matrix); the fuzzy layer's output is the operator artifact (level, rate of rise, rule fired). Each is replaceable independently: with independent flood-event labels we retrain the RF and the rules stay untouched. And honestly — with our current rule-derived labels a rule list would give the same classifications; the hybrid is what lets the model earn its place once real labels exist. *(P240, P224, P606)*
+
+**Q: "What are the thresholds, and where did they come from?"**
+> Water-level bands Low < 914 mm (3 ft) · Medium 914–1,219 mm · High 1,219–1,829 mm · Very High ≥ 1,829 mm (6 ft); risk transitions Alarm at 3 ft, Critical at 4 ft; critical level **1.2192 m**. Anchored on PAGASA's 3 ft / 4 ft warning bands, and **placeholders pending the barangay's hydrological survey** — the configuration itself says "Adjust after hydrological survey," and establishing barangay-specific thresholds with the BDRRMC and MDRRMO is a stated recommendation. Never quote 0.61 m, 0.80 m, or 2.0 m.
 
 ---
 

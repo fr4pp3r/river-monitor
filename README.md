@@ -69,6 +69,12 @@ Features are computed per horizon. `ref_day` is **today** for the 24h forecast a
 
 **Output**: Flood Propensity (Low=0, Medium=1, High=2)
 
+**Training labels:** the `target` column is produced by a quantile-weighted score over the same eight features — each feature bucketed at its p50/p75/p90 and weighted (R7 0.30, R3 0.20, R1 0.15, rain_days 0.10, TideMax 0.10, TideMin 0.05, TMAX 0.05, TMIN 0.05), then cut at >= 1.5 High and >= 0.7 Medium (`add_target_features_only.py`). The resulting 918 / 593 / 315 class distribution is what the shipped model was trained on.
+
+> **Note:** because the labels come from a rule over the same inputs the model uses, the reported accuracy measures *agreement with that rule*, not flood-prediction skill. See `possible_question.md` for the full framing.
+
+**Data quality:** 223 of the 1,826 training rows (12.2%) have a missing `TideMax`/`TideMin`. The pipeline applies **no imputation and drops no rows** — scikit-learn's Random Forest routes missing values natively at each split.
+
 ### Fuzzy Logic System (20 Rules)
 **Inputs** (5 fuzzy variables):
 | Variable | Terms |
@@ -82,7 +88,7 @@ Features are computed per horizon. `ref_day` is **today** for the 24h forecast a
 **Output**: Flood Risk Level (Receding, Alert, Alarm, Critical)
 
 **Membership Functions**:
-- WL: Low <610mm, Medium 610-1220mm, High 1220-1830mm, Very High >1830mm
+- WL: Low <914mm, Medium 914-1219mm, High 1219-1829mm, Very High >1829mm
 - FRain: None <5mm, Light 5-15mm, Moderate 15-30mm, Heavy >30mm
 - RoR: Negative <-0.5mm/hr, Near-Zero -0.5 to 0.5, Moderate 0.5-4.0, Rapid >4.0
 - Tide: Low <0.5m, Mid 0.5-1.0m, High 1.0-1.5m, Extreme >1.5m
@@ -218,7 +224,7 @@ river-monitor/
    WEATHER_LONGITUDE = 120.9842
    
    # Adjust after hydrological survey
-   CRITICAL_LEVEL_M = 2.0  # Water level at 100% risk
+   CRITICAL_LEVEL_M = 1.2192  # Water level at 100% risk (4 ft) - placeholder, adjust after hydrological survey
    ```
 
 ### 3. Train the AI Model
@@ -337,7 +343,7 @@ Caveats:
 
 3. **7-Day Forecast Chart**
    - Predicted water levels for the next 7 days
-   - Risk threshold lines (Alert @40%, Alarm @60%, Critical @100%)
+   - Risk threshold lines (Alert @0% / 0 m, Alarm @75% / 3 ft / 0.9144 m, Critical @100% / 4 ft / 1.2192 m)
 
 4. **Current Weather & Rainfall**
    - Precipitation (mm)
@@ -451,12 +457,12 @@ Key variables include `SECRET_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `AUTH_EN
 Edit `src/config.py`:
 
 ```python
-# Water Level (mm)
+# Water Level (mm) - Alert < 3 ft (914 mm), Alarm 3-4 ft (914-1219 mm), Critical 4-6 ft (1219-1829 mm)
 WL_THRESHOLDS = {
-    'low_max': 610,
-    'medium_min': 610, 'medium_max': 1220,
-    'high_min': 1220, 'high_max': 1830,
-    'very_high_min': 1830
+    'low_max': 914,
+    'medium_min': 914, 'medium_max': 1219,
+    'high_min': 1219, 'high_max': 1829,
+    'very_high_min': 1829
 }
 
 # Forecast Rain (mm/day)

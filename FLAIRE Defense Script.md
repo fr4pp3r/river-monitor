@@ -1,6 +1,6 @@
 # FLAIRE — Oral Defense Script & Q&A Playbook
 
-**How to use this document.** Part 1 is your opening — rehearse it until it sounds conversational, not read. Part 2 contains the five questions most likely to decide the defense, each with a verbatim answer to practice aloud. Part 3 is the full question bank by category. Paragraph references (P###) point into the current revised file (828 paragraphs — References is now **P639**; conclusions/recommendations after P606 shifted +1). **Never read the refs aloud** — they are only for you to find the page fast. **Part 3-H is the proposal-to-thesis delta** — the questions that only exist if a panelist has read your *accepted proposal*. Full evidence for every one of them is in the companion file `FLAIRE Proposal-to-Thesis Change Log.md`. Part 4 is the never-say list. Part 5 is the co-author cheat sheet. Part 6 is the strategy for questions nobody prepared for.
+**How to use this document.** Part 1 is your opening — rehearse it until it sounds conversational, not read. Part 2 contains the six questions most likely to decide the defense, each with a verbatim answer to practice aloud. Part 3 is the full question bank by category. Paragraph references (P###) point into the current revised file (828 paragraphs — References is now **P639**; conclusions/recommendations after P606 shifted +1). **Never read the refs aloud** — they are only for you to find the page fast. **Part 3-H is the proposal-to-thesis delta** — the questions that only exist if a panelist has read your *accepted proposal*. Full evidence for every one of them is in the companion file `FLAIRE Proposal-to-Thesis Change Log.md`. Part 4 is the never-say list. Part 5 is the co-author cheat sheet. Part 6 is the strategy for questions nobody prepared for.
 
 ---
 
@@ -18,7 +18,7 @@
 
 ---
 
-## Part 2 — The Five Questions That Matter Most
+## Part 2 — The Six Questions That Matter Most
 
 ### Q1. "Your labels came from the same eight features the model was trained on, and on the four real floods the model just agreed with your own rule. What did the Random Forest actually add?"
 
@@ -26,7 +26,7 @@
 
 > "Three things, and I'll be precise.
 >
-> First, it was a stated aim, not an assumption. Chapter 1 says the study set out to explore whether machine-learning models can be used to assist in assessing flood risk at the barangay scale. We treated that as an open question, and Chapter 5 answers it: feasibility is established — a model can be trained on eight features and run on a Raspberry Pi and reproduce our decision rule with 94.26% agreement — but predictive usefulness beyond the composite score is not established, for exactly the reason you've raised.
+> First, it was a stated aim, not an assumption. Chapter 1 says the study set out to explore whether machine-learning models can be used to assist in assessing flood risk at the barangay scale. We treated that as an open question, and Chapter 5 answers it: feasibility is established — a model can be trained on eight features and run on a Raspberry Pi and reproduce our decision rule with 94.26% agreement — but predictive usefulness beyond our own scoring rule is not established, for exactly the reason you've raised.
 >
 > Second, architecturally it's a replaceable layer: the Random Forest supplies the flood-propensity input that the fuzzy classifier consumes alongside the live water level, rate of rise, forecast rainfall, and tide. When independent flood-event labels exist, we retrain that model without touching the rule system — that's our first recommendation in Chapter 5.
 >
@@ -65,9 +65,26 @@
 
 *(ref: P44 vs P503 — **verify the fix before printing.**)*
 
-### Q6 — the proposal-reading panelist
+### Q6. "Why do you need both a Random Forest and fuzzy logic? Why not just use one — or why not just use rules?"
 
-Assume at least one panelist has read your *accepted proposal*, because if they have, the sharpest question available to them is why RQ3 changed from a threshold comparison to a rule-consistency check. That is answered in **Part 3-H, H1**. Rehearse it with the other five — it is a sixth question in all but name.
+> "Three reasons, and they line up with what the thesis already says.
+>
+> First, they're complementary in time. The Random Forest works on historical and forecast aggregates — seven-day rainfall, rain days, temperature, tide — to estimate a flood propensity for the 24-hour and 48-hour horizons. The fuzzy classifier works on the live state: the water level right now, how fast it's rising, the cached forecast rainfall, the tide. The fuzzy layer consumes the RF propensity as one of its five inputs. The output is the fusion, not either input.
+>
+> Second, they're complementary in audience. The RF's output is the methodology artifact — the metrics, the feature importances, the confusion matrix. The fuzzy layer's output is the operator artifact — the risk level, the rate of rise, and the rule that fired. Chapter 1 puts it this way: the Random Forest provides data-driven flood-propensity estimates, while the fuzzy-logic classifier integrates those estimates with the real-time water level, its rate of rise, the cached forecast rainfall, and the tide level using interpretable decision rules — so BDRRMC personnel can understand not only the resulting risk level, but the local conditions and decision logic that contributed to it. Because the final warning decision stays with the BDRRMC, the system is decision support, not a replacement for human judgment.
+>
+> Third, they're separately replaceable. When independent flood-event labels exist, we retrain the Random Forest and the rule system stays untouched — the transparent rules the barangay relies on are never at risk from a model swap.
+>
+> And the honest answer underneath all three: with the labels we have, a rule list would produce the same classifications — we say that in the conclusions. The hybrid is what lets the model *earn* its place once real labels exist, without giving up the transparency the barangay needs today."
+
+**If they press — "is the RF doing real work, if it's only one of five fuzzy inputs?"**
+> "Not today, and we don't pretend otherwise. What it carries is the only learned component — the part that has read the 2020–2024 record — and it gates escalation: the rules that produce Alarm and Critical require a Medium or High RF propensity. The RF also can't consume rate-of-rise, because that would mean retraining every minute; the fuzzy layer absorbs the live signal at inference time with no retraining. That's the architectural reason for the split."
+
+*(ref: P240, P224, P606, P622)*
+
+### Q7 — the proposal-reading panelist
+
+Assume at least one panelist has read your *accepted proposal*, because if they have, the sharpest question available to them is why RQ3 changed from a threshold comparison to a rule-consistency check. That is answered in **Part 3-H, H1**. Rehearse it with the other six — it is a seventh question in all but name.
 
 ---
 
@@ -83,12 +100,20 @@ Assume at least one panelist has read your *accepted proposal*, because if they 
 
 **A3. Why both a Random Forest *and* fuzzy logic? Why not just one?**
 > "They do different jobs. The Random Forest estimates meteorological flood propensity from eight features — something a rule list handles poorly as interactions grow. The fuzzy classifier handles the real-time hydrology — water level, rate of rise — with explicit, readable rules the BDRRMC can follow, which a black-box model can't offer. The hybrid keeps the final decision layer interpretable while the machine-learning layer stays replaceable." *(P240)*
+>
+> **Fuller version (Part 2, Q6):** complementary in time (the RF works on historical and forecast aggregates, the fuzzy layer on the live state), complementary in information (the RF is blind to the river; the fuzzy layer is blind to the weather regime), complementary in audience (the methodology artifact vs. the operator artifact), and separately replaceable — retrain the RF, leave the rules alone. Chapter 1 states the same thing: the RF provides data-driven flood-propensity estimates, the fuzzy classifier integrates them with the live water level, rate of rise, forecast rainfall and tide using interpretable rules, and the final warning decision stays with the BDRRMC. *(P240, P224)*
+>
+> **Honest caveat to volunteer if they push:** with the current rule-derived labels, a rule list alone would produce the same classifications — the hybrid is what lets the model *earn* its place once independent labels exist.
 
 **A4. Is fuzzy logic AI? Why call this AI-enhanced?**
 > "Fuzzy inference is a branch of computational intelligence, and the system contains a trained machine-learning model as well. 'AI-enhanced' describes the hybrid pipeline as a whole — trained model plus fuzzy inference — running at the edge." *(P223, P241)*
 
 **A5. Why four risk levels? Who decided the thresholds?**
 > "Receding, Alert, Alarm, Critical — mapped to the barangay's operational reality. The levels come out of the fuzzy rule base — 15 core rules plus 5 gap-fill rules, 20 total — combined with membership functions over water level, rate of rise, forecast rainfall, and tide. The rules are disclosed in full in Chapter 3, so the barangay can audit every decision path." *(P232, Table 3.1)*
+>
+> **The thresholds themselves:** water-level bands are Low below 914 mm (3 ft), Medium 914–1,219 mm, High 1,219–1,829 mm, and Very High from 1,829 mm (6 ft); the risk transitions are Alarm at 3 ft (914 mm) and Critical at 4 ft (1,219 mm); the critical level is **1.2192 m**. They are anchored on PAGASA's 3 ft and 4 ft warning bands, and they are **placeholders** — the configuration itself says "Adjust after hydrological survey," and establishing barangay-specific thresholds with the BDRRMC and MDRRMO is one of our recommendations. We are not claiming a completed hydrological survey. *(P232, Table 3.1, `src/config.py`)*
+>
+> ⚠️ **Do not quote 0.61 m, 0.80 m, or 2.0 m** — those are stale figures from an earlier configuration. If the printed thesis states them, the thesis is wrong and has to be corrected.
 
 **A6. How current is the forecast data?**
 > "Cached from OpenMeteo, refreshed at least daily — targeted every six hours when internet is available — and stored in a local database so classification never depends on connectivity at decision time." *(P230)*
@@ -101,19 +126,25 @@ Assume at least one panelist has read your *accepted proposal*, because if they 
 
 ### B. The AI/ML Cluster
 
-**B1. See Part 2, Q1 — the composite-score question.** (Highest value; rehearse until automatic.)
+**B1. See Part 2, Q1 — the rule-consistency question.** (Highest value; rehearse until automatic.)
 
-**B2. "Why not just run the composite score directly?"**
+**B2. "Why not just run the scoring rule directly?"**
 > "Right now, for these labels, you'd get the same classifications — we say that in the conclusions. The difference is what happens next: a rule list can only encode what we already wrote down. With independent flood-event labels, the model can learn patterns we didn't hand-code — and because it sits behind the fuzzy layer, we can swap it without touching the transparent decision rules the BDRRMC relies on."
 
 **B3. Why Random Forest specifically?**
 > "Refadah's review of ML for flood prediction benchmarks ensembles as consistently strong across the scenarios reviewed, and Random Forest is the standard, well-understood ensemble — robust to mixed features, interpretable enough via feature importance, and light enough for a Raspberry Pi. It was the defensible default." *(P307)*
+>
+> **If they ask "did you compare it against anything?":** "Yes — we benchmarked four model families on the same stratified split with the same hyperparameters. Logistic regression 0.9126, decision tree 0.9180, **Random Forest 0.9426**, gradient boosting 0.9536. So gradient boosting edged us by about one point — we don't claim RF won. We kept RF because it is the documented default for this problem class, its bagged construction is the right risk profile for 1,826 noisy rows with a 918/593/315 class imbalance and 12.2% of rows carrying missing tide values, and a 2 MB scikit-learn pickle that infers in milliseconds on a Pi is a better fit for a pipeline that runs every five minutes than a model that needs extensive tuning to stay stable.
+>
+> **The finding underneath that comparison is worth volunteering:** four very different model families land within about four points of each other, because the target is a threshold function of the same eight inputs. That is the circularity made visible — and it is exactly why we report 94.26% as agreement with our own rule rather than as predictive skill."
 
 **B4. Is 94.26% good? Is your model accurate?**
 > "94.26% is weighted accuracy against rule-derived labels — it measures consistency with our own scoring rule, not flood-prediction skill. The thesis says this in the abstract. So the accurate statement is: the model reproduces the rule reliably; predictive accuracy against real floods has not been established."
 
 **B5. Why a random 80/20 split instead of a time-based split?**
 > "We used a stratified split to preserve class balance in a small dataset — and the thesis flags chronological validation as the correct method for time-ordered data and lists it as a recommendation. That's an acknowledged limitation, not an oversight." *(P623)*
+>
+> **With the number, if they push:** "We ran the chronological split ourselves as a check. Under a chronological 80/20 split the same Random Forest scores **0.8962** accuracy (macro F1 0.8906), against 0.9426 under the stratified random split — about a 4.6-point drop. That confirms the thesis's own caveat empirically: with rolling-window features, a random split can leak overlapping windows across the train/test boundary and inflate apparent generalization performance. Chronological validation stays as our first methodological recommendation."
 
 **B6. What are the eight features, and are they observed or forecast?**
 > "R1, R3, R7 — rainfall totals for the previous one, three, and seven days — rainy days, maximum and minimum temperature, and maximum and minimum tide. The rainfall features blend observed sensor history with the cached forecast for the reference day; temperature and tide come from the cached forecast — that's what Chapter 1 means by 'historical and forecast' features. The variables are defined in Chapter 3." *(P223, P405–P411)*
@@ -121,8 +152,12 @@ Assume at least one panelist has read your *accepted proposal*, because if they 
 **B7. Your training data was 2020–2024 but the deployment was 2026 — did you retrain?**
 > "The model was trained on the 2020–2024 PAGASA/NAMRIA historical set — 1,826 daily records — and deployed as-is; the deployment was a systems test of the pipeline, not a model-retraining exercise. Retraining with newer data and independent labels is part of the improvement path." *(P622, P623)*
 
-**B8. What is the composite score / how were labels created?**
+**B8. What is the scoring rule / how were labels created?**
 > "A hand-written scoring rule over the same eight features produced Low/Medium/High labels in the training data. That circularity is exactly why we frame E1 as rule-consistency, not prediction — it's disclosed in the abstract, RQ3's wording — 'how consistently does the model reproduce the rule-derived categories' — and the conclusions." *(P234, P603, P606)*
+>
+> **Precision matters here — the exact rule:** the labels in the shipped training file were produced by a quantile-weighted variant of the scoring rule (`add_target_features_only.py`): each of the eight features is bucketed at its p50/p75/p90 and weighted (R7 0.30, R3 0.20, R1 0.15, rain_days 0.10, TideMax 0.10, TideMin 0.05, TMAX 0.05, TMIN 0.05), the buckets are multiplied by 1/2/3, and the total is cut at ≥1.5 for High and ≥0.7 for Medium. That yields 918 Low / 593 Medium / 315 High across the 1,826 records.
+>
+> ⚠️ **Do not say "scores of at least 6.0 were High and at least 3.0 were Medium."** That sentence is in the printed thesis and it is wrong — recomputing those cuts against the shipped data reproduces only 64.2% of the labels, while the quantile-weighted rule reproduces 100%. The thesis paragraph has to be corrected; say the rule above instead.
 
 ### C. Evaluation & Numbers
 
@@ -166,6 +201,8 @@ Assume at least one panelist has read your *accepted proposal*, because if they 
 
 **D4. What was out of scope, and why?**
 > "Forecast lead-time measurement and a threshold-baseline comparison — both require event data and a comparison design the four documented events couldn't support. The four-event work is presented as a preliminary case check, and both full evaluations are concrete recommendations." *(P250, P626)*
+>
+> **Scope it precisely if they push:** "The comparison we ran ourselves was a *model-family* benchmark — logistic regression, decision tree, Random Forest, gradient boosting on the same split. That is a different thing from the threshold-based warning-method baseline the proposal proposed, which needs documented flood events to compare against and is still future work. We should be clear that the two baselines are not the same baseline."
 
 **D5. Where is your Gantt chart / why does the timeline look like this?**
 > *(Have the final Gantt filled to match the narrative at P451/P460 before the defense. Answer: planned phases — planning, design, development, testing, deployment, evaluation — with the deployment in the evaluation window.)*
@@ -187,7 +224,7 @@ Assume at least one panelist has read your *accepted proposal*, because if they 
 > "Four: labels derived from the same features, so no independent prediction validation; a 21.5-hour deployment that never exercised the higher risk classes; sensor and power reliability issues; and n=2 on acceptability. All four are in the conclusions with recommendations attached." *(P603–P610)*
 
 **E6. What would you do with another six months?**
-> "Independent flood-event labels from BDRRMC/MDRRMO records, tide and water-level features in the model, chronological validation, a longer powered deployment with multiple sensor nodes, and a baseline comparison — all written out as recommendations in Chapter 5, plus SMS delivery queuing and power hardening." *(P622–P630)*
+> "Independent flood-event labels from BDRRMC/MDRRMO records, tide and water-level features in the model, chronological validation, a longer powered deployment with multiple sensor nodes, and a threshold-based warning-method baseline — all written out as recommendations in Chapter 5, plus SMS delivery queuing and power hardening." *(P622–P630)*
 
 ### F. Practical, Cost & Ethics
 
@@ -277,6 +314,12 @@ These only exist if a panelist has read your *accepted proposal*. Assume one has
 13. Two sensor nodes were deployed — *one node, and the thesis says so (P252).*
 14. The deployment covered a monsoon season — *roughly 21.5 recorded hours (P542).*
 15. A co-author can describe another member's contribution — *each member answers only for their own.*
+16. That Random Forest beat the alternatives — *it didn't; gradient boosting scored 0.9536 against our 0.9426. RF was the defensible default, not the top scorer.*
+17. That 0.61 m, 0.80 m, or 2.0 m are the thresholds — *the running system uses 914 / 1,219 / 1,829 mm with a 1.2192 m critical level.*
+18. That the labels came from a "composite score of at least 6.0 / 3.0" — *the shipped labels came from the quantile-weighted rule; the thesis sentence naming the cuts is wrong and has to be corrected.*
+19. That the thresholds came from a completed hydrological survey — *they are placeholders; the config says "Adjust after hydrological survey."*
+20. That the fuzzy fallback weights are "membership centroids" or were tuned — *they are hand-set design constants in the code.*
+21. That the 94.26% figure is a benchmark win — *it is agreement with our own rule; the model-family benchmark is a separate and much narrower claim.*
 
 **Never improvise:** numbers, dates, citation years, statistics, ethics-clearance claims, or another member's contribution.
 
@@ -284,7 +327,7 @@ These only exist if a panelist has read your *accepted proposal*. Assume one has
 
 ## Part 5 — Co-Author Cheat Sheet
 
-Every member must know these cold — expect any panelist to test any of the five:
+Every member must know these cold — expect any panelist to test any of the six:
 
 1. **FLAIRE = Flood Level AI Risk Evaluation**; deployed in Brgy. Elvita, Narra, Palawan.
 2. **Offline-first means:** classification, dashboard, and storage run on a Raspberry Pi at the barangay; internet only refreshes cached forecasts.
@@ -294,6 +337,8 @@ Every member must know these cold — expect any panelist to test any of the fiv
 6. **SMS:** works, enabled on the device, triggers only at Alarm/Critical — never fired in the field because the river stayed at Receding.
 7. **Three red lines:** never claim flood prediction, never claim lead time, never claim SMS was field-tested.
 8. **The AI rationale in one breath:** "We added the AI layer to explore whether ML can help assess flood risk — Chapter 1 states it as an aim, Chapter 5 answers it: technically feasible, predictive value not yet established."
+9. **The thresholds:** water-level bands Low < 914 mm (3 ft) · Medium 914–1,219 mm · High 1,219–1,829 mm · Very High ≥ 1,829 mm (6 ft); risk transitions Alarm at 3 ft, Critical at 4 ft; critical level **1.2192 m**. Placeholders pending the barangay's hydrological survey — never quote 0.61 m / 0.80 m / 2.0 m.
+10. **The benchmark:** LR 0.9126 · DT 0.9180 · **RF 0.9426** · GB 0.9536 — RF is the defensible default, not the winner, and the narrow spread across families is the circularity made visible. Chronological split: **0.8962**.
 
 ---
 
@@ -306,6 +351,7 @@ Every member must know these cold — expect any panelist to test any of the fiv
 - [ ] Appendices A/B/D–G, Acknowledgement, Gantt bars, TOC filled; all five bionotes/CVs present.
 - [ ] Appendix C checked against the real administered questionnaire.
 - [ ] List of Tables page numbers; MDRRMC/MDRRMO harmonized (MDRRMO is the municipal office; MDRRMC the council).
+- [ ] **Three factual corrections applied to the printed thesis before it goes to print:** (a) **the label-rule paragraph** — replace "scores of at least 6.0 were labeled High… at least 3.0 were labeled Medium" with the quantile-weighted rule that actually generated the labels (p50/p75/p90 buckets; weights R7 .30, R3 .20, R1 .15, rain_days .10, TideMax .10, TideMin .05, TMAX .05, TMIN .05; cuts ≥1.5 High / ≥0.7 Medium); (b) **the field-deployment paragraph** — replace "below 0.61 m" and "the alert threshold of 0.80 m" with the 914 / 1,219 / 1,829 mm bands and the 1.2192 m critical level; (c) **threshold provenance** — say the bands are anchored on PAGASA's 3 ft / 4 ft warning levels and are placeholders pending the barangay's hydrological survey; never state that a survey was completed.
 
 ### Must be true before the defense (people side)
 - [ ] **Each member's contribution agreed and truthful** — G1 cannot be improvised by five people separately.
@@ -316,6 +362,9 @@ Every member must know these cold — expect any panelist to test any of the fiv
 - [ ] **Sensor node transmission interval confirmed** against the deployed firmware — Chapter 3 says every 5 seconds, the proposal said every 10 minutes (H10). Do not answer this from memory.
 - [ ] Open the deployed unit's config to have SMS evidence ready.
 - [ ] Rehearse Part 2 aloud, twice — out loud, not read.
+- [ ] **All five members can state the benchmark and the thresholds without looking** — LR 0.9126 / DT 0.9180 / RF 0.9426 / GB 0.9536; chronological split 0.8962; 914 / 1,219 / 1,829 mm; critical level 1.2192 m. These are the figures a panelist can check, so nobody should be the first to reach for a stale number.
+- [ ] **The rule-consistency framing is rehearsed with its numbers** — 94.26% is agreement with a quantile-weighted rule over the same eight features, not flood prediction. If anyone still says "the composite score," correct it before the defense.
+- [ ] **Rehearse the new Part 2 Q6 ("why both?") aloud** — it is now the second-highest-value question after the labels question.
 
 ### When you get a question you can't answer
 1. **Don't guess.** Say: *"That wasn't measured in this study"* or *"That's outside the scope as defined in Chapter 3 — but our recommendations address it at [topic]."*
