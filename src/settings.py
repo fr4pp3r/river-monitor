@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     # Dashboard
     dashboard_host: str = "0.0.0.0"
     dashboard_port: int = 8000
-    auto_refresh_seconds: int = 30
+    auto_refresh_seconds: int = 5
 
     # Authentication
     auth_enabled: bool = True
@@ -75,7 +75,7 @@ class Settings(BaseSettings):
 
     # Alerts
     alert_phone_numbers: Union[str, List[str]] = ["+639940176150"]
-    sms_alert_risk_levels: Union[str, List[str]] = ["alarm", "critical"]
+    sms_alert_risk_levels: Union[str, List[str]] = ["alert", "alarm", "critical"]
     sms_alert_cooldown_minutes: int = 30
 
     # Weather

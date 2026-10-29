@@ -22,7 +22,7 @@ if _PROJECT_ROOT not in sys.path:
 from src.config import (
     MODEL_PATH, CRITICAL_LEVEL_M, RISK_THRESHOLDS,
     FORECAST_DAYS, RECEDING_HOURS,
-    RF_CLASSES
+    RF_CLASSES, SMS_ALERT_RISK_LEVELS
 )
 from src.data.database import (
     get_latest_sensor_data, get_sensor_data_since,
@@ -299,7 +299,7 @@ def predict_and_alert():
     
     if prediction:
         risk_key = (prediction['risk_level'] or '').strip().lower()
-        if risk_key in ('alarm', 'critical'):
+        if risk_key in [str(r).lower() for r in SMS_ALERT_RISK_LEVELS]:
             # Send SMS alert
             send_alert_sms(
                 risk_key,

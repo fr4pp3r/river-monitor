@@ -187,6 +187,7 @@ class SMSHandler:
             return False
 
         message = SMS_ALERT_TEMPLATE.format(
+            timestamp=datetime.now().strftime("%Y-%m-%d %I:%M %p"),
             risk_level=risk_key.upper(),
             water_level=water_level_m,
             forecast_change=forecast_change

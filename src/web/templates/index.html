@@ -3255,8 +3255,9 @@
         }
 
         const autoRefreshSeconds = {{ auto_refresh_seconds }};
+        const slowRefreshSeconds = 300;
         setInterval(refreshAll, autoRefreshSeconds * 1000);
-        setInterval(refreshSlow, autoRefreshSeconds * 10 * 1000);
+        setInterval(refreshSlow, slowRefreshSeconds * 1000);
 
         // =====================================================================
         // INIT

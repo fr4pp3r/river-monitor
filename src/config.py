@@ -97,10 +97,10 @@ WEATHER_STALE_AFTER = 43200  # 12 hours in seconds
 ALERT_PHONE_NUMBERS = ["+639940176150"]  # REPLACE WITH ACTUAL NUMBERS
 
 # Risk levels that trigger SMS alerts
-SMS_ALERT_RISK_LEVELS = ["alarm", "critical"]
+SMS_ALERT_RISK_LEVELS = ["alert", "alarm", "critical"]
 
 # SMS message template
-SMS_ALERT_TEMPLATE = "[RIVER ALERT] Risk: {risk_level} | Water: {water_level:.2f}m | Forecast: {forecast_change:+.2f}m in 1d"
+SMS_ALERT_TEMPLATE = "[RIVER ALERT] As of {timestamp} | Risk: {risk_level} | Water: {water_level:.2f}m | Forecast: {forecast_change:+.2f}m in 1d"
 
 # Minimum minutes between identical-or-lower-severity alert SMS sends
 # (an escalation, e.g. Alarm -> Critical, bypasses the cooldown)
@@ -122,7 +122,7 @@ DASHBOARD_HOST = "0.0.0.0"  # Listen on all interfaces
 DASHBOARD_PORT = 8000       # Port for the web dashboard
 
 # Auto-refresh settings for frontend
-AUTO_REFRESH_SECONDS = 30   # Dashboard auto-refresh interval
+AUTO_REFRESH_SECONDS = 5   # Dashboard auto-refresh interval
 
 # ============================================================================
 # DATA COLLECTION CONFIGURATION
